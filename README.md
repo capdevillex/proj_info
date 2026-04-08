@@ -6,7 +6,7 @@ Idée : jeu 4X (xplore, xpand, xterminate, xploit)
 
 ---
 
-IHM avec dash 
+IHM avec pygame
 
 Main en .pyw pour plus de propreté
 
