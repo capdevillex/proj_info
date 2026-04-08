@@ -14,4 +14,20 @@
 	Cavalier
 	Avion
 	Artillerie
--
+
+- Arbre de technologies:
+	nvlle unité
+	aprivoisement terrain
+	Aprivoisement ressource
+
+
+- Ressources:
+	Or
+	Nourriture
+
+
+-Idées :
+	Les unités coûtent de l'or et en consomment à chaque tour (CIV)
+	
+
+
