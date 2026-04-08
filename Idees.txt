@@ -1,4 +1,5 @@
 - Carte rectangulaire avec cases rectangulaires au pavage inégal
+
 - Cases avec les modificateurs suivants :
 	défense
 	attaque
@@ -6,12 +7,11 @@
 	déplacement (entrée/sortie)
 	route
 	ressources
-	
+
 - Unités :
 	Soldat
 	Archer
 	Cavalier
 	Avion
 	Artillerie
-- 
- 
+-
