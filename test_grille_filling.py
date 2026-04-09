@@ -142,7 +142,8 @@ def main():
         hovered_tile = None
         if 0 <= grid_x < game_map.width and 0 <= grid_y < game_map.height:
             # On récupère la province (Tile) à cette position via la grille interne
-            hovered_tile = game_map.grid[grid_y][grid_x]
+            tile_id = game_map.grid[grid_y][grid_x]
+            hovered_tile = game_map.tiles.get(tile_id)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
