@@ -61,7 +61,7 @@ class Tile:
 
 
 class Map:
-    def __init__(self, width, height, avg_pts_per_tile=35, seed=0, log=False):
+    def __init__(self, width, height, seed, avg_pts_per_tile=35, log=False):
         self.width = width
         self.height = height
         self.n_points = width * height / avg_pts_per_tile

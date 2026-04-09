@@ -1,3 +1,5 @@
+import random
+
 import pygame  # type: ignore
 
 from world.map import Map
@@ -13,10 +15,12 @@ WIDTH = (HEIGHT * 16) // 9
 SCREEN_WIDTH = WIDTH * TILE_SIZE
 SCREEN_HEIGHT = HEIGHT * TILE_SIZE
 
+LOG_MAP_GENERATION = True
+
 
 BIOME_COLORS = {
     "water": (50, 80, 200),
-    "plain": (100, 200, 100),
+    "plain": (120, 200, 100),
     "forest": (30, 120, 30),
     "mountain": (120, 120, 120),
 }
@@ -46,10 +50,10 @@ def draw_map(screen, game_map: Map, tile_size, hovered_tile=None):
         color = BIOME_COLORS[tile.biome]  # type: ignore
 
         if tile == hovered_tile:
-            color = lighten(color, 60)
+            color = lighten(color, 70)
 
-        if hovered_tile and tile.id in hovered_tile.neighbors:
-            color = lighten(color, 40)
+        if LOG_MAP_GENERATION and hovered_tile and tile.id in hovered_tile.neighbors:
+            color = lighten(color, 35)
 
         for x, y in tile.cells:
             rect = pygame.Rect(
@@ -128,7 +132,8 @@ def main():
 
     clock = pygame.time.Clock()
 
-    game_map = Map(WIDTH, HEIGHT, log=True)
+    seed = random.randint(0, 1000)
+    game_map = Map(WIDTH, HEIGHT, seed, log=LOG_MAP_GENERATION)
 
     running = True
     show_centers = False
@@ -155,7 +160,8 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     print("\n--- REGEN MAP ---")
-                    game_map = Map(WIDTH, HEIGHT, log=True)
+                    seed = random.randint(0, 1000)
+                    game_map = Map(WIDTH, HEIGHT, seed, log=LOG_MAP_GENERATION)
 
                 if event.key == pygame.K_c:
                     show_centers = not show_centers
