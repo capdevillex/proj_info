@@ -3,6 +3,7 @@ import random, math
 import pygame  # type: ignore
 
 from world.map import Map
+from world.biome import Biome
 
 
 # -------------------------
@@ -19,10 +20,11 @@ LOG_MAP_GENERATION = True
 
 
 BIOME_COLORS = {
-    "water": (50, 80, 200),
-    "plain": (120, 200, 100),
-    "forest": (30, 120, 30),
-    "mountain": (120, 120, 120),
+    Biome.BLANK: (0, 0, 0),
+    Biome.WATER: (50, 80, 200),
+    Biome.PLAIN: (120, 200, 100),
+    Biome.FOREST: (30, 120, 30),
+    Biome.MOUNTAIN: (120, 120, 120),
 }
 
 pygame.init()

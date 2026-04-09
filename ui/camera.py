@@ -25,7 +25,7 @@ class Camera:
 
     def update(self, dt, game_map, tile_size, window_w, window_h):
         keys = pygame.key.get_pressed()
-        move_speed = 1000
+        move_speed = 10
 
         self.dx /= 1.65 + 20 * dt
         self.dy /= 1.65 + 20 * dt
@@ -41,8 +41,8 @@ class Camera:
 
         if abs(self.dx) > 0.05 or abs(self.dy) > 0.05:
             norm = (self.dx**2 + self.dy**2) ** 0.5
-            self.x += self.dx / norm * speed_coeff(self.zoom)
-            self.y += self.dy / norm * speed_coeff(self.zoom)
+            self.x += self.dx / norm * speed_coeff(self.zoom) * move_speed
+            self.y += self.dy / norm * speed_coeff(self.zoom) * move_speed
 
         # clamp caméra
         self.x = min(game_map.width * tile_size - window_w / self.zoom, max(0, self.x))
