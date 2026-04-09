@@ -42,8 +42,6 @@ import random, math
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
 
-from matplotlib.pyplot import sca
-
 from utils.noise import perlin_noise
 
 
