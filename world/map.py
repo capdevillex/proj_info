@@ -55,8 +55,8 @@ class Tile:
         self.biome = None
 
     def _compute_center(self):
-        x = sum(c[0] for c in self.cells) / len(self.cells)
-        y = sum(c[1] for c in self.cells) / len(self.cells)
+        x = sum(c[0] + 0.5 for c in self.cells) / len(self.cells)
+        y = sum(c[1] + 0.5 for c in self.cells) / len(self.cells)
         return (x, y)
 
 
@@ -153,8 +153,8 @@ class Map:
             for i, cells in regions.items():
                 if not cells:
                     continue
-                cx = sum(c[0] for c in cells) / len(cells)
-                cy = sum(c[1] for c in cells) / len(cells)
+                cx = sum(c[0] + 0.5 for c in cells) / len(cells)
+                cy = sum(c[1] + 0.5 for c in cells) / len(cells)
                 new_capitals.append((cx, cy))
 
             self.capitals = new_capitals
