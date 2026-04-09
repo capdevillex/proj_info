@@ -77,7 +77,7 @@ class Map:
 
     # PIPELINE GLOBAL
     def _generate(self):
-        self._log("[1] Génération des capitales (Poisson)")
+        self._log("[1] Génération des points d'attraction (Poisson)")
         self.capitals = self._poisson_disk_sampling(self.n_points)
 
         self._log("[2] Relaxation de Lloyd")
@@ -112,7 +112,7 @@ class Map:
         Ici, on utilise une version naïve (rejet) plutôt que Bridson pour rester simple.
         Cela suffit pour des tailles modestes.
 
-        Le but est d'obtenir des "capitales" bien réparties qui serviront de centres Voronoï.
+        Le but est d'obtenir des points d'attraction bien répartis qui serviront de centres Voronoï.
         """
         points = []
         min_dist = math.sqrt((self.width * self.height) / n_points) * 0.7
@@ -168,8 +168,6 @@ class Map:
 
         Le Perlin garantit une continuité spatiale naturelle, évitant le bruit
         aléatoire pur.
-
-        Ces biomes servent de contrainte forte pour les provinces.
         """
         seed = random.randint(0, 255)
 
@@ -188,13 +186,9 @@ class Map:
 
     def _assign_cells(self):
         """
-        Assigne chaque cellule à la capitale la plus proche (Voronoï discret).
+        Assigne chaque cellule au point d'attraction le plus proche (Voronoï discret).
 
-        On calcule la distance euclidienne à chaque capitale et on choisit
-        la plus proche.
-
-        Ensuite, on applique une contrainte biome :
-        une cellule ne peut appartenir qu'à une province compatible.
+        On calcule la distance euclidienne à chaque point d'attraction et on choisit le plus proche.
 
         Cette étape garantit que toute la carte est couverte sans trous.
         """
@@ -232,12 +226,10 @@ class Map:
             while q:
                 cx, cy = q.popleft()
                 comp.append((cx, cy))
-
                 for nx, ny in self._neighbors(cx, cy):
                     if not visited[ny][nx] and self.grid[ny][nx] == id_:
                         visited[ny][nx] = True
                         q.append((nx, ny))
-
             return comp
 
         for y in range(self.height):
@@ -245,17 +237,14 @@ class Map:
                 if not visited[y][x]:
                     id_ = self.grid[y][x]
                     comp = flood_fill(x, y, id_)
-
                     if len(comp) < 10:
                         self._reassign_component(comp)
 
     def _reassign_component(self, comp):
         neighbor_ids = Counter()
-
         for x, y in comp:
             for nx, ny in self._neighbors(x, y):
                 neighbor_ids[self.grid[ny][nx]] += 1
-
         if neighbor_ids:
             new_id = neighbor_ids.most_common(1)[0][0]
             for x, y in comp:
@@ -282,21 +271,17 @@ class Map:
 
         for id_, cells in cells_by_id.items():
             tile = Tile(id_, cells)
-
             biome = Counter(self.biomes[y][x] for x, y in cells).most_common(1)[0][0]
             tile.biome = biome
-
             for x, y in cells:
                 self.biomes[y][x] = biome
-
             self.tiles[id_] = tile
 
     def _build_neighbors(self):
         """
         Construit le graphe de voisinage entre provinces.
 
-        Deux provinces sont voisines si au moins une de leurs cellules
-        est adjacente (4-connectivité).
+        Deux provinces sont voisines si au moins une de leurs cellules est adjacente.
 
         Ce graphe est essentiel pour :
         - pathfinding
