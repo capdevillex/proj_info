@@ -61,10 +61,12 @@ class Tile:
 
 
 class Map:
-    def __init__(self, width, height, avg_pts_per_tile=35, log=False):
+    def __init__(self, width, height, avg_pts_per_tile=35, seed=0, log=False):
         self.width = width
         self.height = height
         self.n_points = width * height / avg_pts_per_tile
+        self.seed = seed
+        random.seed(self.seed)
         self.log = log
 
         self.grid: List[List[Optional[int]]] = [[None] * width for _ in range(height)]
@@ -75,8 +77,21 @@ class Map:
 
         self._generate()
 
+    def serialize(self):
+        """
+        Sérialise la carte, la génération est purement déterministe en se basant sur la seed, on peut
+        donc se contenter de stocker les paramètres de génération pour recréer la même carte à l'identique.
+        """
+        return {
+            "width": self.width,
+            "height": self.height,
+            "avg_pts_per_tile": self._assign_cells,
+            "seed": self.seed,
+        }
+
     # PIPELINE GLOBAL
     def _generate(self):
+        """Pipeline de génération de la carte"""
         self._log("[1] Génération des points d'attraction (Poisson)")
         self.capitals = self._poisson_disk_sampling(self.n_points)
 
@@ -99,6 +114,7 @@ class Map:
         self._build_neighbors()
 
     def _log(self, msg):
+        """Affiche un message de log si l'option est activée"""
         if self.log:
             print(msg)
 
