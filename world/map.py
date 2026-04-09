@@ -42,6 +42,8 @@ import random, math
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
 
+from matplotlib.pyplot import sca
+
 from utils.noise import perlin_noise
 
 
@@ -65,6 +67,7 @@ class Map:
         self.width = width
         self.height = height
         self.n_points = width * height / avg_pts_per_tile
+        self.avg_pts_per_tile = avg_pts_per_tile
         self.seed = seed
         random.seed(self.seed)
         self.log = log
@@ -85,7 +88,7 @@ class Map:
         return {
             "width": self.width,
             "height": self.height,
-            "avg_pts_per_tile": self._assign_cells,
+            "avg_pts_per_tile": self.avg_pts_per_tile,
             "seed": self.seed,
         }
 
@@ -94,6 +97,7 @@ class Map:
         """Pipeline de génération de la carte"""
         self._log("[1] Génération des points d'attraction (Poisson)")
         self.capitals = self._poisson_disk_sampling(self.n_points)
+        self._log(f"    {len(self.capitals)} points d'attraction générés")
 
         self._log("[2] Relaxation de Lloyd")
         self._lloyd_relaxation(iterations=2)
@@ -175,7 +179,7 @@ class Map:
 
             self.capitals = new_capitals
 
-    def _generate_biomes(self, scale=30, octaves=2):
+    def _generate_biomes(self, octaves=3):
         """
         Génère les biomes via bruit de Perlin.
 
@@ -185,11 +189,13 @@ class Map:
         Le Perlin garantit une continuité spatiale naturelle, évitant le bruit
         aléatoire pur.
         """
-        seed = random.randint(0, 255)
+        scale = self.avg_pts_per_tile * 1.5
 
         for y in range(self.height):
             for x in range(self.width):
-                n = perlin_noise(x / scale, y / scale, octaves=octaves, base=seed)
+                n = perlin_noise(
+                    x / scale, y / scale, octaves=octaves, lacunarity=1.75, base=self.seed % 255
+                )
 
                 if n < -0.2:
                     self.biomes[y][x] = "water"
