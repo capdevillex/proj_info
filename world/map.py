@@ -38,11 +38,11 @@ Divers :
  - les régions sont créées en regroupant les points de même type => Perlin-noise assez "lisse"
 """
 
-import random, math
+import random, math, time
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
 
-from scipy.spatial import KDTree
+from scipy.spatial import KDTree  # type: ignore
 
 from utils.noise import perlin_noise
 from world.biome import Biome
@@ -67,7 +67,7 @@ class Map:
     def __init__(self, width, height, seed, avg_pts_per_tile=35, log=False):
         self.width = width
         self.height = height
-        self.n_points = width * height / avg_pts_per_tile
+        self.n_points = int(width * height / avg_pts_per_tile)
         self.avg_pts_per_tile = avg_pts_per_tile
         self.seed = seed
         random.seed(self.seed)
@@ -97,13 +97,14 @@ class Map:
     # PIPELINE GLOBAL
     def _generate(self):
         """Pipeline de génération de la carte"""
+        tic = time.perf_counter()
         self._log("[1] Génération des points d'attraction (Poisson)")
-        self.capitals = self._poisson_disk_sampling(self.n_points)
+        self.capitals = self._ebeida_poisson_phase1(self.n_points)
         self.kdtree = KDTree(self.capitals)
         self._log(f"    {len(self.capitals)} points d'attraction générés")
 
         self._log("[2] Relaxation de Lloyd")
-        self._lloyd_relaxation(iterations=2)
+        self._lloyd_relaxation(iterations=1)
 
         self._log("[3] Génération des biomes")
         self._generate_biomes()
@@ -119,6 +120,8 @@ class Map:
 
         self._log("[7] Voisinage")
         self._build_neighbors()
+
+        self._log(f"[perf] generation time : {time.perf_counter() - tic}s")
 
     def _log(self, msg):
         """Affiche un message de log si l'option est activée"""
@@ -149,6 +152,64 @@ class Map:
                 points.append((x, y))
 
             attempts += 1
+
+        return points
+
+    def _ebeida_poisson_phase1(self, n_points: int):
+        """
+        Implémentation de la Phase I de l'algorithme d'Ebeida et al. (2011) (https://dl.acm.org/doi/10.1145/1964921.1964944).
+
+        On utilise une grille d'accélération où chaque cellule peut contenir au plus un point (taille = r / sqrt(2)).
+
+        On parcourt les cellules dans un ordre aléatoire et on tente de placer un point uniformément à l'intérieur.
+
+        La validation se fait uniquement sur un voisinage local (5x5), garantissant une complexité quasi-linéaire.
+
+        Cette méthode remplace efficacement le Poisson disk sampling naïf
+        avec de bien meilleures performances pour un grand nombre de points.
+        """
+
+        width, height = self.width, self.height
+
+        # distance cible entre points
+        r = math.sqrt((width * height) / n_points) * 0.9
+
+        cell_size = r / math.sqrt(2)
+
+        grid_w = int(width / cell_size) + 1
+        grid_h = int(height / cell_size) + 1
+
+        # grille : stocke index du point
+        grid = [[None for _ in range(grid_w)] for _ in range(grid_h)]
+
+        points = []
+
+        # liste des cellules mélangée (important pour uniformité)
+        cells = [(x, y) for y in range(grid_h) for x in range(grid_w)]
+        random.shuffle(cells)
+
+        def fits(px, py, gx, gy):
+            """Vérifie localement si un point respecte la distance minimale."""
+            for ny in range(max(0, gy - 2), min(grid_h, gy + 3)):
+                for nx in range(max(0, gx - 2), min(grid_w, gx + 3)):
+                    idx = grid[ny][nx]
+                    if idx is not None:
+                        qx, qy = points[idx]
+                        if (qx - px) ** 2 + (qy - py) ** 2 < r * r:
+                            return False
+            return True
+
+        # Phase I : un seul essai par cellule
+        for gx, gy in cells:
+            px = (gx + random.random()) * cell_size
+            py = (gy + random.random()) * cell_size
+
+            if not (0 <= px < width and 0 <= py < height):
+                continue
+
+            if fits(px, py, gx, gy):
+                grid[gy][gx] = len(points)
+                points.append((px, py))
 
         return points
 
@@ -192,7 +253,7 @@ class Map:
         Le Perlin garantit une continuité spatiale naturelle, évitant le bruit
         aléatoire pur.
         """
-        scale = self.avg_pts_per_tile * 1.5
+        scale = self.avg_pts_per_tile * 1.35
 
         for y in range(self.height):
             for x in range(self.width):
@@ -200,9 +261,9 @@ class Map:
                     x / scale, y / scale, octaves=octaves, lacunarity=1.75, base=self.seed % 255
                 )
 
-                if n < -0.2:
+                if n < -0.225:
                     self.biomes[y][x] = Biome.WATER
-                elif n < 0.1:
+                elif n < 0.1125:
                     self.biomes[y][x] = Biome.PLAIN
                 elif n < 0.325:
                     self.biomes[y][x] = Biome.FOREST
