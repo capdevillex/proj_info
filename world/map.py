@@ -42,6 +42,8 @@ import random, math
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
 
+from scipy.spatial import KDTree
+
 from utils.noise import perlin_noise
 from world.biome import Biome
 
@@ -75,6 +77,7 @@ class Map:
         self.biomes = [[Biome.BLANK] * width for _ in range(height)]
 
         self.capitals: List[Tuple[float, float]] = []
+        self.kdtree = None
         self.tiles: Dict[int, Tile] = {}
 
         self._generate()
@@ -96,6 +99,7 @@ class Map:
         """Pipeline de génération de la carte"""
         self._log("[1] Génération des points d'attraction (Poisson)")
         self.capitals = self._poisson_disk_sampling(self.n_points)
+        self.kdtree = KDTree(self.capitals)
         self._log(f"    {len(self.capitals)} points d'attraction générés")
 
         self._log("[2] Relaxation de Lloyd")
@@ -197,7 +201,7 @@ class Map:
                 )
 
                 if n < -0.2:
-                    self.biomes[y][x] = Biome.BLANK
+                    self.biomes[y][x] = Biome.WATER
                 elif n < 0.1:
                     self.biomes[y][x] = Biome.PLAIN
                 elif n < 0.325:
@@ -218,11 +222,10 @@ class Map:
                 self.grid[y][x] = self._nearest_capital((x, y))
 
     def _nearest_capital(self, pos):
-        x, y = pos
-        return min(
-            range(len(self.capitals)),
-            key=lambda i: (self.capitals[i][0] - x) ** 2 + (self.capitals[i][1] - y) ** 2,
-        )
+        if self.kdtree is None:
+            raise RuntimeError("This should not happen")
+        _, index = self.kdtree.query(pos)
+        return index
 
     def _cleanup(self):
         """
