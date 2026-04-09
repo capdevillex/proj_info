@@ -1,3 +1,8 @@
+Propositions de noms :
+	Imperium Novum
+	Krata
+	Arkhon
+
 - Carte rectangulaire avec cases à la géométrie créée par l'algo de Voronoï + Poisson disk sampling et "biomisées" avec un bruit de Perlin (entièrement déterministe sur seed)
 
 - Cases avec les modificateurs suivants :
