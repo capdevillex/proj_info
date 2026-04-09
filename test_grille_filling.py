@@ -25,6 +25,10 @@ BIOME_COLORS = {
     "mountain": (120, 120, 120),
 }
 
+pygame.init()
+
+font = pygame.font.SysFont(None, 20)
+
 
 def darken(color, factor=0.7):
     return tuple(int(c * factor) for c in color)
@@ -115,8 +119,7 @@ def draw_centers(screen, game_map: Map, tile_size):
             3,
         )
         # render number of cells
-        font = pygame.font.SysFont(None, 20)
-        text = font.render(str(len(tile.cells)), True, (255, 255, 255))
+        text = font.render(str(tile.area), True, (255, 255, 255))
         screen.blit(text, (int(x * tile_size) - 10, int(y * tile_size) - 15))
 
 
@@ -126,7 +129,6 @@ def draw_centers(screen, game_map: Map, tile_size):
 
 
 def main():
-    pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("4X Map Generator")
 

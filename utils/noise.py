@@ -1,4 +1,8 @@
-"""Utilitaires de base pour le bruit de Perlin"""
+"""
+Utilitaires de base pour le bruit de Perlin
+
+Pris de la bibliothèques `noise` mais plus mise à jour depuis 8 ans, d'où le choix de ne prendre que les bouts utiles.
+"""
 
 import math
 import json
