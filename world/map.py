@@ -43,6 +43,7 @@ from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
 
 from utils.noise import perlin_noise
+from world.biome import Biome
 
 
 class Tile:
@@ -52,7 +53,7 @@ class Tile:
         self.center = self._compute_center()
         self.area = len(cells)
         self.neighbors = set()
-        self.biome = None
+        self.biome = Biome.BLANK
 
     def _compute_center(self):
         x = sum(c[0] + 0.5 for c in self.cells) / len(self.cells)
@@ -71,7 +72,7 @@ class Map:
         self.log = log
 
         self.grid: List[List[Optional[int]]] = [[None] * width for _ in range(height)]
-        self.biomes = [[None] * width for _ in range(height)]
+        self.biomes = [[Biome.BLANK] * width for _ in range(height)]
 
         self.capitals: List[Tuple[float, float]] = []
         self.tiles: Dict[int, Tile] = {}
@@ -196,13 +197,13 @@ class Map:
                 )
 
                 if n < -0.2:
-                    self.biomes[y][x] = "water"
+                    self.biomes[y][x] = Biome.BLANK
                 elif n < 0.1:
-                    self.biomes[y][x] = "plain"
+                    self.biomes[y][x] = Biome.PLAIN
                 elif n < 0.325:
-                    self.biomes[y][x] = "forest"
+                    self.biomes[y][x] = Biome.FOREST
                 else:
-                    self.biomes[y][x] = "mountain"
+                    self.biomes[y][x] = Biome.MOUNTAIN
 
     def _assign_cells(self):
         """
@@ -311,6 +312,10 @@ class Map:
         for y in range(self.height):
             for x in range(self.width):
                 id_ = self.grid[y][x]
+
+                if id_ is None:
+                    print(f"   ({x,y}) cell is None, check the assignation step")
+                    continue
 
                 for nx, ny in self._neighbors(x, y):
                     nid = self.grid[ny][nx]
