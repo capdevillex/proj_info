@@ -2,8 +2,8 @@
 La carte est générée sur une grille 2D où chaque cellule appartient à une province (Tile) et possède
  un biome spécifique. La structure repose sur un diagramme de Voronoi optimisé par relaxation.
 
-1. Placement et relaxation des capitales (points d'origine)
-- Des points (capitales ) sont placés aléatoirement grace à l'algo du Poisson-disk-sampling.
+1. Placement et relaxation des capitales (points d'attraction)
+- Des points (capitales) sont placés aléatoirement grace à l'algo du Poisson-disk-sampling.
 - Relaxation de Lloyd : les capitales sont déplacés vers le centre de masse de leur zone d'influence
   pour obtenir une répartition plus organique et équilibrée des futures provinces.
 
