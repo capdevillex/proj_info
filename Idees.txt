@@ -24,10 +24,11 @@
 - Ressources:
 	Or
 	Nourriture
+	Chasse ?
 
 
 -Idées :
 	Les unités coûtent de l'or et en consomment à chaque tour (CIV)
-	
+
 
 
