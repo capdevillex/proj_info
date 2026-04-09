@@ -46,7 +46,10 @@ def draw_map(screen, game_map: Map, tile_size, hovered_tile=None):
         color = BIOME_COLORS[tile.biome]  # type: ignore
 
         if tile == hovered_tile:
-            color = lighten(color, 50)
+            color = lighten(color, 60)
+
+        if hovered_tile and tile.id in hovered_tile.neighbors:
+            color = lighten(color, 40)
 
         for x, y in tile.cells:
             rect = pygame.Rect(
