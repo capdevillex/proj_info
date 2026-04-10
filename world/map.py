@@ -341,9 +341,10 @@ class Map:
 
         Cette étape garantit que toute la carte est couverte et sans trous.
         """
-        for y in range(self.height):
-            for x in range(self.width):
-                self.grid[y][x] = self._nearest_capital((x, y))
+        coords = [(x, y) for y in range(self.height) for x in range(self.width)]
+        _, indices = self.kdtree.query(coords)
+        for i, (x, y) in enumerate(coords):
+            self.grid[y][x] = int(indices[i])
 
     def _nearest_capital(self, pos):
         """
