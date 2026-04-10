@@ -103,8 +103,9 @@ class Map:
         self.kdtree = KDTree(self.capitals)
         self._log(f"    {len(self.capitals)} points d'attraction générés")
 
-        self._log("[2] Relaxation de Lloyd")
-        self._lloyd_relaxation(iterations=1)
+        # self._log("[2] Relaxation de Lloyd")
+        # self._lloyd_relaxation(iterations=1)
+        # En pratique ne change pas la forme des tuiles et en le désativant on gagne 20-30% de temps de génération
 
         self._log("[3] Génération des biomes")
         self._generate_biomes()
