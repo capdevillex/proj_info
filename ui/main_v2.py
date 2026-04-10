@@ -44,7 +44,13 @@ def compute_tile_size(window_w, window_h):
 # -------------------------
 # 🖼️ RENDER WORLD
 # -------------------------
-def draw_map(screen, game_map, tile_size, cam, hovered_tile):
+def draw_map(screen, game_map, tile_size, cam, hovered_tile, camera_x, camera_y, zoom):
+    min_x = camera_x - TILE_SIZE
+    max_x = camera_x + WIDTH * TILE_SIZE / zoom + TILE_SIZE
+
+    min_y = camera_y - TILE_SIZE
+    max_y = camera_y + HEIGHT * TILE_SIZE / zoom + TILE_SIZE
+
     for tile in game_map.tiles.values():
         color = BIOME_COLORS[tile.biome]
 
@@ -59,6 +65,9 @@ def draw_map(screen, game_map, tile_size, cam, hovered_tile):
             wy1 = y * tile_size
             wx2 = (x + 1) * tile_size
             wy2 = (y + 1) * tile_size
+
+            if wx1 < min_x or wx2 > max_x or wy1 < min_y or wy2 > max_y:  # Culling
+                continue
 
             sx1, sy1 = world_to_screen(wx1, wy1, cam.x, cam.y, cam.zoom)
             sx2, sy2 = world_to_screen(wx2, wy2, cam.x, cam.y, cam.zoom)
@@ -136,13 +145,15 @@ class RenderPipeline:
     def __init__(self):
         self.show_centers = False
 
-    def render(self, screen, game_map, cam, tile_size, hovered_tile):
-        self.render_world(screen, game_map, cam, tile_size, hovered_tile)
+    def render(self, screen, game_map, cam, tile_size, hovered_tile, camera_x, camera_y, zoom):
+        self.render_world(screen, game_map, cam, tile_size, hovered_tile, camera_x, camera_y, zoom)
         self.render_overlay(screen, game_map, cam, tile_size, hovered_tile)
         self.render_ui(screen, hovered_tile)
 
-    def render_world(self, screen, game_map, cam, tile_size, hovered_tile):
-        draw_map(screen, game_map, tile_size, cam, hovered_tile)
+    def render_world(
+        self, screen, game_map, cam, tile_size, hovered_tile, camera_x, camera_y, zoom
+    ):
+        draw_map(screen, game_map, tile_size, cam, hovered_tile, camera_x, camera_y, zoom)
         draw_borders(screen, game_map, tile_size, cam)
 
     def render_overlay(self, screen, game_map, cam, tile_size, hovered_tile):
@@ -204,7 +215,9 @@ def main():
 
         # -------- RENDER --------
         screen.fill((0, 0, 0))
-        renderer.render(screen, game_map, camera, tile_size, hovered_tile)
+        renderer.render(
+            screen, game_map, camera, tile_size, hovered_tile, camera.x, camera.y, camera.zoom
+        )
 
         pygame.display.flip()
 
