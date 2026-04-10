@@ -1,106 +1,103 @@
-Propositions de noms :
-Imperium Novum
-Krata
-Arkhon
 
-* Carte rectangulaire avec cases à la géométrie créée par l'algo de Voronoï + Poisson disk sampling et "biomisées" avec un bruit de Perlin (entièrement déterministe sur seed)
-* Cases avec les modificateurs suivants :
-défense
-attaque
-vision (bloque / porte)
-déplacement (entrée / sortie, coût asymétrique)
-route
-ressources
-supply\_limit
-* Unités :
-damage = base\_damage \* (attack / (attack + defense)) \* terrain\_modifier \* (hp / max\_hp)
-Déplacement avec A\*
-Zone of Control ?
+# Game Design Document : Projet 4X
 
-  Soldat
-Colon
-Cavalier
-Archer
-Avion (si on se chauffe, difficile à équilibrer)
-Artillerie
+Ce document détaille les spécifications techniques et de gameplay pour notre 4X au tour par tour.
 
-  * Contre-unités :
-cavalerie > archers
-archers > infanterie
-infanterie > cavalerie
-* Arbre de technologies:
-Militaire
-Économie (apprivoisement terrain, aprivoisement ressource)
-Exploration / Diplomatie
-coût croissant
-temps de recherche
-prérequis (arbre)
-science produite par des université financées par de l'or (+ programme de recherche inter-cité)
-* Ressources :
-Or
-Nourriture
-Bois (constructions)
-Pierre (défense / bâtiments)
-Fer (unités avancées)
-On peut abstraire Bois + Pierre + Fer en Production dans un premier temps
-Chasse ?
-* Biomes:
-Plaine
-Eau
-Montagne
-Forêt
-Désert
-Un biome influence les ressources disponibles avec des bonus (forêt → bois, montagne → pierre/fer, plaine → nourriture)
-* Par province (1 seul par province, sauf routes, upgradable):
-Ferme = + food
-Mine = + or ou pierre
-Caserne = unités
-Route = cout déplacement / 2
-Fort = interdit le déplacement dans les provinces adjacentes (EU)
-* Idées :
-Les unités coûtent de l'or et en consomment à chaque tour (CIV)
-Brouillard de guerre (FOW)
-Terra Incognita (TI)
-Zone d'influence autour des villes : zone sans FOW qui grandi avec le développement de la cité
-Contrôle de territoire, provinces adjacentes = bonus
-Logistique : unités trop loin = malus d'attrition proportionnel au dépassement de la portée de ravitaillement (augmentable avec des routes)
-Routes : réduisent coût déplacement, bonus économique si connecté à capitale (Polytopia)
-Ville : une ville est une province capitale plus sa zone d'influence qui grandi comme dans CIV
-Population : si food\_surplus / pop > valeur\_arbitraire alors pop++ -> +prod et +taxes
-Events comme dans EU : âge d’or → +prod, révolte → perte province, famine, mauvaise récoltes, etc.
-* IA :
-arbre de décision
-pondération des branches en fonction de l'état de son royaume
-expansion aléatoire pondérée
-attaque si avantage
-priorité ressources
-comportement :
-expansion early
-économie midgame
-guerre late
-* HUD / UX
-survol case → infos
-sélection unité → stats
-minimap ?
-panneau ressources
-* Conditions de victoire :
-domination (militaire)
-richesse (éco)
-technologie (science)
-* Si on a le temps et que l'on se chauffe un peu :
-Biomes dynamiques :
+## 1. Identité et Univers
+### Propositions de noms
+* **Imperium Novum**
+* **Krata**
+* **Arkhon**
 
-  * forêt brûle → devient plaine
-  * désert s’étend dans la direction du vent tous les X tours
-Événements aléatoires :
-  * famine
-  * tempête
-  * découverte
+---
 
+## 2. Génération de la Carte
+Le monde est généré de manière entièrement **déterministe** via une graine (seed).
 
+* **Géométrie :** Grille rectangulaire basée sur un algorithme de **Voronoï** combiné à un **Poisson Disk Sampling** pour une répartition organique des cellules.
+* **Biomes :** Distribution via un **Bruit de Perlin**. Chaque biome influence les ressources et le gameplay :
+    * **Plaine :** Bonus nourriture.
+    * **Eau :** Obstacle ou transport.
+    * **Montagne :** Bonus pierre/fer, bloque la vision.
+    * **Forêt :** Bonus bois, modificateur de défense.
+    * **Désert :** Malus de déplacement/survie.
 
+---
 
+## 3. Mécaniques de Combat et Unités
 
-  Si on se chauffe vraiment vraiment (impossible IMO) rajouter une option pour jouer en LAN.
+### Formule de Dégâts
+Les dégâts sont calculés selon la formule suivante :
 
+`damage = base_bamage *  attack / (attack + defense) * terrain_modifier * (HP / MaxHP)`
 
+### Types d'Unités & Équilibre (Triangle d'Acier)
+* **Soldat (Infanterie) :** Efficace contre la Cavalerie.
+* **Archer :** Efficace contre l'Infanterie.
+* **Cavalier :** Efficace contre les Archers.
+* **Colon :** Expansion territoriale.
+* **Artillerie :** Siège et dégâts de zone.
+* **Avion :** (Optionnel) Unité de fin de jeu, équilibrage complexe.
+
+### Systèmes de Déplacement
+* **Pathfinding :** Algorithme A\*.
+* **Zone de Contrôle (ZoC) :** Les unités ennemies ralentissent ou bloquent le passage adjacent.
+* **Logistique :** Système d'attrition si l'unité dépasse sa portée de ravitaillement (extensible via les routes, dépend des villes).
+
+---
+
+## 4. Économie et Infrastructures
+
+### Ressources
+1.  **Or :** Entretien des unités et financement de la science.
+2.  **Nourriture :** Croissance de la population.
+3.  **Matériaux :** Bois, Pierre, Fer (peuvent être simplifiés en un score unique de **Production** en phase alpha).
+
+### Aménagements de Province (1 slot par case + routes)
+* **Ferme :** Boost de nourriture.
+* **Mine :** Extraction d'or, pierre ou fer.
+* **Caserne :** Production d'unités militaires.
+* **Route :** Divise le coût de déplacement par 2, bonus économique vers la capitale.
+* **Fort :** Bloque le mouvement ennemi dans les cases adjacentes (mécanique type *Europa Universalis*).
+
+### Croissance et Population
+* **Calcul :** Si `FoodSurplus / Population > Seuil`, alors la population augmente.
+* **Effets :** Augmente la production et les revenus fiscaux.
+
+---
+
+## 5. Arbre de Technologies
+La science est générée par des **Universités** financées par l'or.
+* **Branches :** Militaire, Économie (ressources/terrain), Exploration & Diplomatie.
+* **Paramètres :** Coût croissant, temps de recherche en tours, prérequis de dépendance.
+
+---
+
+## 6. Intelligence Artificielle
+L'IA suit un cycle de vie adaptatif :
+* **Early Game :** Focus expansion.
+* **Mid Game :** Focus optimisation économique.
+* **Late Game :** Focus militaire et victoire.
+* **Logique :** Arbre de décision avec pondération dynamique selon l'état du royaume (avantage militaire → agression).
+
+---
+
+## 7. Interface et UX
+* **Fog of War (FOW) :** Brouillard de guerre classique.
+* **Terra Incognita (TI) :** Zones non explorées.
+* **Zone d'Influence :** Rayon de visibilité autour des villes qui croît avec leur développement.
+* **HUD :** Panneau de ressources permanent, infobulles (tooltips) au survol des cases, statistiques détaillées à la sélection.
+
+---
+
+## 8. Conditions de Victoire
+* **Domination :** Élimination militaire des rivaux.
+* **Richesse :** Atteindre un seuil critique de trésorerie/PIB.
+* **Technologie :** Compléter l'arbre de recherche.
+
+---
+
+## 9. Objectifs Secondaires ("Si on se chauffe")
+* **Événements Dynamiques :** Âges d'or, révoltes, famines, tempêtes.
+* **Biomes Évolutifs :** La forêt peut brûler (devient plaine), le désert s'étend avec le vent. (on verra)
+* **Multijoueur :** Mode LAN.
