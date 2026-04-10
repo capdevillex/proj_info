@@ -44,7 +44,7 @@ def compute_tile_size(window_w, window_h):
 # -------------------------
 # 🖼️ RENDER WORLD
 # -------------------------
-def draw_map(screen, game_map, tile_size, cam, hovered_tile, camera_x, camera_y, zoom):
+def draw_map(screen, game_map: Map, tile_size, cam, hovered_tile, camera_x, camera_y, zoom):
     min_x = camera_x - TILE_SIZE
     max_x = camera_x + WIDTH * TILE_SIZE / zoom + TILE_SIZE
 
@@ -145,10 +145,10 @@ class RenderPipeline:
     def __init__(self):
         self.show_centers = False
 
-    def render(self, screen, game_map, cam, tile_size, hovered_tile, camera_x, camera_y, zoom):
+    def render(self, screen, game_map, cam, tile_size, hovered_tile, camera_x, camera_y, zoom, dt):
         self.render_world(screen, game_map, cam, tile_size, hovered_tile, camera_x, camera_y, zoom)
         self.render_overlay(screen, game_map, cam, tile_size, hovered_tile)
-        self.render_ui(screen, hovered_tile)
+        self.render_ui(screen, hovered_tile, dt)
 
     def render_world(
         self, screen, game_map, cam, tile_size, hovered_tile, camera_x, camera_y, zoom
@@ -160,14 +160,20 @@ class RenderPipeline:
         if self.show_centers:
             draw_centers(screen, game_map, tile_size, cam)
 
-    def render_ui(self, screen, hovered_tile):
+    def render_ui(self, screen, hovered_tile, dt):
         if hovered_tile:
-            text = font.render(
+            text_info = font.render(
                 f"Tile {hovered_tile.id} | {hovered_tile.biome} | {hovered_tile.area}",
                 True,
                 (255, 255, 255),
             )
-            screen.blit(text, (10, 10))
+            screen.blit(text_info, (10, 10))
+            text_FPS = font.render(
+                f"FPS : {1/dt:.3f}",
+                True,
+                (255, 255, 255),
+            )
+            screen.blit(text_FPS, (10, 30))
 
 
 # -------------------------
@@ -188,7 +194,7 @@ def main():
     running = True
 
     while running:
-        dt = clock.tick(60) / 1000
+        dt = clock.tick(120) / 1000
         window_w, window_h = screen.get_size()
         tile_size = compute_tile_size(window_w, window_h)
 
@@ -216,7 +222,7 @@ def main():
         # -------- RENDER --------
         screen.fill((0, 0, 0))
         renderer.render(
-            screen, game_map, camera, tile_size, hovered_tile, camera.x, camera.y, camera.zoom
+            screen, game_map, camera, tile_size, hovered_tile, camera.x, camera.y, camera.zoom, dt
         )
 
         pygame.display.flip()
