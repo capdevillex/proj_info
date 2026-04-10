@@ -1,54 +1,84 @@
 """
-La carte est générée sur une grille 2D où chaque cellule appartient à une province (Tile) et possède
- un biome spécifique. La structure repose sur un diagramme de Voronoi optimisé par relaxation.
+Module de Génération Procédurale de Monde (Grid-Based Voronoi Map)
 
-1. Placement et relaxation des capitales (points d'attraction)
-- Des points (capitales) sont placés aléatoirement grace à l'algo du Poisson-disk-sampling.
-- Relaxation de Lloyd : les capitales sont déplacés vers le centre de masse de leur zone d'influence
-  pour obtenir une répartition plus organique et équilibrée des futures provinces.
+Ce module orchestre la création d'un monde structuré en provinces (Tiles) à partir d'une grille 2D.
+La génération suit une approche hybride mêlant partitionnement spatial (Voronoï), échantillonnage de
+Blue Noise (Ebeida/Poisson) et bruit cohérent (Perlin).
 
-2. Génération des biomes
-- Utilisation du bruit de Perlin pour assigner un biome (water, plain, forest, mountain, etc.) à chaque cellule.
-- Les biomes sont spatialement continus et servent de contrainte absolue pour les provinces.
+---
 
-3. Assignation des cellules (Voronoi par biome)
-- Chaque cellule de la grille est rattachée à la capitale la plus proche, on définira le biome de cette province comme le biome majoriataire
-- Cela garantit qu'une province ne chevauche jamais deux biomes différents.
+### Pipeline de Génération :
 
-4. Nettoyage et lissage
-- Lissage (Smooth) : Réduction du bruit sur les frontières.
-- Contraintes de taille : Fusion des provinces trop petites avec leurs voisines et division
-  des provinces trop grandes pour maintenir une densité de jeu homogène.
-- Stabilisation des centres : On s'assure que le centre géométrique d'une province
-  lui appartient toujours pour éviter les formes aberrantes (en forme de "U" ou morcelées).
+1.  **Placement des points d'attraction (Blue Noise) :**
+    * Initialisation de points d'attraction via l'algorithme d'Ebeida (Poisson-disk sampling simplifié).
+    * Cette méthode garantit une distribution homogène des centres de provinces, évitant
+        les clusters inesthétiques tout en conservant un aspect organique.
+    * *Optionnel :* Relaxation de Lloyd pour stabiliser les centroïdes.
 
-5. Finalisation des Provinces (Tiles)
-- Chaque province est instanciée avec :
-    - Son centre (moyenne des positions des cellules).
-    - Son biome dominant (on redéfini le biome de toutes les cellule de la province par celui majoritaire).
-    - Sa liste de cellules et sa surface.
+2.  **Cartographie des Biomes (Bruit Cohérent) :**
+    * Génération d'une carte de bruit de Perlin multi-octave.
+    * Segmentation de la valeur du bruit en seuils discrets pour définir les biomes
+        (Eau, Plaine, Forêt, Montagne).
+    * Assure une continuité spatiale (les forêts bordent les plaines, etc.).
 
-6. Construction du graphe de voisinage
-- Détection de l'adjacence directe entre les cellules pour lier les provinces entre elles.
-- Ce graphe permet ensuite de calculer les chemins et les temps de déplacement.
+3.  **Partitionnement de Voronoï Discret :**
+    * Chaque cellule de la grille est assignée à la capitale la plus proche via une
+        recherche accélérée par KD-Tree.
+    * Unification des biomes : La province adopte le biome majoritaire de ses cellules
+        constituantes, et réécrase ensuite le biome de chaque cellule pour garantir
+        l'homogénéité interne.
 
-Divers :
- - le temps de déplacement d'une région à une autre est proportionnel à la distance de leur centre
-   et pondéré par un coefficient de pénalité de déplacement en fonction du biome
- - les régions sont créées en regroupant les points de même type => Perlin-noise assez "lisse"
+4.  **Optimisation Topologique et Nettoyage :**
+    * **Flood Fill :** Détection et réassignation des fragments isolés (îles de pixels)
+        vers la province voisine la plus dominante.
+    * **Contraintes morphologiques :** Stabilisation des formes pour éviter les
+        provinces en "U" ou excessivement morcelées.
+    * **Filtrage de taille :** Fusion systématique des micro-provinces sous un seuil
+        de surface critique.
+
+5.  **Instanciation et Topologie (Graphe) :**
+    * Calcul des propriétés finales de chaque objet `Tile` (Centroïde, Surface, Biome).
+    * **Graphe d'Adjacence :** Analyse des frontières de cellules pour identifier les
+        provinces voisines. Ce graphe sert de base au calcul de pathfinding et aux
+        algorithmes de diffusion.
+
+---
+
+### Mécaniques de Jeu et Déplacement :
+* **Coût de mouvement :** Le temps de trajet entre deux provinces est calculé par la
+    distance euclidienne entre les centres, pondérée par un coefficient de friction
+    propre au biome de destination.
+* **Déterminisme :** La génération est entièrement pilotée par une graine (seed),
+    permettant une reproductibilité parfaite de la géographie et des biomes.
 """
 
 import random, math, time
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
 
-from scipy.spatial import KDTree  # type: ignore
+from scipy.spatial import KDTree
 
 from utils.noise import perlin_noise
 from world.biome import Biome
 
 
 class Tile:
+    """
+    Représente une unité territoriale (province) cohérente sur la carte.
+
+    Une province regroupe un ensemble de cellules (pixels/coordonnées) issues d'une
+    segmentation de Voronoï. Elle porte des propriétés physiques et topologiques
+    utilisées pour le gameplay et le rendu.
+
+    Attributes:
+        id (int): Identifiant unique de la tuile.
+        cells (List[Tuple[int, int]]): Liste des coordonnées (x, y) composant la tuile.
+        center (Tuple[float, float]): Point central (centroïde) géométrique de la tuile.
+        area (int): Nombre total de cellules (surface).
+        neighbors (Set[int]): Ensemble des IDs des tuiles adjacentes.
+        biome (Biome): Type de terrain dominant assigné à la tuile.
+    """
+
     def __init__(self, id_, cells):
         self.id = id_
         self.cells = cells
@@ -58,17 +88,42 @@ class Tile:
         self.biome = Biome.BLANK
 
     def _compute_center(self):
+        """
+        Calcule le centre de masse moyen de la tuile.
+
+        Returns:
+            Tuple[float, float]: Coordonnées (x, y) du centre géométrique.
+        """
         x = sum(c[0] + 0.5 for c in self.cells) / len(self.cells)
         y = sum(c[1] + 0.5 for c in self.cells) / len(self.cells)
         return (x, y)
 
 
 class Map:
-    def __init__(self, width, height, seed, avg_pts_per_tile=35, log=False):
+    """
+    Gestionnaire principal de la génération procédurale du monde.
+
+    Cette classe orchestre un pipeline allant de la distribution de points  stochastiques (Poisson
+    Disk Sampling) à la construction d'un graphe de voisinage,  en passant par la génération de
+    bruit cohérent (Perlin) pour les biomes.
+
+    Attributes:
+        width (int): Largeur de la carte en cellules.
+        height (int): Hauteur de la carte en cellules.
+        seed (int): Graine de génération garantissant le déterminisme.
+        tiles (Dict[int, Tile]): Répertoire des objets Tile générés.
+        grid (List[List[Optional[int]]]): Grille 2D stockant l'ID de la tuile pour chaque coordonnée.
+        biomes (List[List[Biome]]): Grille 2D des types de terrain.
+    """
+
+    def __init__(self, width, height, seed, avg_cells_per_tile=35, log=False):
         self.width = width
         self.height = height
-        self.n_points = int(width * height / avg_pts_per_tile)
-        self.avg_pts_per_tile = avg_pts_per_tile
+        self.avg_cells_per_tile = avg_cells_per_tile
+        _corrected_avg_cells_per_tile = (
+            avg_cells_per_tile / 1.566
+        )  # facteur de correction empirique
+        self.n_points = int(width * height / _corrected_avg_cells_per_tile)
         self.seed = seed
         random.seed(self.seed)
         self.log = log
@@ -86,17 +141,25 @@ class Map:
         """
         Sérialise la carte, la génération est purement déterministe en se basant sur la seed, on peut
         donc se contenter de stocker les paramètres de génération pour recréer la même carte à l'identique.
+
+        Returns:
+            Dict: Paramètres nécessaires pour reconstruire la carte via la même seed.
         """
         return {
             "width": self.width,
             "height": self.height,
-            "avg_pts_per_tile": self.avg_pts_per_tile,
+            "avg_cells_per_tile": self.avg_cells_per_tile,
             "seed": self.seed,
         }
 
     # PIPELINE GLOBAL
     def _generate(self):
-        """Pipeline de génération de la carte"""
+        """ "
+        Exécute le pipeline de génération complet (Séquence chronologique).
+
+        Séquence :
+            Points Poisson -> Bruit Biomes -> Voronoï -> Nettoyage -> Topologie.
+        """
         tic = time.perf_counter()
         self._log("[1] Génération des points d'attraction (Poisson)")
         self.capitals = self._ebeida_poisson_phase1(self.n_points)
@@ -118,6 +181,8 @@ class Map:
 
         self._log("[6] Construction des provinces")
         self._build_tiles()
+        self._log(f"    {len(self.tiles)} provinces générés")
+        self._log(f"    mean area : {sum((t.area for t in self.tiles.values()))/len(self.tiles)}")
 
         self._log("[7] Voisinage")
         self._build_neighbors()
@@ -166,8 +231,7 @@ class Map:
 
         La validation se fait uniquement sur un voisinage local (5x5), garantissant une complexité quasi-linéaire.
 
-        Cette méthode remplace efficacement le Poisson disk sampling naïf
-        avec de bien meilleures performances pour un grand nombre de points.
+        Cette méthode remplace efficacement le Poisson disk sampling naïf avec de bien meilleures performances pour un grand nombre de points.
         """
 
         width, height = self.width, self.height
@@ -221,10 +285,9 @@ class Map:
         Chaque point est déplacé vers le centre de masse des cellules qui lui sont
         les plus proches (Voronoï discret sur la grille).
 
-        Cela permet de rendre la distribution plus régulière et organique,
-        en évitant les zones trop denses ou trop vides.
+        Cela permet de rendre la distribution plus régulière et organique, en évitant les zones trop denses ou trop vides.
 
-        Le processus est répété plusieurs fois pour converger vers un équilibre.
+        Transforme un Voronoï irrégulier en un pavage de Centroïdal Voronoï (CVT) plus esthétique et équilibré.
         """
         for _ in range(iterations):
             regions = defaultdict(list)
@@ -246,15 +309,14 @@ class Map:
 
     def _generate_biomes(self, octaves=3):
         """
-        Génère les biomes via bruit de Perlin.
+        Génère les biomes via bruit de Perlin multi-octave.
 
-        Chaque cellule reçoit une valeur continue transformée en catégorie :
-        eau, plaine, forêt, montagne.
+        Chaque cellule reçoit une valeur continue transformée en catégorie : eau, plaine, forêt, montagne.
 
-        Le Perlin garantit une continuité spatiale naturelle, évitant le bruit
-        aléatoire pur.
+        Args:
+            octaves (int): Niveau de détail du bruit (persistance des fréquences).
         """
-        scale = self.avg_pts_per_tile * 1.35
+        scale = self.avg_cells_per_tile * 1.35
 
         for y in range(self.height):
             for x in range(self.width):
@@ -275,15 +337,23 @@ class Map:
         """
         Assigne chaque cellule au point d'attraction le plus proche (Voronoï discret).
 
-        On calcule la distance euclidienne à chaque point d'attraction et on choisit le plus proche.
+        Utilise un KD-Tree pour optimiser la recherche du point d'attraction le plus proche pour chaque cellule (x, y).
 
-        Cette étape garantit que toute la carte est couverte sans trous.
+        Cette étape garantit que toute la carte est couverte et sans trous.
         """
         for y in range(self.height):
             for x in range(self.width):
                 self.grid[y][x] = self._nearest_capital((x, y))
 
     def _nearest_capital(self, pos):
+        """
+        Trouve l'index du point d'attraction le plus proche d'une coordonnée donnée.
+
+        Args:
+            pos (Tuple[int, int]): Position cible.
+        Returns:
+            int: Index (ID) de la capitale la plus proche.
+        """
         if self.kdtree is None:
             raise RuntimeError("This should not happen")
         _, index = self.kdtree.query(pos)
@@ -291,7 +361,7 @@ class Map:
 
     def _cleanup(self):
         """
-        Nettoie les artefacts du Voronoï discret.
+        Post-traitement morphologique pour garantir l'intégrité de la carte, nettoie les artefacts du Voronoï discret.
 
         - Supprime les petites régions isolées
         - Fusionne les provinces trop petites avec leurs voisines
@@ -327,6 +397,13 @@ class Map:
                         self._reassign_component(comp)
 
     def _reassign_component(self, comp):
+        """
+        Réassigne un groupe de cellules isolées au voisin le plus représenté.
+
+        Args:
+            comp (List[Tuple[int, int]]): Liste de cellules formant une île isolée.
+        """
+        self._log(f"[reassign comp] : {comp}")
         neighbor_ids = Counter()
         for x, y in comp:
             for nx, ny in self._neighbors(x, y):
@@ -338,7 +415,7 @@ class Map:
 
     def _build_tiles(self):
         """
-        Construit les objets Tile à partir de la grille.
+        Instancie les objets Tile et harmonise les biomes.
 
         Chaque province récupère :
         - ses cellules
@@ -367,7 +444,7 @@ class Map:
         """
         Construit le graphe de voisinage entre provinces.
 
-        Deux provinces sont voisines si au moins une de leurs cellules est adjacente.
+        Deux provinces sont voisines si au moins une de leurs cellules est adjacente latéralement ou diagonalement.
 
         Ce graphe est essentiel pour :
         - pathfinding
@@ -388,6 +465,15 @@ class Map:
                         self.tiles[id_].neighbors.add(nid)
 
     def _neighbors(self, x, y):
+        """
+        Générateur des 8 coordonnées adjacentes à un point.
+
+        Args:
+            x (int): Coordonnée X d'origine.
+            y (int): Coordonnée Y d'origine.
+        Yields:
+            Tuple[int, int]: Coordonnées valides à l'intérieur des limites de la carte.
+        """
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (1, 1), (1, -1), (-1, 1), (-1, -1)]:
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.width and 0 <= ny < self.height:
