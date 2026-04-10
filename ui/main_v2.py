@@ -79,7 +79,7 @@ def main():
     clock = pygame.time.Clock()
 
     seed = random.randint(0, 1000)
-    game_map = Map(WIDTH, HEIGHT, seed, avg_pts_per_tile=30, log=LOG_MAP_GENERATION)
+    game_map = Map(WIDTH, HEIGHT, seed, log=LOG_MAP_GENERATION)
 
     camera = Camera()
     renderer = RenderPipeline(font, BIOME_COLORS)
@@ -102,7 +102,7 @@ def main():
                     renderer.map_dirty = True
                     renderer.border_dirty = True
                     seed = random.randint(0, 1000)
-                    game_map = Map(WIDTH, HEIGHT, seed, avg_pts_per_tile=30, log=LOG_MAP_GENERATION)
+                    game_map = Map(WIDTH, HEIGHT, seed, log=LOG_MAP_GENERATION)
 
                 if event.key == pygame.K_c:
                     renderer.show_centers = not renderer.show_centers
