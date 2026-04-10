@@ -1,5 +1,5 @@
 import math
-import pygame  # type: ignore
+import pygame
 
 
 def speed_coeff(zoom):

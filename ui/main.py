@@ -1,6 +1,6 @@
 import random, math
 
-import pygame  # type: ignore
+import pygame
 
 from world.map import Map
 from world.biome import Biome
@@ -61,7 +61,7 @@ def speed_coeff(zoom):
 def draw_map(screen, game_map: Map, tile_size, camera_x, camera_y, zoom, hovered_tile=None):
     """Dessine les provinces cellule par cellule"""
     for tile in game_map.tiles.values():
-        color = BIOME_COLORS[tile.biome]  # type: ignore
+        color = BIOME_COLORS[tile.biome]
 
         if tile == hovered_tile:
             color = lighten(color, 70)
@@ -187,7 +187,7 @@ def main():
         if 0 <= grid_x < game_map.width and 0 <= grid_y < game_map.height:
             # On récupère la province (Tile) à cette position via la grille interne
             tile_id = game_map.grid[grid_y][grid_x]
-            hovered_tile = game_map.tiles.get(tile_id)  # type: ignore
+            hovered_tile = game_map.tiles.get(tile_id)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
