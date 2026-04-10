@@ -9,8 +9,8 @@ from ui.renderer import RenderPipeline
 # -------------------------
 # 🎨 CONFIG
 # -------------------------
-TILE_SIZE = 6
-HEIGHT = 200
+TILE_SIZE = 4
+HEIGHT = 300
 WIDTH = (HEIGHT * 16) // 9
 
 SCREEN_WIDTH = WIDTH * TILE_SIZE
