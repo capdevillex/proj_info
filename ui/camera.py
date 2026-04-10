@@ -25,28 +25,45 @@ class Camera:
 
     def update(self, dt, game_map, tile_size, window_w, window_h):
         keys = pygame.key.get_pressed()
-        move_speed = 10
+        accel = 5000  # Accélération (pixels/s^2)
+        friction_coeff = 0.01
 
-        self.dx /= 1.65 + 20 * dt
-        self.dy /= 1.65 + 20 * dt
-
+        move_x = 0
+        move_y = 0
         if keys[pygame.K_z]:
-            self.dy -= move_speed * dt / self.zoom
+            move_y -= 1
         if keys[pygame.K_s]:
-            self.dy += move_speed * dt / self.zoom
+            move_y += 1
         if keys[pygame.K_q]:
-            self.dx -= move_speed * dt / self.zoom
+            move_x -= 1
         if keys[pygame.K_d]:
-            self.dx += move_speed * dt / self.zoom
+            move_x += 1
 
-        if abs(self.dx) > 0.05 or abs(self.dy) > 0.05:
-            norm = (self.dx**2 + self.dy**2) ** 0.5
-            self.x += self.dx / norm * speed_coeff(self.zoom) * move_speed
-            self.y += self.dy / norm * speed_coeff(self.zoom) * move_speed
+        if move_x != 0 or move_y != 0:
+            inv = 1 / math.sqrt(2)
+            move_x *= inv
+            move_y *= inv
+
+            self.dx += move_x * accel * dt
+            self.dy += move_y * accel * dt
+
+        self.dx *= math.pow(friction_coeff, dt)
+        self.dy *= math.pow(friction_coeff, dt)
+
+        if abs(self.dx) < 1:
+            self.dx = 0
+        if abs(self.dy) < 1:
+            self.dy = 0
+
+        self.x += (self.dx / self.zoom) * dt
+        self.y += (self.dy / self.zoom) * dt
 
         # clamp caméra
-        self.x = min(game_map.width * tile_size - window_w / self.zoom, max(0, self.x))
-        self.y = min(game_map.height * tile_size - window_h / self.zoom, max(0, self.y))
+        max_x = game_map.width * tile_size - window_w / self.zoom
+        max_y = game_map.height * tile_size - window_h / self.zoom
+
+        self.x = max(0, min(self.x, max_x))
+        self.y = max(0, min(self.y, max_y))
 
     def apply_zoom(self, mouse_pos, zoom_delta):
         mx, my = mouse_pos
