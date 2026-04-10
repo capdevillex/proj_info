@@ -245,7 +245,7 @@ class Map:
         grid_h = int(height / cell_size) + 1
 
         # grille : stocke index du point
-        grid = [[None for _ in range(grid_w)] for _ in range(grid_h)]
+        grid = [[-1 for _ in range(grid_w)] for _ in range(grid_h)]
 
         points = []
 
@@ -258,7 +258,7 @@ class Map:
             for ny in range(max(0, gy - 2), min(grid_h, gy + 3)):
                 for nx in range(max(0, gx - 2), min(grid_w, gx + 3)):
                     idx = grid[ny][nx]
-                    if idx is not None:
+                    if idx != -1:
                         qx, qy = points[idx]
                         if (qx - px) ** 2 + (qy - py) ** 2 < r * r:
                             return False
@@ -357,7 +357,7 @@ class Map:
         if self.kdtree is None:
             raise RuntimeError("This should not happen")
         _, index = self.kdtree.query(pos)
-        return index
+        return int(index)
 
     def _cleanup(self):
         """
