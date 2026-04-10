@@ -205,6 +205,10 @@ class Map:
         Cela suffit pour des tailles modestes.
 
         Le but est d'obtenir des points d'attraction bien répartis qui serviront de centres Voronoï.
+
+        ---
+
+        (Non appelé, gardé juste à des fins de documentation)
         """
         points = []
         min_dist = math.sqrt((self.width * self.height) / n_points) * 0.7
@@ -288,6 +292,10 @@ class Map:
         Cela permet de rendre la distribution plus régulière et organique, en évitant les zones trop denses ou trop vides.
 
         Transforme un Voronoï irrégulier en un pavage de Centroïdal Voronoï (CVT) plus esthétique et équilibré.
+
+        ---
+
+        (Non appelé, gardé juste à des fins de documentation)
         """
         for _ in range(iterations):
             regions = defaultdict(list)
@@ -354,6 +362,10 @@ class Map:
             pos (Tuple[int, int]): Position cible.
         Returns:
             int: Index (ID) de la capitale la plus proche.
+
+        ---
+
+        (Non appelé, gardé juste à des fins de documentation)
         """
         if self.kdtree is None:
             raise RuntimeError("This should not happen")
