@@ -71,7 +71,7 @@ class Camera:
         before = screen_to_world(mx, my, self.x, self.y, self.zoom)
 
         self.zoom *= 1 + zoom_delta * 0.1
-        self.zoom = max(1, min(self.zoom, 5))
+        self.zoom = max(1, min(self.zoom, 25))
 
         after = screen_to_world(mx, my, self.x, self.y, self.zoom)
 
