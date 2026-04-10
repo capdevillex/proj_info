@@ -62,6 +62,9 @@ from utils.noise import perlin_noise
 from world.biome import Biome
 
 
+VORONOI_AREA_CORRECTION = 1.556  # facteur de correction empirique
+
+
 class Tile:
     """
     Représente une unité territoriale (province) cohérente sur la carte.
@@ -120,9 +123,7 @@ class Map:
         self.width = width
         self.height = height
         self.avg_cells_per_tile = avg_cells_per_tile
-        _corrected_avg_cells_per_tile = (
-            avg_cells_per_tile / 1.566
-        )  # facteur de correction empirique
+        _corrected_avg_cells_per_tile = avg_cells_per_tile / VORONOI_AREA_CORRECTION
         self.n_points = int(width * height / _corrected_avg_cells_per_tile)
         self.seed = seed
         random.seed(self.seed)
@@ -150,6 +151,7 @@ class Map:
             "height": self.height,
             "avg_cells_per_tile": self.avg_cells_per_tile,
             "seed": self.seed,
+            "log": self.log,
         }
 
     # PIPELINE GLOBAL
@@ -280,6 +282,10 @@ class Map:
                 grid[gy][gx] = len(points)
                 points.append((px, py))
 
+        if len(points) < width * height / self.avg_cells_per_tile * 0.7:
+            raise RuntimeError(
+                f"Poisson sampling failed to generate enough points: {len(points)} / {n_points}"
+            )
         return points
 
     def _lloyd_relaxation(self, iterations=2):
@@ -331,6 +337,12 @@ class Map:
                 n = perlin_noise(
                     x / scale, y / scale, octaves=octaves, lacunarity=1.75, base=self.seed % 255
                 )
+
+                # ajout d'un gradiant négatif qui part des bords de la carte et vers le centre
+                nx = 1 - (2 * x / self.width - 1 + 10**-5) ** 2
+                ny = 1 - (2 * y / self.height - 1 + 10**-5) ** 2
+                deniv = min(math.log(3 * min(nx, ny)), 0.1)
+                n += 0.7 * deniv
 
                 if n < -0.225:
                     self.biomes[y][x] = Biome.WATER
@@ -406,7 +418,7 @@ class Map:
                 if not visited[y][x]:
                     id_ = self.grid[y][x]
                     comp = flood_fill(x, y, id_)
-                    if len(comp) < 10:
+                    if len(comp) < self.avg_cells_per_tile * 0.3:
                         self._reassign_component(comp)
 
     def _reassign_component(self, comp):
@@ -479,7 +491,8 @@ class Map:
 
     def _neighbors(self, x, y):
         """
-        Générateur des 8 coordonnées adjacentes à un point.
+        Générateur des 8 coordonnées adjacentes à un point. On considère aussi comme adjacente deux
+        provinces ne partageant qu'un sommet commun.
 
         Args:
             x (int): Coordonnée X d'origine.
