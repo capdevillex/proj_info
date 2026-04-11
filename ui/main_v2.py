@@ -4,15 +4,17 @@ import pygame
 from config import GameConfig as gc
 from world.map import Map
 from world.biome import Biome
-from world.unit import Unit, UnitType  # NOUVEAU : imports pour les unités
+from world.unit import Unit, UnitType, UnitPlacementButton  # NOUVEAU : imports pour les unités
+from world.clock import TurnManager
 from ui.camera import Camera, world_to_screen, screen_to_world
 from ui.renderer import RenderPipeline
 
 
-pygame.init()
-font = pygame.font.SysFont(None, 20)
-button_font = pygame.font.SysFont(None, 18)  # NOUVEAU : police pour le bouton
 
+pygame.init()
+
+font = pygame.font.SysFont(None, 20)
+button_font = pygame.font.SysFont(None, 18)  #police pour le bouton
 
 # -------------------------
 # 🧰 UTILS
@@ -53,54 +55,6 @@ def get_hovered_tile(game_map, cam, tile_size):
     return None
 
 
-# NOUVEAU : Classe pour le bouton de placement d'unités
-class UnitPlacementButton:
-    """
-    Bouton UI pour activer/désactiver le mode placement d'unités.
-
-    Le bouton affiche :
-    - "Place Unit" en bleu normal quand le mode est désactivé
-    - "Place Unit (ON)" en rouge quand le mode est activé
-    """
-
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.is_active = False
-        self.is_hovered = False
-
-    def update(self, mouse_pos):
-        """Met à jour l'état du bouton (survol)"""
-        self.is_hovered = self.rect.collidepoint(mouse_pos)
-
-    def is_clicked(self, mouse_pos):
-        """Retourne True si le bouton est cliqué"""
-        return self.rect.collidepoint(mouse_pos)
-
-    def toggle(self):
-        """Active/désactive le mode placement"""
-        self.is_active = not self.is_active
-
-    def draw(self, screen):
-        """Dessine le bouton à l'écran"""
-        # Couleur du bouton selon l'état
-        if self.is_active:
-            color = gc.BUTTON_ACTIVE_COLOR  # Rouge si actif
-        elif self.is_hovered:
-            color = gc.BUTTON_HOVER_COLOR  # Bleu clair si survolé
-        else:
-            color = gc.BUTTON_COLOR  # Bleu normal
-
-        # Dessiner le rectangle du bouton
-        pygame.draw.rect(screen, color, self.rect)
-        pygame.draw.rect(screen, (200, 200, 200), self.rect, 2)  # Bordure
-
-        # Texte du bouton
-        text_str = "Placer Unité (ON)" if self.is_active else "Placer Unité (OFF)"
-        text_surface = button_font.render(text_str, True, (255, 255, 255))
-        text_rect = text_surface.get_rect(center=self.rect.center)
-        screen.blit(text_surface, text_rect)
-
-
 # -------------------------
 # 🚀 MAIN
 # -------------------------
@@ -127,6 +81,10 @@ def main():
 
     running = True
 
+    turn_manager = TurnManager()
+
+    #bouton pour le tour suivant
+    next_turn_rect = pygame.Rect(gc.SCREEN_WIDTH - 160, 10, 150, 40)
     while running:
         dt = clock.tick(gc.FPS) / 1000
         window_w, window_h = screen.get_size()
@@ -203,6 +161,14 @@ def main():
                                 hovered_tile.add_unit(unit)
                                 print(f"✅ Unité placée sur tuile {hovered_tile.id} : {unit}")
 
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1: # Clic gauche
+                    mouse_pos = pygame.mouse.get_pos()
+                    
+                    # Si on clique DANS le rectangle du bouton "Tour Suivant"
+                    if next_turn_rect.collidepoint(mouse_pos):
+                        turn_manager.next_turn(game_map)
+
         # -------- UPDATE --------
         camera.update(dt, game_map, tile_size, window_w, window_h)
         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
@@ -219,10 +185,18 @@ def main():
         placement_button.draw(screen)
 
         # NOUVEAU : Afficher le type d'unité sélectionné
-        unit_type_text = button_font.render(
-            f"Type d'unité sélectionnée: {selected_unit_type.name} (1-4 pour changer)", True, (200, 200, 200)
-        )
+        unit_type_text = button_font.render(f"Type d'unité sélectionnée: {selected_unit_type.name} (1-4 pour changer)", True, (200, 200, 200))
         screen.blit(unit_type_text, (gc.BUTTON_X, gc.BUTTON_Y + gc.BUTTON_HEIGHT + 10))
+
+        #bouton tour suivant crazzyyyyyyyy
+        pygame.draw.rect(screen, (60, 60, 60), next_turn_rect)
+        pygame.draw.rect(screen, (255, 255, 255), next_turn_rect, 2)
+        ui_font = pygame.font.SysFont(None, 24)
+        turn_text = ui_font.render(f"Fin du tour {turn_manager.current_turn}", True, (255, 255, 255))
+        text_rect = turn_text.get_rect(center=next_turn_rect.center)
+        screen.blit(turn_text, text_rect)
+
+
 
         pygame.display.flip()
 

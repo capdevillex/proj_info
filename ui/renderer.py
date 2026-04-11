@@ -260,20 +260,10 @@ class RenderPipeline:
             )
             screen.blit(text_info, (10, 10))
 
-            # Afficher le nombre d'unités
-            units_count = len(hovered_tile.units)
-            if units_count > 0:
-                units_text = self.font.render(
-                    f"Units: {units_count}",
-                    True,
-                    (200, 255, 200),
-                )
-                screen.blit(units_text, (10, 50))
-
             self.fps = (self.fps * 0.85) + (1 / dt * (1 - 0.85))
-            text_FPS = self.font.render(
-                f"FPS : {self.fps:.1f} | seed {game_map.seed}",
-                True,
-                (255, 255, 255),
+        text_FPS = self.font.render(
+            f"FPS : {self.fps:.1f} | seed {game_map.seed}",
+            True,
+            (255, 255, 255),
             )
-            screen.blit(text_FPS, (10, 30))
+        screen.blit(text_FPS, (10, 30))

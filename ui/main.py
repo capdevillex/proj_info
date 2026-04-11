@@ -19,6 +19,7 @@ SCREEN_HEIGHT = HEIGHT * TILE_SIZE
 LOG_MAP_GENERATION = True
 
 
+
 BIOME_COLORS = {
     Biome.BLANK: (0, 0, 0),
     Biome.WATER: (50, 80, 200),

@@ -5,7 +5,16 @@ Les unités sont des entités placées sur les tuiles de la carte.
 Elles représentent des éléments du gameplay (soldats, villes, etc.)
 """
 
+import pygame
 from enum import Enum
+from config import GameConfig as gc
+
+
+pygame.init()
+
+font = pygame.font.SysFont(None, 20)
+button_font = pygame.font.SysFont(None, 18)  #police pour le bouton
+
 
 
 class UnitType(Enum):
@@ -63,3 +72,49 @@ class Unit:
             UnitType.SETTLEMENT: 4,
         }
         return sizes.get(self.unit_type, 2)
+
+class UnitPlacementButton:
+    """
+    Bouton UI pour activer/désactiver le mode placement d'unités.
+
+    Le bouton affiche :
+    - "Place Unit" en bleu normal quand le mode est désactivé
+    - "Place Unit (ON)" en rouge quand le mode est activé
+    """
+
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.is_active = False
+        self.is_hovered = False
+
+    def update(self, mouse_pos):
+        """Met à jour l'état du bouton (survol)"""
+        self.is_hovered = self.rect.collidepoint(mouse_pos)
+
+    def is_clicked(self, mouse_pos):
+        """Retourne True si le bouton est cliqué"""
+        return self.rect.collidepoint(mouse_pos)
+
+    def toggle(self):
+        """Active/désactive le mode placement"""
+        self.is_active = not self.is_active
+
+    def draw(self, screen):
+        """Dessine le bouton à l'écran"""
+        # Couleur du bouton selon l'état
+        if self.is_active:
+            color = gc.BUTTON_ACTIVE_COLOR  # Rouge si actif
+        elif self.is_hovered:
+            color = gc.BUTTON_HOVER_COLOR  # Bleu clair si survolé
+        else:
+            color = gc.BUTTON_COLOR  # Bleu normal
+
+        # Dessiner le rectangle du bouton
+        pygame.draw.rect(screen, color, self.rect)
+        pygame.draw.rect(screen, (200, 200, 200), self.rect, 2)  # Bordure
+
+        # Texte du bouton
+        text_str = "Placer Unité (ON)" if self.is_active else "Placer Unité (OFF)"
+        text_surface = button_font.render(text_str, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        screen.blit(text_surface, text_rect)
