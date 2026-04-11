@@ -9,7 +9,7 @@ from ui.renderer import RenderPipeline
 # -------------------------
 # 🎨 CONFIG
 # -------------------------
-TILE_SIZE = 4
+TILE_SIZE = 2  # Divisé par 2 pour passer de 2132px à 1066px de large
 HEIGHT = 300
 WIDTH = (HEIGHT * 16) // 9
 
