@@ -82,7 +82,9 @@ def perlin_noise(
     total = 0.0
 
     for _ in range(octaves):
-        total += _noise(x * freq, y * freq, int(repeatx * freq), int(repeaty * freq), base) * amp
+        total += (
+            _noise(x * freq, y * freq, int(repeatx * freq), int(repeaty * freq), base % 254) * amp
+        )
         max_amp += amp
         freq *= lacunarity
         amp *= persistence
