@@ -59,8 +59,8 @@ class Camera:
         self.y += (self.dy / self.zoom) * dt
 
         # clamp caméra
-        max_x = game_map.width * tile_size - window_w / self.zoom
-        max_y = game_map.height * tile_size - window_h / self.zoom
+        max_x = max(0, game_map.width * tile_size - window_w / self.zoom)
+        max_y = max(0, game_map.height * tile_size - window_h / self.zoom)
 
         self.x = max(0, min(self.x, max_x))
         self.y = max(0, min(self.y, max_y))
