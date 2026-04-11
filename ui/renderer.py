@@ -95,9 +95,57 @@ class RenderPipeline:
 
         return surface, (min_x * tile_size, min_y * tile_size)
 
+    # ========== NOUVEAU : Méthode pour dessiner les unités ==========
+    def render_units(self, screen, game_map, cam, tile_size):
+        """
+        Dessine toutes les unités de la carte.
+        
+        Pour chaque tuile, dessine les unités comme des cercles colorés
+        au-dessus du centre de la tuile.
+        
+        Args:
+            screen: Surface pygame du rendu
+            game_map: La carte avec toutes les tuiles
+            cam: Caméra (pour les transformations de coordonnées)
+            tile_size: Taille d'une tuile en pixels
+        """
+        for tile in game_map.tiles.values():
+            # Si la tuile n'a pas d'unités, on saute
+            if not tile.has_units():
+                continue
+            
+            # Position du centre de la tuile en coordonnées monde
+            tile_center_x, tile_center_y = tile.center
+            world_x = tile_center_x * tile_size
+            world_y = tile_center_y * tile_size
+            
+            # Convertir en coordonnées écran
+            screen_x, screen_y = world_to_screen(world_x, world_y, cam.x, cam.y, cam.zoom)
+            
+            # Dessiner chaque unité sur cette tuile
+            for i, unit in enumerate(tile.units):
+                # Décaler légèrement chaque unité si plusieurs sur la même tuile
+                offset = (i - len(tile.units) / 2) * 12 * cam.zoom
+                unit_screen_x = screen_x + offset
+                unit_screen_y = screen_y
+                
+                # Récupérer la couleur et la taille de l'unité
+                color = unit.get_color()
+                size = int(unit.get_size() * cam.zoom)
+                
+                # Dessiner l'unité comme un cercle
+                pygame.draw.circle(screen, color, (int(unit_screen_x), int(unit_screen_y)), max(2, size))
+                
+                # Ajouter une bordure blanche pour mieux voir
+                pygame.draw.circle(screen, (255, 255, 255), (int(unit_screen_x), int(unit_screen_y)), max(2, size), 1)
+
     def render(self, screen, game_map, cam, tile_size, hovered_tile, dt):
         self.render_world(screen, game_map, cam, tile_size)
         self.render_overlay(screen, game_map, cam, tile_size, hovered_tile)
+        
+        # NOUVEAU : Dessiner les unités
+        self.render_units(screen, game_map, cam, tile_size)
+        
         self.render_ui(screen, hovered_tile, dt)
 
     def render_world(self, screen, game_map, cam, tile_size):
@@ -187,12 +235,24 @@ class RenderPipeline:
 
     def render_ui(self, screen, hovered_tile, dt):
         if hovered_tile:
+            # Afficher les infos de la tuile
             text_info = self.font.render(
                 f"Tile {hovered_tile.id:>5} | {hovered_tile.biome:>7} | {hovered_tile.area}",
                 True,
                 (255, 255, 255),
             )
             screen.blit(text_info, (10, 10))
+            
+            # NOUVEAU : Afficher le nombre d'unités
+            units_count = len(hovered_tile.units)
+            if units_count > 0:
+                units_text = self.font.render(
+                    f"Units: {units_count}",
+                    True,
+                    (200, 255, 200),
+                )
+                screen.blit(units_text, (10, 50))
+            
             self.fps = (self.fps * 0.85) + (1 / dt * (1 - 0.85))
             text_FPS = self.font.render(
                 f"FPS : {self.fps:.1f}",
