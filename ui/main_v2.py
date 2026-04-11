@@ -183,19 +183,14 @@ def main():
 
                     # NOUVEAU : Si en mode placement et clic sur une tuile
                     elif placement_button.is_active:
-                        print("1. Le bouton de placement est bien actif") # <-- DEBUG
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
                         if hovered_tile:
-                            print(f"2. Tuile survolée trouvée : {hovered_tile.id}") # <-- DEBUG
+                            print(f"2. Tuile survolée trouvée : {hovered_tile.id}")
                             if hovered_tile.has_units():
                                 print(f"❌La tuile {hovered_tile.id} a déjà une unité !")
-                            elif (
-                                hovered_tile.biome == Biome.WATER
-                                and not selected_unit_water_affinity
-                            ):
-                                print(
-                                    f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!"
-                                )
+                            elif (hovered_tile.biome == Biome.WATER
+                                and not selected_unit_water_affinity):
+                                print(f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!")
                             else:
                                 # Créer et ajouter une unité
                                 unit = Unit(
