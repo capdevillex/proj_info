@@ -102,34 +102,34 @@ class RenderPipeline:
         for tile in game_map.tiles.values():
             if not tile.has_units():
                 continue
-            
+
             # Position du centre de la tuile
             tile_center_x, tile_center_y = tile.center
             world_x = tile_center_x * tile_size
             world_y = tile_center_y * tile_size
-            
+
             # Convertir en coordonnées écran
             screen_x, screen_y = world_to_screen(world_x, world_y, cam.x, cam.y, cam.zoom)
-            
+
             # MODIFIÉ : Arrondir pour mieux centrer
             screen_x = round(screen_x)
             screen_y = round(screen_y)
-            
+
             # Dessiner chaque unité
             for unit in tile.units:
                 color = unit.get_color()
                 size = max(1, int(unit.get_size() * cam.zoom))
-                
+
                 # Dessiner le cercle
                 pygame.draw.circle(screen, color, (screen_x, screen_y), size)
-                
+
                 # Bordure blanche
                 pygame.draw.circle(screen, (255, 255, 255), (screen_x, screen_y), size, 1)
 
     def render(self, screen, game_map, cam, tile_size, hovered_tile, dt):
         self.render_world(screen, game_map, cam, tile_size)
         self.render_overlay(screen, game_map, cam, tile_size, hovered_tile)
-        
+
         # Dessiner les unités
         self.render_units(screen, game_map, cam, tile_size)
 
@@ -222,7 +222,7 @@ class RenderPipeline:
                 (255, 255, 255),
             )
             screen.blit(text_info, (10, 10))
-            
+
             # Afficher le nombre d'unités
             units_count = len(hovered_tile.units)
             if units_count > 0:
@@ -232,7 +232,7 @@ class RenderPipeline:
                     (200, 255, 200),
                 )
                 screen.blit(units_text, (10, 50))
-            
+
             self.fps = (self.fps * 0.85) + (1 / dt * (1 - 0.85))
             text_FPS = self.font.render(
                 f"FPS : {self.fps:.1f} | seed {game_map.seed}",
