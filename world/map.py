@@ -170,7 +170,7 @@ class Map:
 
         # self._log("[2] Relaxation de Lloyd")
         # self._lloyd_relaxation(iterations=1)
-        # En pratique ne change pas la forme des tuiles et en le désativant on gagne 20-30% de temps de génération
+        # En pratique ne change pas la forme des tuiles et en le désactivant on gagne 20-30% de temps de génération
 
         self._log("[3] Génération des biomes")
         self._generate_biomes()
@@ -338,7 +338,7 @@ class Map:
                     x / scale, y / scale, octaves=octaves, lacunarity=1.75, base=self.seed % 255
                 )
 
-                # ajout d'un gradiant négatif qui part des bords de la carte et vers le centre
+                # ajout d'un gradient négatif qui part des bords de la carte et vers le centre
                 nx = 1 - (2 * x / self.width - 1 + 10**-5) ** 2
                 ny = 1 - (2 * y / self.height - 1 + 10**-5) ** 2
                 deniv = min(math.log(3 * min(nx, ny)), 0.1)
