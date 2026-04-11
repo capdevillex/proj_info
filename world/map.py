@@ -476,12 +476,32 @@ class Map:
         """
         Génère les biomes via bruit de Perlin multi-octave.
 
-        Chaque cellule reçoit une valeur continue transformée en catégorie : eau, plaine, forêt, montagne.
+        Chaque cellule reçoit une valeur continue transformée en catégorie : eau, plaine, forêt,
+        montagne ou désert.
+
+        Le désert est déterminé par un second bruit de Perlin indépendant ("heat map") appliqué
+        uniquement dans les zones de plaine.
 
         Args:
             octaves (int): Niveau de détail du bruit (persistance des fréquences).
         """
         scale = self.avg_cells_per_tile * 1.35
+        # Échelle plus large pour le bruit de chaleur : les zones désertiques sont plus étendues et moins fragmentées que la topographie de base.
+        heat_scale = self.avg_cells_per_tile * 3.5
+        heat_seed = (
+            self.seed + 7919
+        ) % 255  # Décalage de seed pour que la heat map soit indépendante du bruit de terrain.
+
+        # Seuil au-dessus duquel une cellule de plaine devient désert.
+        # ~0.17 donne environ 9% de déserts, ce qui est rare mais visible.
+        DESERT_HEAT_THRESHOLD = 0.17
+
+        # stats pour les biomes
+        water_ct = 0
+        plain_ct = 0
+        forest_ct = 0
+        mountain_ct = 0
+        desert_ct = 0
 
         for y in range(self.height):
             for x in range(self.width):
@@ -497,12 +517,31 @@ class Map:
 
                 if n < -0.225:
                     self.biomes[y][x] = Biome.WATER
-                elif n < 0.1125:
-                    self.biomes[y][x] = Biome.PLAIN
+                    water_ct += 1
                 elif n < 0.325:
-                    self.biomes[y][x] = Biome.FOREST
+                    heat = perlin_noise(
+                        x / heat_scale, y / heat_scale, octaves=2, lacunarity=2.0, base=heat_seed
+                    )
+                    if n < 0.14:
+                        # Zone de plaine : on applique la heat map pour détecter le désert.
+                        if heat > DESERT_HEAT_THRESHOLD:
+                            self.biomes[y][x] = Biome.DESERT
+                            desert_ct += 1
+                        else:
+                            self.biomes[y][x] = Biome.PLAIN
+                            plain_ct += 1
+                    else:
+                        self.biomes[y][x] = (
+                            Biome.FOREST if heat < DESERT_HEAT_THRESHOLD else Biome.PLAIN
+                        )
+                        forest_ct += 1
                 else:
                     self.biomes[y][x] = Biome.MOUNTAIN
+                    mountain_ct += 1
+        total = self.width * self.height
+        self._log(
+            f"    Biome distribution: WATER={water_ct/total:.2%}, PLAIN={plain_ct/total:.2%}, DESERT={desert_ct/total:.2%}, FOREST={forest_ct/total:.2%}, MOUNTAIN={mountain_ct/total:.2%}"
+        )
 
     def _assign_cells(self):
         """
@@ -579,7 +618,7 @@ class Map:
         Args:
             comp (List[Tuple[int, int]]): Liste de cellules formant une île isolée.
         """
-        self._log(f"[reassign comp] : {comp}")
+        # self._log(f"[reassign comp] : {comp}")
         neighbor_ids = Counter()
         for x, y in comp:
             for nx, ny in self._neighbors(x, y):

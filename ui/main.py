@@ -25,6 +25,7 @@ BIOME_COLORS = {
     Biome.PLAIN: (120, 200, 100),
     Biome.FOREST: (30, 120, 30),
     Biome.MOUNTAIN: (120, 120, 120),
+    Biome.DESERT: (194, 178, 128),
 }
 
 pygame.init()

@@ -7,3 +7,4 @@ class Biome(Enum):
     PLAIN = 2
     FOREST = 3
     MOUNTAIN = 4
+    DESERT = 5
