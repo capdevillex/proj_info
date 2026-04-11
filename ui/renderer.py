@@ -132,8 +132,8 @@ class RenderPipeline:
         
         # Dessiner les unités
         self.render_units(screen, game_map, cam, tile_size)
-        
-        self.render_ui(screen, hovered_tile, dt)
+
+        self.render_ui(screen, game_map, hovered_tile, dt)
 
     def render_world(self, screen, game_map, cam, tile_size):
         if self.map_surface is None or self.map_dirty:
@@ -214,7 +214,7 @@ class RenderPipeline:
         scaled_surf = pygame.transform.scale(highlight_surf, new_size)
         screen.blit(scaled_surf, (screen_x, screen_y))
 
-    def render_ui(self, screen, hovered_tile, dt):
+    def render_ui(self, screen, game_map, hovered_tile, dt):
         if hovered_tile:
             text_info = self.font.render(
                 f"Tile {hovered_tile.id:>5} | {hovered_tile.biome:>7} | {hovered_tile.area}",
@@ -235,7 +235,7 @@ class RenderPipeline:
             
             self.fps = (self.fps * 0.85) + (1 / dt * (1 - 0.85))
             text_FPS = self.font.render(
-                f"FPS : {self.fps:.1f}",
+                f"FPS : {self.fps:.1f} | seed {game_map.seed}",
                 True,
                 (255, 255, 255),
             )
