@@ -52,6 +52,7 @@ Blue Noise (Ebeida/Poisson) et bruit cohérent (Perlin).
     permettant une reproductibilité parfaite de la géographie et des biomes.
 """
 
+import heapq
 import random, math, time
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
@@ -74,6 +75,25 @@ WATER_CONNECT_MIN_SIZE = 8
 
 # Distance maximale (en sauts de tuile) entre deux masses d'eau pour les relier.
 WATER_BRIDGE_MAX_HOPS = 3
+
+
+def ratio_area_perimeter(cells: List):
+    """
+    Calcule le ratio area/perimeter d'un groupe de cellules, utilisé pour favoriser les fusions avec des groupes plus compacts.
+
+    Args:
+        cells (List[Tuple[int, int]]): Liste des coordonnées des cellules formant le groupe.
+    Returns:
+        float: Le ratio area/perimeter (plus élevé pour les formes compactes).
+    """
+    area = len(cells)
+    perimeter = 0
+    cell_set = set(cells)
+    for x, y in cells:
+        for nx, ny in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]:
+            if (nx, ny) not in cell_set:
+                perimeter += 1
+    return area / (perimeter + 10**-12)
 
 
 class Tile:
@@ -345,7 +365,10 @@ class Map:
         self._log("[7] Post-traitement hydrographique")
         self._fix_water_connectivity()
 
-        self._log("[8] Voisinage")
+        self._log("[8] Fusion des tuiles d'eau (super-tuiles)")
+        self._merge_water_tiles()
+
+        self._log("[9] Voisinage")
         self._build_neighbors()
 
         self._log(f"[perf] generation time : {time.perf_counter() - tic}s")
@@ -480,7 +503,7 @@ class Map:
 
             self.capitals = new_capitals
 
-    def _generate_biomes(self, octaves=3):
+    def _generate_biomes(self, octaves=4):
         """
         Génère les biomes via bruit de Perlin multi-octave.
 
@@ -501,8 +524,8 @@ class Map:
         ) % 255  # Décalage de seed pour que la heat map soit indépendante du bruit de terrain.
 
         # Seuil au-dessus duquel une cellule de plaine devient désert.
-        # ~0.17 donne environ 9% de déserts, ce qui est rare mais visible.
-        DESERT_HEAT_THRESHOLD = 0.17
+        # ~0.15 donne environ 9% de déserts, ce qui est rare mais visible.
+        DESERT_HEAT_THRESHOLD = 0.15
 
         # stats pour les biomes
         water_ct = 0
@@ -520,7 +543,7 @@ class Map:
                 # ajout d'un gradient négatif qui part des bords de la carte et vers le centre
                 nx = 1 - (2 * x / self.width - 1 + 10**-5) ** 2
                 ny = 1 - (2 * y / self.height - 1 + 10**-5) ** 2
-                deniv = min(math.log(3 * min(nx, ny)), 0.1)
+                deniv = min(math.log(2.25 * min(nx, ny)), 0.1)
                 n += 0.7 * deniv
 
                 if n < -0.225:
@@ -1001,6 +1024,246 @@ class Map:
                 if (x + dx, y + dy) in cells_b:
                     count += 1
         return count
+
+    def _merge_water_tiles(self, target_size: int = 12):
+        """
+        Fusionne les tuiles d'eau proches en super-tuiles plus grandes pour améliorer la jouabilité.
+        Algorithme :
+            1. On collecte les cellules d'eau et on prépare une Distance Transform pour mesurer la distance à la terre la plus proche.
+            2. On applique un Poisson Disk Sampling adaptatif (inspiré d'Ebeida) sur les cellules d'eau, où le rayon de rejet varie en fonction de la distance à la côte : plus on est proche de la terre, plus les points d'attraction sont denses, créant des tuiles d'eau plus petites et détaillées près des côtes, et plus espacés au large pour éviter les micro-tuiles d'eau.
+            3. On effectue une relaxation de Lloyd sur les points d'attraction pour améliorer la régularité des tuiles d'eau, en introduisant une répulsion supplémentaire près des côtes pour éviter que les tuiles d'eau ne deviennent trop grandes et irrégulières à proximité de la terre.
+            4. Enfin, on réassigne les cellules d'eau aux nouveaux points d'attraction via un Voronoï discret, ce qui fusionne efficacement les tuiles d'eau proches en de plus grandes entités cohérentes, tout en préservant les détails côtiers essentiels pour la jouabilité et l'esthétique de la carte.
+            5. On reconstruit les tuiles d'eau fusionnées et on met à jour les biomes en conséquence.
+        """
+        # 1. Collecte des cellules d'eau et préparation de la Distance Transform
+        water_cells_set = set()
+        land_cells = set()
+        land_tiles = []
+
+        for tid, tile in self.tiles.items():
+            if tile.biome == Biome.WATER:
+                water_cells_set.update(tile.cells)
+            else:
+                land_tiles.append(tile)
+                land_cells.update(tile.cells)
+
+        if not water_cells_set:
+            return
+
+        # ÉTAPE A : DISTANCE TRANSFORM (Manhattan simplifiée pour la performance)
+        # Calcule la distance de chaque cellule d'eau à la terre la plus proche
+        distance_map = {pos: float("inf") for pos in water_cells_set}
+        dist_queue = deque()
+
+        # Initialisation avec les cellules d'eau adjacentes à la terre
+        for cx, cy in water_cells_set:
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                if (cx + dx, cy + dy) in land_cells:
+                    distance_map[(cx, cy)] = 1
+                    dist_queue.append((cx, cy))
+                    break
+
+        while dist_queue:
+            curr = dist_queue.popleft()
+            d = distance_map[curr]
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                neighbor = (curr[0] + dx, curr[1] + dy)
+                if neighbor in distance_map and distance_map[neighbor] == float("inf"):
+                    distance_map[neighbor] = d + 1
+                    dist_queue.append(neighbor)
+
+        # ÉTAPE B : POISSON DISK SAMPLING ADAPTATIF (Ebeida encore)
+        # Rayon de base pour la densité cible (target_size)
+        r_base = math.sqrt(
+            len(water_cells_set)
+            / (max(1, len(water_cells_set) / (self.avg_cells_per_tile * target_size)))
+        )
+
+        # Paramètres de densité : 1.5x plus dense à la côte -> r_coast = r_base / sqrt(1.5)
+        r_min = r_base * 0.85  # Près des côtes
+        r_max = r_base * 1.75  # Large (3x moins dense environ)
+
+        seeds = []
+        # Grille d'accélération basée sur r_max pour la sécurité
+        cell_size = r_max / 1.414
+        grid_w, grid_h = int(self.width / cell_size) + 1, int(self.height / cell_size) + 1
+        accel_grid = [[-1 for _ in range(grid_w)] for _ in range(grid_h)]
+
+        def get_local_r(pos):
+            d = distance_map.get(pos, 0)
+            # Interpolation douce du rayon : sature à 50 pixels de la côte
+            t = min(d / 50.0, 1.0)
+            return r_min + (r_max - r_min) * t
+
+        water_candidates = list(water_cells_set)
+        random.shuffle(water_candidates)
+
+        for cx, cy in water_candidates:
+            px, py = cx + 0.5, cy + 0.5
+            local_r = get_local_r((cx, cy))
+
+            # Vérification du voisinage
+            gx, gy = int(px / cell_size), int(py / cell_size)
+            too_close = False
+            for ny in range(max(0, gy - 2), min(grid_h, gy + 3)):
+                for nx in range(max(0, gx - 2), min(grid_w, gx + 3)):
+                    idx = accel_grid[ny][nx]
+                    if idx != -1:
+                        sx, sy = seeds[idx]
+                        dist_sq = (sx - px) ** 2 + (sy - py) ** 2
+                        # Rayon effectif : moyenne ou max pour assurer la transition
+                        combined_r = max(local_r, get_local_r((int(sx), int(sy))))
+                        if dist_sq < combined_r**2:
+                            too_close = True
+                            break
+                if too_close:
+                    break
+
+            if not too_close:
+                accel_grid[gy][gx] = len(seeds)
+                seeds.append((px, py))
+
+        # ÉTAPE C : RELAXATION DE LLOYD AVEC RÉPULSION CÔTIÈRE
+        for _ in range(3):  # 2 itérations suffisent
+            groups = defaultdict(list)
+            # BFS temporaire pour assigner les cellules aux seeds actuelles
+            temp_assignment = {
+                (int(s[0]), int(s[1])): i
+                for i, s in enumerate(seeds)
+                if (int(s[0]), int(s[1])) in water_cells_set
+            }
+            q = deque(temp_assignment.keys())
+
+            while q:
+                curr = q.popleft()
+                idx = temp_assignment[curr]
+                groups[idx].append(curr)
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nb = (curr[0] + dx, curr[1] + dy)
+                    if nb in water_cells_set and nb not in temp_assignment:
+                        temp_assignment[nb] = idx
+                        q.append(nb)
+
+            new_seeds = []
+            for i, old_seed in enumerate(seeds):
+                cells = groups[i]
+                if not cells:
+                    new_seeds.append(old_seed)
+                    continue
+
+                # Centroïde
+                tx = sum(c[0] for c in cells) / len(cells)
+                ty = sum(c[1] for c in cells) / len(cells)
+
+                # Répulsion : on pousse vers le gradient positif de distance
+                d_center = distance_map.get((int(tx), int(ty)), 20)
+                if d_center < 15:
+                    push_x, push_y = 0, 0
+                    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        if distance_map.get((int(tx) + dx, int(ty) + dy), 0) > d_center:
+                            push_x += dx
+                            push_y += dy
+
+                    factor = (15 - d_center) / 15 * 1.5
+                    tx += push_x * factor
+                    ty += push_y * factor
+
+                # Validation : rester dans l'eau
+                if (int(tx), int(ty)) in water_cells_set:
+                    new_seeds.append((tx, ty))
+                else:
+                    new_seeds.append(old_seed)
+            seeds = new_seeds
+
+        # ÉTAPE 4 : PROPAGATION PAR FLOOD FILL SIMULTANÉ (BFS)
+        grid_assignment = {}
+        priority_queue = []  # (cost, x, y, seed_index, x_seed, y_seed)
+
+        for i, seed in enumerate(seeds):
+            pos = (int(seed[0]), int(seed[1]))
+            if pos in water_cells_set:
+                grid_assignment[pos] = i
+                heapq.heappush(priority_queue, (0, pos[0], pos[1], i, pos[0], pos[1]))
+
+        while priority_queue:
+            _, x, y, s_idx, sx, sy = heapq.heappop(priority_queue)
+
+            curr = (x, y)
+            if grid_assignment.get(curr) != s_idx and curr in grid_assignment:
+                continue
+
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                neighbor = (x + dx, y + dy)
+                if neighbor in water_cells_set and neighbor not in grid_assignment:
+                    new_cost = (neighbor[0] - sx) ** 2 + (neighbor[1] - sy) ** 2
+                    grid_assignment[neighbor] = s_idx
+                    heapq.heappush(
+                        priority_queue, (new_cost, neighbor[0], neighbor[1], s_idx, sx, sy)
+                    )
+
+        # ÉTAPE E : NETTOYAGE ET FUSION
+        water_groups = defaultdict(list)
+        for pos, s_idx in grid_assignment.items():
+            water_groups[s_idx].append(pos)
+
+        min_area = (self.avg_cells_per_tile * target_size) * 0.4
+        remap = {idx: idx for idx in range(len(seeds))}
+
+        # Fusion des orphelins (identique à ton code mais sécurisé)
+        sorted_indices = sorted(water_groups.keys(), key=lambda i: len(water_groups[i]))
+        for s_idx in sorted_indices:
+            cells = water_groups[s_idx]
+            if 0 < len(cells) < min_area:
+                neighbor_indices = set()
+                for cx, cy in cells:
+                    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nb = (cx + dx, cy + dy)
+                        if nb in grid_assignment:
+                            nb_idx = remap[grid_assignment[nb]]
+                            if nb_idx != s_idx:
+                                neighbor_indices.add(nb_idx)
+
+                if neighbor_indices:
+                    target_idx = min(
+                        neighbor_indices,
+                        key=lambda idx: (
+                            len(water_groups[idx] + water_groups[s_idx])
+                            / (self._shared_pixel_border(s_idx, idx) + 1)
+                            / (1 + ratio_area_perimeter(water_groups[idx] + water_groups[s_idx]))
+                            ** 2
+                        ),
+                    )
+                    water_groups[target_idx].extend(cells)
+                    for c in cells:
+                        grid_assignment[c] = target_idx  # Mise à jour pour fusions suivantes
+                    remap[s_idx] = target_idx
+                    water_groups[s_idx] = []
+
+        # ÉTAPE F : RECONSTRUCTION
+        new_tiles = {}
+        next_id = 0
+
+        # Terres (on garde tes objets Tile existants)
+        for tile in sorted(land_tiles, key=lambda t: t.id):
+            tile.id = next_id
+            for x, y in tile.cells:
+                self.grid[y][x] = next_id
+            new_tiles[next_id] = tile
+            next_id += 1
+
+        # Mers
+        for s_idx, cells in water_groups.items():
+            if not cells:
+                continue
+            w_tile = Tile(next_id, cells)
+            w_tile.biome = Biome.WATER
+            for x, y in cells:
+                self.grid[y][x] = next_id
+                self.biomes[y][x] = Biome.WATER
+            new_tiles[next_id] = w_tile
+            next_id += 1
+
+        self.tiles = new_tiles
 
     def _build_neighbors(self):
         """
