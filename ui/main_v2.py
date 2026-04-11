@@ -1,41 +1,13 @@
 import random
 import pygame
 
+from config import GameConfig as gc
 from world.map import Map
 from world.biome import Biome
 from world.unit import Unit, UnitType  # NOUVEAU : imports pour les unités
 from ui.camera import Camera, world_to_screen, screen_to_world
 from ui.renderer import RenderPipeline
 
-# -------------------------
-# 🎨 CONFIG
-# -------------------------
-TILE_SIZE = 2  # Divisé par 2 pour passer de 2132px à 1066px de large
-HEIGHT = 300
-WIDTH = (HEIGHT * 16) // 9
-
-SCREEN_WIDTH = WIDTH * TILE_SIZE
-SCREEN_HEIGHT = HEIGHT * TILE_SIZE
-
-LOG_MAP_GENERATION = True
-
-BIOME_COLORS = {
-    Biome.BLANK: (0, 0, 0),
-    Biome.WATER: (50, 80, 200),
-    Biome.PLAIN: (120, 200, 100),
-    Biome.FOREST: (30, 120, 30),
-    Biome.MOUNTAIN: (120, 120, 120),
-    Biome.DESERT: (194, 178, 128),
-}
-
-# NOUVEAU : Configuration du bouton
-BUTTON_WIDTH = 150
-BUTTON_HEIGHT = 40
-BUTTON_X = 10
-BUTTON_Y = 50
-BUTTON_COLOR = (100, 100, 200)
-BUTTON_HOVER_COLOR = (150, 150, 255)
-BUTTON_ACTIVE_COLOR = (255, 100, 100)
 
 pygame.init()
 font = pygame.font.SysFont(None, 20)
@@ -50,7 +22,7 @@ def lighten(color, amount=40):
 
 
 def compute_tile_size(window_w, window_h):
-    return min(window_w // WIDTH, window_h // HEIGHT)
+    return min(window_w // gc.WIDTH, window_h // gc.HEIGHT)
 
 
 def draw_centers(screen, game_map, tile_size, cam):
@@ -112,11 +84,11 @@ class UnitPlacementButton:
         """Dessine le bouton à l'écran"""
         # Couleur du bouton selon l'état
         if self.is_active:
-            color = BUTTON_ACTIVE_COLOR  # Rouge si actif
+            color = gc.BUTTON_ACTIVE_COLOR  # Rouge si actif
         elif self.is_hovered:
-            color = BUTTON_HOVER_COLOR  # Bleu clair si survolé
+            color = gc.BUTTON_HOVER_COLOR  # Bleu clair si survolé
         else:
-            color = BUTTON_COLOR  # Bleu normal
+            color = gc.BUTTON_COLOR  # Bleu normal
 
         # Dessiner le rectangle du bouton
         pygame.draw.rect(screen, color, self.rect)
@@ -133,19 +105,21 @@ class UnitPlacementButton:
 # 🚀 MAIN
 # -------------------------
 def main():
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
+    screen = pygame.display.set_mode((gc.SCREEN_WIDTH, gc.SCREEN_HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("4X Map Generator")
 
     clock = pygame.time.Clock()
 
     seed = random.randint(0, 1000)
-    game_map = Map(WIDTH, HEIGHT, seed, log=LOG_MAP_GENERATION)
+    game_map = Map(gc.WIDTH, gc.HEIGHT, seed, log=gc.LOG_MAP_GENERATION)
 
     camera = Camera()
-    renderer = RenderPipeline(font, BIOME_COLORS)
+    renderer = RenderPipeline(font, gc.BIOME_COLORS)
 
     # NOUVEAU : Créer le bouton de placement
-    placement_button = UnitPlacementButton(BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)
+    placement_button = UnitPlacementButton(
+        gc.BUTTON_X, gc.BUTTON_Y, gc.BUTTON_WIDTH, gc.BUTTON_HEIGHT
+    )
 
     # NOUVEAU : Type d'unité à placer par défaut
     selected_unit_type = UnitType.SOLDIER
@@ -154,7 +128,7 @@ def main():
     running = True
 
     while running:
-        dt = clock.tick(350) / 1000
+        dt = clock.tick(gc.FPS) / 1000
         window_w, window_h = screen.get_size()
         tile_size = compute_tile_size(window_w, window_h)
 
@@ -169,7 +143,8 @@ def main():
                     renderer.map_dirty = True
                     renderer.border_dirty = True
                     seed = random.randint(0, 1000)
-                    game_map = Map(WIDTH, HEIGHT, seed, log=LOG_MAP_GENERATION)
+                    game_map = Map(gc.WIDTH, gc.HEIGHT, seed, log=gc.LOG_MAP_GENERATION)
+                    renderer.clear_cache()  # vider le cache du renderer pour forcer un recalcul total
 
                 if event.key == pygame.K_c:
                     renderer.show_centers = not renderer.show_centers
@@ -251,7 +226,7 @@ def main():
         unit_type_text = button_font.render(
             f"Type: {selected_unit_type.name} (1-4 pour changer)", True, (200, 200, 200)
         )
-        screen.blit(unit_type_text, (BUTTON_X, BUTTON_Y + BUTTON_HEIGHT + 10))
+        screen.blit(unit_type_text, (gc.BUTTON_X, gc.BUTTON_Y + gc.BUTTON_HEIGHT + 10))
 
         pygame.display.flip()
 
