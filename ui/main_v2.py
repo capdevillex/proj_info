@@ -183,9 +183,10 @@ def main():
 
                     # NOUVEAU : Si en mode placement et clic sur une tuile
                     elif placement_button.is_active:
+                        print("1. Le bouton de placement est bien actif") # <-- DEBUG
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
                         if hovered_tile:
-                            # MODIFIÉ : Vérifier qu'il n'y a pas déjà une unité
+                            print(f"2. Tuile survolée trouvée : {hovered_tile.id}") # <-- DEBUG
                             if hovered_tile.has_units():
                                 print(f"❌La tuile {hovered_tile.id} a déjà une unité !")
                             elif (

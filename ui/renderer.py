@@ -1,6 +1,7 @@
 import pygame
 
 from ui.camera import world_to_screen
+from world.unit import UnitType
 
 
 class RenderPipeline:
@@ -16,6 +17,15 @@ class RenderPipeline:
         self.biome_colors = biome_colors
 
         self.fps = 60
+
+        """dico avec les chemins des images des unités"""
+        self.unit_images = {
+            UnitType.SOLDIER: pygame.image.load("img\\soldat.png").convert_alpha(),
+            UnitType.ARCHER: pygame.image.load("img\\archer.png").convert_alpha(),
+            UnitType.CAVALRY: pygame.image.load("img\\cavalier.png").convert_alpha(),
+            UnitType.SETTLEMENT: pygame.image.load("img\\colon.png").convert_alpha()
+        }
+        self.default_image = pygame.image.load("img\\soldat.png").convert_alpha()
 
     def clear_cache(self):
         """Vide les surfaces mises en cache pour forcer un recalcul total."""
@@ -124,6 +134,7 @@ class RenderPipeline:
             screen_y = round(screen_y)
 
             # Dessiner chaque unité
+            """
             for unit in tile.units:
                 color = unit.get_color()
                 size = max(1, int(unit.get_size() * cam.zoom))
@@ -133,6 +144,24 @@ class RenderPipeline:
 
                 # Bordure blanche
                 pygame.draw.circle(screen, (255, 255, 255), (screen_x, screen_y), size, 1)
+                """
+
+            # Dessiner chaque unité
+            for unit in tile.units:
+                # 1. Récupérer l'image associée au type de cette unité
+                # La méthode .get() renvoie self.default_image si unit.unit_type n'est pas trouvé
+                base_image = self.unit_images.get(unit.unit_type, self.default_image)
+
+                # 2. Calculer la taille souhaitée
+                base_diameter = unit.get_size() * 2 
+                scaled_size = max(1, int(base_diameter * cam.zoom))
+
+                # 3. Redimensionner LA bonne image
+                scaled_img = pygame.transform.scale(base_image, (scaled_size, scaled_size))
+
+                # 4. Centrer et afficher
+                img_rect = scaled_img.get_rect(center=(screen_x, screen_y))
+                screen.blit(scaled_img, img_rect)
 
     def render(self, screen, game_map, cam, tile_size, hovered_tile, dt):
         self.render_world(screen, game_map, cam, tile_size)
