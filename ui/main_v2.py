@@ -172,17 +172,17 @@ def main():
                 if event.key == pygame.K_c:
                     renderer.show_centers = not renderer.show_centers
                 
-                # NOUVEAU : Touches pour changer le type d'unité
-                if event.key == pygame.K_1:
+                # NOUVEAU : Touches pour changer le type d'unité avec clavier et numpad
+                if event.key in (pygame.K_1, pygame.K_KP1):
                     selected_unit_type = UnitType.SOLDIER
                     print("Type sélectionné : SOLDAT")
-                if event.key == pygame.K_2:
+                if event.key in (pygame.K_2, pygame.K_KP2):
                     selected_unit_type = UnitType.CAVALRY
                     print("Type sélectionné : CAVALIER")
-                if event.key == pygame.K_3:
+                if event.key in (pygame.K_3, pygame.K_KP3):
                     selected_unit_type = UnitType.ARCHER
                     print("Type sélectionné : ARCHER")
-                if event.key == pygame.K_4:
+                if event.key in (pygame.K_4, pygame.K_KP4):
                     selected_unit_type = UnitType.SETTLEMENT
                     print("Type sélectionné : COLON")
 

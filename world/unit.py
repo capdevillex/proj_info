@@ -55,9 +55,9 @@ class Unit:
         """Retourne la taille (rayon) pour dessiner l'unité."""
         # MODIFIÉ : Tailles réduites pour mieux voir le détail
         sizes = {
-            UnitType.SOLDIER: 2,
-            UnitType.CAVALRY: 3,
-            UnitType.ARCHER: 2,
+            UnitType.SOLDIER: 1,
+            UnitType.CAVALRY: 2,
+            UnitType.ARCHER: 3,
             UnitType.SETTLEMENT: 4,
         }
         return sizes.get(self.unit_type, 2)
