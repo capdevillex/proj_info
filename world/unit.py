@@ -27,15 +27,17 @@ class Unit:
     # Compteur global pour générer des IDs uniques
     _unit_counter = 0
     
-    def __init__(self, tile_id, unit_type=UnitType.SOLDIER, owner=0, x=0.0, y=0.0):
+    def __init__(self, tile_id,water_affinity, unit_type=UnitType.SOLDIER, owner=0, x=0.0, y=0.0):
         """Crée une nouvelle unité."""
         Unit._unit_counter += 1
         self.id = Unit._unit_counter
         self.tile_id = tile_id
+        self.water_affinity = water_affinity
         self.unit_type = unit_type
         self.owner = owner
         self.x = x
         self.y = y
+        
     
     def __repr__(self):
         """Représentation textuelle de l'unité"""

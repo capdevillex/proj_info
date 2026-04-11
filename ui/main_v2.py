@@ -149,6 +149,7 @@ def main():
     
     # NOUVEAU : Type d'unité à placer par défaut
     selected_unit_type = UnitType.SOLDIER
+    selected_unit_water_affinity = False
 
     running = True
 
@@ -176,15 +177,19 @@ def main():
                 # NOUVEAU : Touches pour changer le type d'unité avec clavier et numpad
                 if event.key in (pygame.K_1, pygame.K_KP1):
                     selected_unit_type = UnitType.SOLDIER
+                    selected_unit_water_affinity = False
                     print("Type sélectionné : SOLDAT")
                 if event.key in (pygame.K_2, pygame.K_KP2):
                     selected_unit_type = UnitType.CAVALRY
+                    selected_unit_water_affinity = False
                     print("Type sélectionné : CAVALIER")
                 if event.key in (pygame.K_3, pygame.K_KP3):
                     selected_unit_type = UnitType.ARCHER
+                    selected_unit_water_affinity = False
                     print("Type sélectionné : ARCHER")
                 if event.key in (pygame.K_4, pygame.K_KP4):
                     selected_unit_type = UnitType.SETTLEMENT
+                    selected_unit_water_affinity = True
                     print("Type sélectionné : COLON")
 
             if event.type == pygame.MOUSEWHEEL:
@@ -207,16 +212,18 @@ def main():
                         if hovered_tile:
                             # MODIFIÉ : Vérifier qu'il n'y a pas déjà une unité
                             if hovered_tile.has_units():
-                                print(f"❌ La tuile {hovered_tile.id} a déjà une unité !")
-                            elif hovered_tile.biome == Biome.WATER :
-                                print(f"❌ La tuile {hovered_tile.id} est pleine de flotte !")
+                                print(f"❌La tuile {hovered_tile.id} a déjà une unité !")
+                            elif hovered_tile.biome == Biome.WATER and not selected_unit_water_affinity :
+                                print(f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!")
                             else:
                                 # Créer et ajouter une unité
                                 unit = Unit(
                                     tile_id=hovered_tile.id,
                                     unit_type=selected_unit_type,
-                                    owner=0
+                                    owner=0,
+                                    water_affinity=selected_unit_water_affinity
                                 )
+
                                 hovered_tile.add_unit(unit)
                                 print(f"✅ Unité placée sur tuile {hovered_tile.id} : {unit}")
 
