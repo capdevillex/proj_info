@@ -9,6 +9,7 @@ class RenderPipeline:
 
         self.map_surface = None
         self.border_surface = None
+        self.tile_highlights = {}
         self.map_dirty = True
         self.border_dirty = True
         self.font = font
@@ -71,8 +72,28 @@ class RenderPipeline:
                                     (px + tile_size, py + tile_size),
                                     1,
                                 )
-
         return surface
+
+    def build_tile_highlight(self, tile, tile_size):
+        """Crée une surface unique pour la mise en évidence d'une tuile spécifique."""
+        # On calcule la bounding box de la tuile pour ne pas créer une surface de la taille de toute la map
+        min_x = min(c[0] for c in tile.cells)
+        max_x = max(c[0] for c in tile.cells)
+        min_y = min(c[1] for c in tile.cells)
+        max_y = max(c[1] for c in tile.cells)
+
+        width = (max_x - min_x + 1) * tile_size
+        height = (max_y - min_y + 1) * tile_size
+
+        surface = pygame.Surface((width, height), pygame.SRCALPHA)
+
+        highlight_color = (255, 255, 255, 100)  # Couleur blanche avec une opacité de 100/255
+
+        for x, y in tile.cells:
+            rect = ((x - min_x) * tile_size, (y - min_y) * tile_size, tile_size, tile_size)
+            surface.fill(highlight_color, rect)
+
+        return surface, (min_x * tile_size, min_y * tile_size)
 
     def render(self, screen, game_map, cam, tile_size, hovered_tile, dt):
         self.render_world(screen, game_map, cam, tile_size)
@@ -88,36 +109,81 @@ class RenderPipeline:
             self.border_surface = self.build_border_surface(game_map, tile_size)
             self.border_dirty = False
 
+        window_w, window_h = pygame.display.get_window_size()
         view_rect = pygame.Rect(
             int(cam.x),
             int(cam.y),
-            int(screen.get_width() / cam.zoom),
-            int(screen.get_height() / cam.zoom),
+            int(window_w / cam.zoom),
+            int(window_h / cam.zoom),
+        )
+        map_rect = self.map_surface.get_rect()
+
+        clipped = view_rect.clip(map_rect)
+        if clipped.width <= 0 or clipped.height <= 0:
+            return
+
+        # OFFSET écran
+        offset_x = (clipped.x - view_rect.x) * cam.zoom
+        offset_y = (clipped.y - view_rect.y) * cam.zoom
+
+        # extraire zone valide
+        sub = self.map_surface.subsurface(clipped)
+
+        # scale seulement la partie visible
+        scaled = pygame.transform.scale(
+            sub,
+            (
+                int(clipped.width * cam.zoom),
+                int(clipped.height * cam.zoom),
+            ),
         )
 
-        sub = self.map_surface.subsurface(view_rect)
-        scaled = pygame.transform.scale(sub, screen.get_size())
-        screen.blit(scaled, (0, 0))
+        # dessiner au bon endroit
+        screen.blit(scaled, (offset_x, offset_y))
+
+        # stockage des paramètres pour le rendu de l'overlay
+        self.last_view_rect = view_rect
+        self.last_clipped = clipped
+        self.last_offset = (offset_x, offset_y)
 
         if cam.zoom > 1.2:  # BORDERS (LOD)
-            sub_b = self.border_surface.subsurface(view_rect)
-            scaled_b = pygame.transform.scale(sub_b, screen.get_size())
-            screen.blit(scaled_b, (0, 0))
+            sub_b = self.border_surface.subsurface(clipped)
+            scaled_b = pygame.transform.scale(
+                sub_b,
+                (
+                    int(clipped.width * cam.zoom),
+                    int(clipped.height * cam.zoom),
+                ),
+            )
+            screen.blit(scaled_b, (offset_x, offset_y))
 
     def render_overlay(self, screen, game_map, cam, tile_size, hovered_tile):
         if not hovered_tile:
             return
 
-        color = (255, 255, 255)
+        if hovered_tile.id not in self.tile_highlights:
+            self.tile_highlights[hovered_tile.id] = self.build_tile_highlight(
+                hovered_tile, tile_size
+            )
 
-        for x, y in hovered_tile.cells:
-            wx = x * tile_size
-            wy = y * tile_size
+        highlight_surf, (world_x, world_y) = self.tile_highlights[hovered_tile.id]
+        view_rect = self.last_view_rect
+        offset_x, offset_y = self.last_offset
 
-            sx, sy = world_to_screen(wx, wy, cam.x, cam.y, cam.zoom)
-            size = int(tile_size * cam.zoom)
+        rel_x = world_x - view_rect.x
+        rel_y = world_y - view_rect.y
 
-            pygame.draw.rect(screen, color, (sx + 5, sy + 5, size, size), 1)
+        screen_x = rel_x * cam.zoom + offset_x
+        screen_y = rel_y * cam.zoom + offset_y
+
+        new_size = (
+            int(highlight_surf.get_width() * cam.zoom),
+            int(highlight_surf.get_height() * cam.zoom),
+        )
+
+        # On scale la surface de highlight
+        scaled_surf = pygame.transform.scale(highlight_surf, new_size)
+        screen.blit(scaled_surf, (screen_x, screen_y))
 
     def render_ui(self, screen, hovered_tile, dt):
         if hovered_tile:
