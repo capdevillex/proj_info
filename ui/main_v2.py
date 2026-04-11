@@ -122,7 +122,7 @@ class UnitPlacementButton:
         pygame.draw.rect(screen, (200, 200, 200), self.rect, 2)  # Bordure
         
         # Texte du bouton
-        text_str = "Place Unit (ON)" if self.is_active else "Place Unit"
+        text_str = "Placer Unité (ON)" if self.is_active else "Placer Unité (OFF)"
         text_surface = button_font.render(text_str, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=self.rect.center)
         screen.blit(text_surface, text_rect)
@@ -175,16 +175,16 @@ def main():
                 # NOUVEAU : Touches pour changer le type d'unité
                 if event.key == pygame.K_1:
                     selected_unit_type = UnitType.SOLDIER
-                    print("Type sélectionné : SOLDIER")
+                    print("Type sélectionné : SOLDAT")
                 if event.key == pygame.K_2:
                     selected_unit_type = UnitType.CAVALRY
-                    print("Type sélectionné : CAVALRY")
+                    print("Type sélectionné : CAVALIER")
                 if event.key == pygame.K_3:
                     selected_unit_type = UnitType.ARCHER
                     print("Type sélectionné : ARCHER")
                 if event.key == pygame.K_4:
                     selected_unit_type = UnitType.SETTLEMENT
-                    print("Type sélectionné : SETTLEMENT")
+                    print("Type sélectionné : COLON")
 
             if event.type == pygame.MOUSEWHEEL:
                 camera.apply_zoom(pygame.mouse.get_pos(), event.y)
@@ -204,14 +204,18 @@ def main():
                     elif placement_button.is_active:
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
                         if hovered_tile:
-                            # Créer et ajouter une unité
-                            unit = Unit(
-                                tile_id=hovered_tile.id,
-                                unit_type=selected_unit_type,
-                                owner=0
-                            )
-                            hovered_tile.add_unit(unit)
-                            print(f"✅ Unité placée sur tuile {hovered_tile.id} : {unit}")
+                            # MODIFIÉ : Vérifier qu'il n'y a pas déjà une unité
+                            if len(hovered_tile.units) > 0:
+                                print(f"❌ La tuile {hovered_tile.id} a déjà une unité !")
+                            else:
+                                # Créer et ajouter une unité
+                                unit = Unit(
+                                    tile_id=hovered_tile.id,
+                                    unit_type=selected_unit_type,
+                                    owner=0
+                                )
+                                hovered_tile.add_unit(unit)
+                                print(f"✅ Unité placée sur tuile {hovered_tile.id} : {unit}")
 
         # -------- UPDATE --------
         camera.update(dt, game_map, tile_size, window_w, window_h)
