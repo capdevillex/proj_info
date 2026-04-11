@@ -17,6 +17,14 @@ class RenderPipeline:
 
         self.fps = 60
 
+    def clear_cache(self):
+        """Vide les surfaces mises en cache pour forcer un recalcul total."""
+        self.tile_highlights = {}
+        self.map_dirty = True
+        self.border_dirty = True
+        self.map_surface = None
+        self.border_surface = None
+
     def build_map_surface(self, game_map, tile_size):
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre la carte"""
         width_px = game_map.width * tile_size
