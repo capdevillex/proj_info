@@ -32,7 +32,7 @@ BIOME_COLORS = {
 BUTTON_WIDTH = 150
 BUTTON_HEIGHT = 40
 BUTTON_X = 10
-BUTTON_Y = 10
+BUTTON_Y = 50
 BUTTON_COLOR = (100, 100, 200)
 BUTTON_HOVER_COLOR = (150, 150, 255)
 BUTTON_ACTIVE_COLOR = (255, 100, 100)
@@ -85,43 +85,43 @@ def get_hovered_tile(game_map, cam, tile_size):
 class UnitPlacementButton:
     """
     Bouton UI pour activer/désactiver le mode placement d'unités.
-    
+
     Le bouton affiche :
     - "Place Unit" en bleu normal quand le mode est désactivé
     - "Place Unit (ON)" en rouge quand le mode est activé
     """
-    
+
     def __init__(self, x, y, width, height):
         self.rect = pygame.Rect(x, y, width, height)
         self.is_active = False
         self.is_hovered = False
-    
+
     def update(self, mouse_pos):
         """Met à jour l'état du bouton (survol)"""
         self.is_hovered = self.rect.collidepoint(mouse_pos)
-    
+
     def is_clicked(self, mouse_pos):
         """Retourne True si le bouton est cliqué"""
         return self.rect.collidepoint(mouse_pos)
-    
+
     def toggle(self):
         """Active/désactive le mode placement"""
         self.is_active = not self.is_active
-    
+
     def draw(self, screen):
         """Dessine le bouton à l'écran"""
         # Couleur du bouton selon l'état
         if self.is_active:
             color = BUTTON_ACTIVE_COLOR  # Rouge si actif
         elif self.is_hovered:
-            color = BUTTON_HOVER_COLOR   # Bleu clair si survolé
+            color = BUTTON_HOVER_COLOR  # Bleu clair si survolé
         else:
-            color = BUTTON_COLOR         # Bleu normal
-        
+            color = BUTTON_COLOR  # Bleu normal
+
         # Dessiner le rectangle du bouton
         pygame.draw.rect(screen, color, self.rect)
         pygame.draw.rect(screen, (200, 200, 200), self.rect, 2)  # Bordure
-        
+
         # Texte du bouton
         text_str = "Placer Unité (ON)" if self.is_active else "Placer Unité (OFF)"
         text_surface = button_font.render(text_str, True, (255, 255, 255))
@@ -143,10 +143,10 @@ def main():
 
     camera = Camera()
     renderer = RenderPipeline(font, BIOME_COLORS)
-    
+
     # NOUVEAU : Créer le bouton de placement
     placement_button = UnitPlacementButton(BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)
-    
+
     # NOUVEAU : Type d'unité à placer par défaut
     selected_unit_type = UnitType.SOLDIER
     selected_unit_water_affinity = False
@@ -173,7 +173,7 @@ def main():
 
                 if event.key == pygame.K_c:
                     renderer.show_centers = not renderer.show_centers
-                
+
                 # NOUVEAU : Touches pour changer le type d'unité avec clavier et numpad
                 if event.key in (pygame.K_1, pygame.K_KP1):
                     selected_unit_type = UnitType.SOLDIER
@@ -194,18 +194,18 @@ def main():
 
             if event.type == pygame.MOUSEWHEEL:
                 camera.apply_zoom(pygame.mouse.get_pos(), event.y)
-            
+
             # NOUVEAU : Détection du clic sur le bouton
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Clic gauche
                     mouse_pos = pygame.mouse.get_pos()
-                    
+
                     # Vérifier si le bouton est cliqué
                     if placement_button.is_clicked(mouse_pos):
                         placement_button.toggle()
                         status = "ACTIVÉ" if placement_button.is_active else "DÉSACTIVÉ"
                         print(f"Mode placement {status}")
-                    
+
                     # NOUVEAU : Si en mode placement et clic sur une tuile
                     elif placement_button.is_active:
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
@@ -213,15 +213,20 @@ def main():
                             # MODIFIÉ : Vérifier qu'il n'y a pas déjà une unité
                             if hovered_tile.has_units():
                                 print(f"❌La tuile {hovered_tile.id} a déjà une unité !")
-                            elif hovered_tile.biome == Biome.WATER and not selected_unit_water_affinity :
-                                print(f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!")
+                            elif (
+                                hovered_tile.biome == Biome.WATER
+                                and not selected_unit_water_affinity
+                            ):
+                                print(
+                                    f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!"
+                                )
                             else:
                                 # Créer et ajouter une unité
                                 unit = Unit(
                                     tile_id=hovered_tile.id,
                                     unit_type=selected_unit_type,
                                     owner=0,
-                                    water_affinity=selected_unit_water_affinity
+                                    water_affinity=selected_unit_water_affinity,
                                 )
 
                                 hovered_tile.add_unit(unit)
@@ -230,7 +235,7 @@ def main():
         # -------- UPDATE --------
         camera.update(dt, game_map, tile_size, window_w, window_h)
         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
-        
+
         # NOUVEAU : Mettre à jour l'état du bouton (survol)
         mouse_pos = pygame.mouse.get_pos()
         placement_button.update(mouse_pos)
@@ -238,15 +243,13 @@ def main():
         # -------- RENDER --------
         screen.fill((0, 0, 0))
         renderer.render(screen, game_map, camera, tile_size, hovered_tile, dt)
-        
+
         # NOUVEAU : Dessiner le bouton
         placement_button.draw(screen)
-        
+
         # NOUVEAU : Afficher le type d'unité sélectionné
         unit_type_text = button_font.render(
-            f"Type: {selected_unit_type.name} (1-4 pour changer)",
-            True,
-            (200, 200, 200)
+            f"Type: {selected_unit_type.name} (1-4 pour changer)", True, (200, 200, 200)
         )
         screen.blit(unit_type_text, (BUTTON_X, BUTTON_Y + BUTTON_HEIGHT + 10))
 
