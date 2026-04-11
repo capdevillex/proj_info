@@ -29,7 +29,7 @@ Blue Noise (Ebeida/Poisson) et bruit cohérent (Perlin).
         l'homogénéité interne.
 
 4.  **Optimisation Topologique et Nettoyage :**
-    * **Flood Fill :** Détection et réassignation des fragments isolés (îles de pixels)
+    * **BFS :** Détection et réassignation des fragments isolés (îles de pixels)
         vers la province voisine la plus dominante.
     * **Contraintes morphologiques :** Stabilisation des formes pour éviter les
         provinces en "U" ou excessivement morcelées.
@@ -64,6 +64,16 @@ from world.biome import Biome
 from world.unit import Unit
 
 VORONOI_AREA_CORRECTION = 1.556  # facteur de correction empirique
+
+# Taille minimale d'un cluster d'eau (en nombre de tuiles) pour être conservé. Les groupes connexes
+# de tuiles d'eau dont la taille est <= à cette valeur seront convertis en biome terrestre.
+MIN_WATER_CLUSTER_SIZE = 2
+
+# Taille minimale d'une masse d'eau pour tenter de la relier à une voisine.
+WATER_CONNECT_MIN_SIZE = 8
+
+# Distance maximale (en sauts de tuile) entre deux masses d'eau pour les relier.
+WATER_BRIDGE_MAX_HOPS = 3
 
 
 class Tile:
@@ -337,7 +347,10 @@ class Map:
         self._log(f"    {len(self.tiles)} provinces générés")
         self._log(f"    mean area : {sum((t.area for t in self.tiles.values()))/len(self.tiles)}")
 
-        self._log("[7] Voisinage")
+        self._log("[7] Post-traitement hydrographique")
+        self._fix_water_connectivity()
+
+        self._log("[8] Voisinage")
         self._build_neighbors()
 
         self._log(f"[perf] generation time : {time.perf_counter() - tic}s")
@@ -582,14 +595,14 @@ class Map:
         - Fusionne les provinces trop petites avec leurs voisines
         - Assure la connexité des provinces
 
-        On utilise un flood fill pour détecter les composantes connexes.
+        On utilise un BFS pour détecter les composantes connexes.
         Les petites composantes sont réassignées à un voisin dominant.
 
         Cela évite les formes aberrantes et améliore la jouabilité.
         """
         visited = [[False] * self.width for _ in range(self.height)]
 
-        def flood_fill(x, y, id_):
+        def bfs(x, y, id_):
             q = deque([(x, y)])
             comp = []
             visited[y][x] = True
@@ -607,7 +620,7 @@ class Map:
             for x in range(self.width):
                 if not visited[y][x]:
                     id_ = self.grid[y][x]
-                    comp = flood_fill(x, y, id_)
+                    comp = bfs(x, y, id_)
                     if len(comp) < self.avg_cells_per_tile * 0.3:
                         self._reassign_component(comp)
 
@@ -654,6 +667,345 @@ class Map:
             for x, y in cells:
                 self.biomes[y][x] = biome
             self.tiles[id_] = tile
+
+    def _fix_water_connectivity(self):
+        """
+        Assure la cohérence hydrographique de la carte en deux passes.
+
+        **Passe 1 — Suppression des micro-points d'eau :**
+            Les composantes connexes de tuiles d'eau de taille <= MIN_WATER_CLUSTER_SIZE
+            sont converties en biome terrestre. Cela élimine les points d'eau ponctuels
+            (1-2 provinces) incohérents.
+
+        **Passe 2 — Connexion des masses d'eau proches :**
+            Pour chaque paire de masses d'eau significatives (>= WATER_CONNECT_MIN_SIZE),
+            on cherche un chemin de tuiles intermédiaires de longueur <= WATER_BRIDGE_MAX_HOPS
+            qui ne traverse pas de montagne. Si un tel chemin existe, les tuiles terrestres
+            sur le chemin le plus court sont converties en eau, créant un détroit naturel.
+
+        Note : cette méthode doit être appelée après `_build_tiles` et avant `_build_neighbors`.
+        """
+
+        # tile.neighbors est vide à ce stade, on construit le graphe complet à la volée.
+        tile_adjacency: Dict[int, set] = defaultdict(set)
+        for y in range(self.height):
+            for x in range(self.width):
+                tid = self.grid[y][x]
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < self.width and 0 <= ny < self.height:
+                        nid = self.grid[ny][nx]
+                        if nid != tid and nid is not None and tid is not None:
+                            tile_adjacency[tid].add(nid)
+
+        water_tile_ids = {tid for tid, t in self.tiles.items() if t.biome == Biome.WATER}
+
+        if not water_tile_ids:
+            return
+
+        # --- BFS pour identifier les composantes connexes d'eau ---
+        def water_components(wids):
+            visited: set = set()
+            comps: List[List[int]] = []
+            for start in wids:
+                if start in visited:
+                    continue
+                comp = []
+                q = deque([start])
+                visited.add(start)
+                while q:
+                    cur = q.popleft()
+                    comp.append(cur)
+                    for nb in tile_adjacency[cur]:
+                        if nb not in visited and nb in wids:
+                            visited.add(nb)
+                            q.append(nb)
+                comps.append(comp)
+            return comps
+
+        components = water_components(water_tile_ids)
+
+        # Passe 1 : supprimer les micro-clusters d'eau
+        small_ids: set = set()
+        large_components: List[List[int]] = []
+        for comp in components:
+            if len(comp) <= MIN_WATER_CLUSTER_SIZE:
+                small_ids.update(comp)
+                self._log(f"[water] micro-cluster supprimé ({len(comp)} tuile(s))")
+            else:
+                large_components.append(comp)
+
+        for tid in small_ids:
+            self._convert_water_tile_to_land(tid, tile_adjacency)
+
+        # Passe 2 : relier les masses d'eau significatives proches
+        # On ne tente de relier que les composantes >= WATER_CONNECT_MIN_SIZE.
+        significant = [c for c in large_components if len(c) >= WATER_CONNECT_MIN_SIZE]
+
+        if len(significant) < 2:
+            self._log(
+                f"[water] {len(significant)} masse(s) d'eau significative(s), pas de connexion à établir."
+            )
+            return
+
+        # Pour chaque paire de composantes significatives distinctes, on cherche
+        # le chemin le plus court entre leurs tuiles via un BFS sur le graphe de tuiles.
+        # On bloque les tuiles de montagne pour ne pas percer les reliefs.
+        # Si le chemin (hors les tuiles d'eau de départ/arrivée) a <= WATER_BRIDGE_MAX_HOPS
+        # tuiles terrestres, on les convertit en eau.
+        comp_sets = [set(c) for c in significant]
+        bridges_built = 0
+
+        for i in range(len(significant)):
+            for j in range(i + 1, len(significant)):
+                set_i, set_j = comp_sets[i], comp_sets[j]
+
+                # BFS depuis toutes les tuiles de la composante i vers la composante j.
+                # On s'arrête dès qu'on atteint une tuile de j ou qu'on dépasse la distance max.
+                # `prev` stocke le prédécesseur pour reconstruire le chemin.
+                prev: Dict[int, Optional[int]] = {tid: None for tid in set_i}
+                frontier = deque(set_i)
+                found: Optional[int] = None
+                land_hops: Dict[int, int] = {tid: 0 for tid in set_i}  # nb de sauts terrestres
+
+                while frontier and found is None:
+                    cur = frontier.popleft()
+                    cur_hops = land_hops[cur]
+                    if cur_hops > WATER_BRIDGE_MAX_HOPS:
+                        continue
+                    for nb in tile_adjacency[cur]:
+                        if nb in prev:
+                            continue
+                        nb_biome = self.tiles[nb].biome
+                        # Bloquer les montagnes
+                        if nb_biome == Biome.MOUNTAIN:
+                            continue
+                        prev[nb] = cur
+                        if nb in set_j:
+                            found = nb
+                            break
+                        # Compter les sauts terrestres (hors eau)
+                        nb_hops = cur_hops if nb_biome == Biome.WATER else cur_hops + 1
+                        land_hops[nb] = nb_hops
+                        frontier.append(nb)
+
+                if found is None:
+                    continue  # pas de chemin court trouvé, on laisse les masses séparées
+
+                # Reconstruction du chemin et conversion des tuiles terrestres en eau.
+                path = []
+                cur = found
+                while cur is not None:
+                    path.append(cur)
+                    cur = prev[cur]
+                path.reverse()
+
+                converted = 0
+                for tid in path:
+                    if self.tiles[tid].biome != Biome.WATER:
+                        self._convert_land_tile_to_water(tid)
+                        water_tile_ids.add(tid)
+                        set_i.add(tid)
+                        set_j.add(tid)
+                        converted += 1
+
+                if converted > 0:
+                    bridges_built += 1
+                    self._log(
+                        f"[water] pont créé entre comp {i} et comp {j} ({converted} tuile(s) converties)"
+                    )
+
+                # Fusionner les deux composantes dans comp_sets pour les prochaines paires.
+                comp_sets[i] = set_i | set_j
+                comp_sets[j] = comp_sets[i]
+
+        self._log(f"[water] {bridges_built} pont(s) hydrographique(s) établi(s).")
+
+        # Passe 3 : élargissement des corridors trop fins
+        self._widen_water_corridors(water_tile_ids, tile_adjacency)
+
+    def _widen_water_corridors(self, water_tile_ids: set, tile_adjacency: Dict[int, set]):
+        """
+        Épaissit les corridors d'eau trop fins après la création des ponts.
+
+        Algorithme :
+          1. On constitue l'ensemble des tuiles d'eau qui ont strictement moins de 4 voisines
+             eau (au sens de tile_adjacency). Ce sont les tuiles "en bordure étroite".
+          2. Pour chaque tuile T de cet ensemble, on itère sur ses voisines eau W.
+             On compte les pixels de frontière 4-connexe entre T et W.
+             Si ce contact est < 4 (la connexion entre T et W est trop fine) :
+               - On prend l'intersection des voisines de T et de W (hors eau, hors montagne).
+               - Parmi ces candidates, on convertit en eau celle dont la somme de pixels de
+                 frontière avec T et W est maximale.
+          3. Les tuiles nouvellement converties sont ajoutées à water_tile_ids et
+             tile_adjacency pour que les passes suivantes les voient.
+
+        Args:
+            water_tile_ids: Ensemble des IDs de tuiles d'eau (modifié en place).
+            tile_adjacency: Graphe d'adjacence inter-tuiles complet (modifié en place).
+        """
+        # Calcul du cache des frontières pixel entre tuiles voisines.
+        # On ne calcule que les paires (a, b) avec a < b pour éviter les doublons.
+        border_cache: Dict[tuple, int] = {}
+
+        def pixel_border(a: int, b: int) -> int:
+            key = (min(a, b), max(a, b))
+            if key not in border_cache:
+                cells_b = set(self.tiles[b].cells)
+                count = 0
+                for x, y in self.tiles[a].cells:
+                    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        if (x + dx, y + dy) in cells_b:
+                            count += 1
+                border_cache[key] = count
+            return border_cache[key]
+
+        # On itère jusqu'à convergence : une conversion peut créer de nouvelles paires trop fines.
+        # En pratique 2-3 passes suffisent largement.
+        MAX_PASSES = 3
+        for pass_num in range(MAX_PASSES):
+            widened = 0
+
+            # Étape 1 : tuiles d'eau avec < 5 voisines eau.
+            thin_water = {
+                tid
+                for tid in water_tile_ids
+                if sum(1 for nb in tile_adjacency[tid] if nb in water_tile_ids) < 4
+            }
+
+            for tid in thin_water:
+                water_neighbors = [nb for nb in tile_adjacency[tid] if nb in water_tile_ids]
+
+                for w_nb in water_neighbors:
+                    if pixel_border(tid, w_nb) >= 5:
+                        continue  # connexion déjà suffisamment large
+
+                    # Intersection des voisines terrestres non-montagne de tid et w_nb.
+                    candidates = (tile_adjacency[tid] - water_tile_ids) & (
+                        tile_adjacency[w_nb] - water_tile_ids
+                    )
+                    candidates = {c for c in candidates if self.tiles[c].biome != Biome.MOUNTAIN}
+
+                    if not candidates:
+                        continue
+
+                    # On choisit le candidat qui maximise la frontière totale avec tid + w_nb.
+                    best = max(
+                        candidates, key=lambda c: pixel_border(c, tid) + pixel_border(c, w_nb)
+                    )
+
+                    self._convert_land_tile_to_water(best)
+                    water_tile_ids.add(best)
+
+                    # Mise à jour de tile_adjacency pour les passes suivantes.
+                    for nb in tile_adjacency[best]:
+                        tile_adjacency[nb].add(best)
+
+                    # Invalider le cache pour les paires impliquant best.
+                    keys_to_drop = [k for k in border_cache if best in k]
+                    for k in keys_to_drop:
+                        del border_cache[k]
+
+                    widened += 1
+                    self._log(f"[water] élargissement : tuile {best} convertie en eau")
+
+            self._log(
+                f"[water] passe d'élargissement {pass_num + 1} : {widened} tuile(s) ajoutée(s)"
+            )
+            if widened == 0:
+                break
+
+    def _convert_water_tile_to_land(self, tile_id: int, tile_adjacency: Dict[int, set]):
+        """
+        Convertit une tuile d'eau en biome terrestre (PLAIN ou DESERT).
+
+        Le biome est choisi selon le voisinage dominant (hors eau) dans tile_adjacency.
+
+        Args:
+            tile_id (int): Identifiant de la tuile à convertir.
+            tile_adjacency (Dict[int, set]): Graphe d'adjacence inter-tuiles pré-calculé.
+        """
+        tile = self.tiles[tile_id]
+
+        land_neighbor_biomes = [
+            self.tiles[nid].biome
+            for nid in tile_adjacency.get(tile_id, set())
+            if nid in self.tiles and self.tiles[nid].biome != Biome.WATER
+        ]
+
+        if land_neighbor_biomes:
+            dominant = Counter(land_neighbor_biomes).most_common(1)[0][0]
+            new_biome = dominant if dominant in (Biome.DESERT, Biome.PLAIN) else Biome.PLAIN
+        else:
+            new_biome = Biome.PLAIN
+
+        tile.biome = new_biome
+        for x, y in tile.cells:
+            self.biomes[y][x] = new_biome
+
+        # self._log(f"[water->land] tuile {tile_id} convertie en {new_biome.name}")
+
+    def _convert_land_tile_to_water(self, tile_id: int, biome=Biome.WATER):
+        """
+        Convertit une tuile terrestre en eau pour créer un détroit entre deux masses d'eau.
+
+        Args:
+            tile_id (int): Identifiant de la tuile à convertir.
+        """
+        tile = self.tiles[tile_id]
+        tile.biome = biome
+        for x, y in tile.cells:
+            self.biomes[y][x] = biome
+
+        # self._log(f"[land->water] tuile {tile_id} convertie en eau (détroit)")
+
+    def _pixel_contact_with_water(self, tile_id: int, water_tile_ids: set) -> int:
+        """
+        Compte le nombre de pixels (4-connexité) par lesquels une tuile touche
+        l'ensemble des tuiles d'eau indiquées.
+
+        Chaque paire (cellule de tile_id, cellule voisine d'une tuile d'eau) comptant
+        comme un contact, le maximum théorique est le périmètre complet de la tuile.
+
+        Args:
+            tile_id: Tuile dont on mesure le contact avec l'eau.
+            water_tile_ids: Ensemble des IDs de tuiles considérées comme eau.
+
+        Returns:
+            int: Nombre de contacts pixel 4-connexes avec des tuiles d'eau.
+        """
+        contact = 0
+        for x, y in self.tiles[tile_id].cells:
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    nid = self.grid[ny][nx]
+                    if nid != tile_id and nid in water_tile_ids:
+                        contact += 1
+        return contact
+
+    def _shared_pixel_border(self, tile_a: int, tile_b: int) -> int:
+        """
+        Compte le nombre de pixels de frontière 4-connexe partagés entre deux tuiles.
+
+        Utile pour choisir la tuile voisine qui est "la plus proche" d'un pont d'eau
+        existant, dans le but d'élargir un détroit trop fin.
+
+        Args:
+            tile_a: ID de la première tuile.
+            tile_b: ID de la seconde tuile.
+
+        Returns:
+            int: Nombre de paires de cellules adjacentes (4-connexité) entre les deux tuiles.
+        """
+        # On construit un set des cellules de tile_b pour les lookups O(1).
+        cells_b = set(self.tiles[tile_b].cells)
+        count = 0
+        for x, y in self.tiles[tile_a].cells:
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                if (x + dx, y + dy) in cells_b:
+                    count += 1
+        return count
 
     def _build_neighbors(self):
         """
