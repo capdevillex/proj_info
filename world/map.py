@@ -231,9 +231,6 @@ class Tile:
 
     def has_units(self):
         """
-<<<<<<< HEAD
-        bool qui vérifie si la tuile a des unités
-=======
         Vérifie si la tuile a des unités.
 
         Retour :
@@ -242,13 +239,12 @@ class Tile:
         Exemple :
             if tile.has_units():
                 print(f"Cette tuile a {len(tile.units)} unité(s)")
->>>>>>> 2d403f6 (style(map): Clean up whitespace and formatting in Tile class)
         """
 
         return len(self.units) > 0
 
     def get_units_by_owner(self, owner):
-        #utile si mind bender/priest
+        # utile si mind bender/priest
         """
         Récupère toutes les unités d'un propriétaire sur cette tuile.
 
@@ -516,9 +512,9 @@ class Map:
         Args:
             octaves (int): Niveau de détail du bruit (persistance des fréquences).
         """
-        scale = self.avg_cells_per_tile * 1.35
+        scale = self.avg_cells_per_tile * 1.15
         # Échelle plus large pour le bruit de chaleur : les zones désertiques sont plus étendues et moins fragmentées que la topographie de base.
-        heat_scale = self.avg_cells_per_tile * 3.5
+        heat_scale = self.avg_cells_per_tile * 3
         heat_seed = (
             self.seed + 7919
         ) % 255  # Décalage de seed pour que la heat map soit indépendante du bruit de terrain.
@@ -1286,7 +1282,13 @@ class Map:
 
                 for nx, ny in self._neighbors(x, y):
                     nid = self.grid[ny][nx]
-                    if nid != id_:
+                    if (
+                        nid != id_
+                        and id_ in self.tiles
+                        and self.tiles[id_] is not None
+                        and nid in self.tiles
+                        and self.tiles[nid] is not None
+                    ):
                         self.tiles[id_].neighbors.add(nid)
 
     def _neighbors(self, x, y):
