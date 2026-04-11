@@ -220,7 +220,7 @@ def main():
 
         # NOUVEAU : Afficher le type d'unité sélectionné
         unit_type_text = button_font.render(
-            f"Type: {selected_unit_type.name} (1-4 pour changer)", True, (200, 200, 200)
+            f"Type d'unité sélectionnée: {selected_unit_type.name} (1-4 pour changer)", True, (200, 200, 200)
         )
         screen.blit(unit_type_text, (gc.BUTTON_X, gc.BUTTON_Y + gc.BUTTON_HEIGHT + 10))
 
