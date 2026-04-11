@@ -216,19 +216,14 @@ class Tile:
     
     def has_units(self):
         """
-        Vérifie si la tuile a des unités.
-        
-        Retour :
-            bool : True si au moins une unité est présente
-            
-        Exemple :
-            if tile.has_units():
-                print(f"Cette tuile a {len(tile.units)} unité(s)")
+        bool qui vérifie si la tuile a des unités
         """
+
         return len(self.units) > 0
     
     
     def get_units_by_owner(self, owner):
+        #utile si mind bender/priest
         """
         Récupère toutes les unités d'un propriétaire sur cette tuile.
         

@@ -206,8 +206,10 @@ def main():
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
                         if hovered_tile:
                             # MODIFIÉ : Vérifier qu'il n'y a pas déjà une unité
-                            if len(hovered_tile.units) > 0:
+                            if hovered_tile.has_units():
                                 print(f"❌ La tuile {hovered_tile.id} a déjà une unité !")
+                            elif hovered_tile.biome == Biome.WATER :
+                                print(f"❌ La tuile {hovered_tile.id} est pleine de flotte !")
                             else:
                                 # Créer et ajouter une unité
                                 unit = Unit(
