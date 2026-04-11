@@ -1,0 +1,1 @@
+Changer le fonctionnement des boutons, faire en sorte que ce soit une classe bouton avec la positon, taille et couleur en paramètres)
