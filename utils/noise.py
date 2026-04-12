@@ -49,11 +49,11 @@ def _noise(x, y, repeatx=1024, repeaty=1024, base=0):
 
     # Récupération des indices de hashage
     A = PERM[i]
-    AA = PERM[A + j]
-    AB = PERM[A + jj]
+    AA = PERM[(A + j) % 512]
+    AB = PERM[(A + jj) % 512]
     B = PERM[ii]
-    BA = PERM[B + j]
-    BB = PERM[B + jj]
+    BA = PERM[(B + j) % 512]
+    BB = PERM[(B + jj) % 512]
 
     # Interpolation finale
     res = lerp(
