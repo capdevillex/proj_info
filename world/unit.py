@@ -21,7 +21,8 @@ class UnitType(Enum):
     SOLDIER = 1
     CAVALRY = 2
     ARCHER = 3
-    SETTLEMENT = 4
+    COLON = 4
+    COLONIE = 5
 
 
 class Unit:
@@ -35,7 +36,16 @@ class Unit:
     # Compteur global pour générer des IDs uniques
     _unit_counter = 0
     
-    def __init__(self, tile_id, water_affinity, unit_type=UnitType.SOLDIER, owner=0, x=0.0, y=0.0):
+    # Distance maximale pour chaque type d'unité
+    MAX_DISTANCE = {
+        UnitType.SOLDIER: 3,
+        UnitType.CAVALRY: 5,
+        UnitType.ARCHER: 2,
+        UnitType.COLON: 2,  # Immobile
+        UnitType.COLONIE: 0
+    }
+
+    def __init__(self, tile_id, water_affinity,unit_type=UnitType.SOLDIER, owner=0, x=0.0, y=0.0):
         """Crée une nouvelle unité."""
         Unit._unit_counter += 1
         self.id = Unit._unit_counter
@@ -45,7 +55,8 @@ class Unit:
         self.owner = owner
         self.x = x
         self.y = y
-        
+        self.max_distance = self.MAX_DISTANCE[unit_type]
+        self.has_moved = False
     
     def __repr__(self):
         """Représentation textuelle de l'unité"""
@@ -57,7 +68,7 @@ class Unit:
             UnitType.SOLDIER: (255, 100, 100),      # Rouge
             UnitType.CAVALRY: (100, 200, 255),      # Bleu
             UnitType.ARCHER: (255, 200, 100),       # Orange
-            UnitType.SETTLEMENT: (255, 255, 100),   # Jaune
+            UnitType.COLON: (255, 255, 100),   # Jaune
         }
         return colors.get(self.unit_type, (200, 200, 200))
     
@@ -67,9 +78,36 @@ class Unit:
             UnitType.SOLDIER: 1,
             UnitType.CAVALRY: 2,
             UnitType.ARCHER: 3,
-            UnitType.SETTLEMENT: 4,
+            UnitType.COLON: 4,
         }
         return sizes.get(self.unit_type, 2)
+
+    def get_opacity(self):
+        """
+        Retourne l'opacité de l'unité.
+        
+        Returns:
+            float: 1.0 si n'a pas bougé, 0.5 si a bougé
+        """
+        return 0.5 if self.has_moved else 1.0
+    
+    def can_move(self):
+        """Vérifie si l'unité peut encore se déplacer ce tour."""
+        return not self.has_moved and self.max_distance > 0
+    
+    def move_to_tile(self, new_tile_id):
+        """
+        Déplace l'unité vers une nouvelle tuile.
+        
+        Args:
+            new_tile_id (int): ID de la nouvelle tuile
+        """
+        self.tile_id = new_tile_id
+        self.has_moved = True
+    
+    def reset_movement(self):
+        """Réinitialise le mouvement (appelé au début d'un nouveau tour)."""
+        self.has_moved = False
 
     def get_visibility_mask(self, map_):
         """Calcule le bitmask de visibilité pour cette unité."""
