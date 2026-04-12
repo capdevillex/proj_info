@@ -28,7 +28,7 @@ class RenderPipeline:
             UnitType.SOLDIER: pygame.image.load(img_path / "soldat.png").convert_alpha(),
             UnitType.ARCHER: pygame.image.load(img_path / "archer.png").convert_alpha(),
             UnitType.CAVALRY: pygame.image.load(img_path / "cavalier.png").convert_alpha(),
-            UnitType.SETTLEMENT: pygame.image.load(img_path / "colon.png").convert_alpha(),
+            UnitType.COLON: pygame.image.load(img_path / "colon.png").convert_alpha(),
         }
         self.default_image = pygame.image.load(img_path / "soldat.png").convert_alpha()
 
@@ -166,6 +166,12 @@ class RenderPipeline:
 
                 # 4. Centrer et afficher
                 img_rect = scaled_img.get_rect(center=(screen_x, screen_y))
+                
+
+                # Pas de numéro ici, gestion de l'opacité
+                opacity = unit.get_opacity()  # Retourne 1.0 ou 0.5
+                alpha = int(255 * opacity)  
+                scaled_img.set_alpha(alpha)  
                 screen.blit(scaled_img, img_rect)
 
     def render(self, screen, game_map, cam, tile_size, hovered_tile, dt):
