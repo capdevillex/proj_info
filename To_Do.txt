@@ -1,12 +1,48 @@
 -----------A FAIRE-------------
 
-Faire bouger les unités en vdv
-Ajouter génération des ressources (V : coming soon)
-Ajouter FOW  (après déplacement unit)
+Phase 0 :
+    Implémenter déplacement des unités (coût simple : distance centre à centre des tuiles)
+    Ajouter génération des ressources (V : coming soon)
+    Ajouter sélection d’unité
+    Ajouter FOW (après déplacement unit)
+    Combat basique (sans edge-case terrain)
+
+Phase 1 :
+    Économie (production / nourriture / or)
+    Colonisation (colon)
+    Villes simples
+    Construction basique (ferme, scierie, mine, etc.)
+    Ajouter routes (bonus déplacement)
+    système de sauvegarde de partie
+
+Phase 2 :
+    Tech tree
+        - système de recherche
+        - arbre simple
+    Expansion des villes
+    IA basique, citées états
+    Combat avancé (modificateur de terrain, spécialisation des units)
+    Attrition logistique (distance à route ou ville)
+    Types d’unités avancés
+
+Phase 3:
+    IA plus complète
+    UI avancée (tooltips, infos)
+    Équilibrage
+    Conditions de victoire
+    Events
+
+
+Cool si on a le temps et la motivation :
+    Events aléatoires
+    Multijoueur local
 
 ----------FAIT-----------------
 
+V : Fenêtre basique
+V : Génération procédurale de la carte
 X : Changer le fonctionnement des boutons, faire en sorte que ce soit une classe bouton avec la positon, taille et couleur en paramètres)
-V : réparer génération buggée
+X : Création d'unités basique
+V : Réparer génération buguée
 V : Placement du HUD relativement aux bordures de l'écran
 V : Ajouter side bar retractable avec les ressources dont on dispose dessus
