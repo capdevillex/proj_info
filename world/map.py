@@ -976,54 +976,6 @@ class Map:
 
         # self._log(f"[land->water] tuile {tile_id} convertie en eau (détroit)")
 
-    def _pixel_contact_with_water(self, tile_id: int, water_tile_ids: set) -> int:
-        """
-        Compte le nombre de pixels (4-connexité) par lesquels une tuile touche
-        l'ensemble des tuiles d'eau indiquées.
-
-        Chaque paire (cellule de tile_id, cellule voisine d'une tuile d'eau) comptant
-        comme un contact, le maximum théorique est le périmètre complet de la tuile.
-
-        Args:
-            tile_id: Tuile dont on mesure le contact avec l'eau.
-            water_tile_ids: Ensemble des IDs de tuiles considérées comme eau.
-
-        Returns:
-            int: Nombre de contacts pixel 4-connexes avec des tuiles d'eau.
-        """
-        contact = 0
-        for x, y in self.tiles[tile_id].cells:
-            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < self.width and 0 <= ny < self.height:
-                    nid = self.grid[ny][nx]
-                    if nid != tile_id and nid in water_tile_ids:
-                        contact += 1
-        return contact
-
-    def _shared_pixel_border(self, tile_a: int, tile_b: int) -> int:
-        """
-        Compte le nombre de pixels de frontière 4-connexe partagés entre deux tuiles.
-
-        Utile pour choisir la tuile voisine qui est "la plus proche" d'un pont d'eau
-        existant, dans le but d'élargir un détroit trop fin.
-
-        Args:
-            tile_a: ID de la première tuile.
-            tile_b: ID de la seconde tuile.
-
-        Returns:
-            int: Nombre de paires de cellules adjacentes (4-connexité) entre les deux tuiles.
-        """
-        # On construit un set des cellules de tile_b pour les lookups O(1).
-        cells_b = set(self.tiles[tile_b].cells)
-        count = 0
-        for x, y in self.tiles[tile_a].cells:
-            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                if (x + dx, y + dy) in cells_b:
-                    count += 1
-        return count
-
     def _rebuild_tiles_from_grid(self):
         self.tiles.clear()
 
