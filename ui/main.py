@@ -34,7 +34,7 @@ def main():
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
 
-    # ✨ NOUVEAU : Utiliser UIManager au lieu de créer les boutons manuellement
+    # NOUVEAU : Utiliser UIManager au lieu de créer les boutons manuellement
     ui_manager = UIManager(button_font)
 
     # Type d'unité à placer par défaut
@@ -130,24 +130,29 @@ def main():
         camera.update(dt, game_map, tile_size, window_w, window_h)
         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
 
-        # ✨ NOUVEAU : Une seule ligne pour mettre à jour tous les boutons
+        # Mettre à jour les positions des boutons en fonction de la taille de l'écran
+        ui_manager.update_positions(window_w, window_h)
+
+        # Mettre à jour tous les boutons et la sidebar
         mouse_pos = pygame.mouse.get_pos()
-        ui_manager.update(mouse_pos)
+        ui_manager.update(mouse_pos, dt)
 
         # -------- RENDER --------
         screen.fill((0, 0, 0))
         renderer.render(screen, game_map, camera, tile_size, hovered_tile, dt)
 
-        # ✨ NOUVEAU : Une seule ligne pour dessiner tous les boutons
+        # Une seule ligne pour dessiner tous les boutons
         ui_manager.draw(screen)
 
-        # Afficher le type d'unité sélectionné
+        # Afficher le type d'unité sélectionné (positionné en bas à droite)
         unit_type_text = button_font.render(
-            f"Type d'unité sélectionnée: {selected_unit_type.name} (1-4 pour changer)",
+            f"Type: {selected_unit_type.name} (1-4)",
             True,
             (200, 200, 200),
         )
-        screen.blit(unit_type_text, (gc.BUTTON_X, gc.BUTTON_Y + gc.BUTTON_HEIGHT + 10))
+        text_rect = unit_type_text.get_rect()
+        text_rect.bottomright = (window_w - 10, window_h - 10)
+        screen.blit(unit_type_text, text_rect)
 
         pygame.display.flip()
 
