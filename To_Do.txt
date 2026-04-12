@@ -3,9 +3,9 @@
 Phase 0 :
     
     Ajouter génération des ressources (V : coming soon)
-    
     Ajouter FOW (après déplacement unit)
     Combat basique (sans edge-case terrain)
+    Gestion des collisions (mouvements avec eau, autres unités etc) (X : On it)
 
 Phase 1 :
     Économie (production / nourriture / or)
