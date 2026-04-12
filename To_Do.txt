@@ -1,7 +1,7 @@
 -----------A FAIRE-------------
 
 Phase 0 :
-    Implémenter déplacement des unités (coût simple : distance centre à centre des tuiles)
+    Implémenter déplacement des unités (coût simple : distance centre à centre des tuiles) (X : je suis dessus)
     Ajouter génération des ressources (V : coming soon)
     Ajouter sélection d’unité
     Ajouter FOW (après déplacement unit)
