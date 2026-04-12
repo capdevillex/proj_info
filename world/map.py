@@ -344,28 +344,31 @@ class Map:
         # self._lloyd_relaxation(iterations=1)
         # En pratique ne change pas la forme des tuiles et en le désactivant on gagne 20-30% de temps de génération
 
-        self._log("[3] Génération des biomes")
+        self._log("[2] Génération des biomes")
         self._generate_biomes()
 
-        self._log("[4] Assignation Voronoï")
+        self._log("[3] Assignation Voronoï")
         self._assign_cells()
 
-        self._log("[5] Nettoyage & contraintes")
+        self._log("[4] Nettoyage & contraintes")
         self._cleanup()
 
-        self._log("[6] Construction des provinces")
+        self._log("[5] Construction des provinces")
         self._build_tiles()
         self._log(f"    {len(self.tiles)} provinces générés")
         self._log(f"    mean area : {sum((t.area for t in self.tiles.values()))/len(self.tiles)}")
 
-        self._log("[7] Post-traitement hydrographique")
+        self._log("[6] Post-traitement hydrographique")
         self._fix_water_connectivity()
 
-        self._log("[8] Fusion des tuiles d'eau (super-tuiles)")
+        self._log("[7] Fusion des tuiles d'eau (super-tuiles)")
         self._merge_water_tiles()
 
-        self._log("[9] Voisinage")
+        self._log("[8] Voisinage")
         self._build_neighbors()
+
+        self._log("[9] Validation de l'intégrité de la carte")
+        self._validate_integrity()
 
         self._log(f"[perf] generation time : {time.perf_counter() - tic}s")
 
@@ -745,7 +748,7 @@ class Map:
         for comp in components:
             if len(comp) <= MIN_WATER_CLUSTER_SIZE:
                 small_ids.update(comp)
-                self._log(f"[water] micro-cluster supprimé ({len(comp)} tuile(s))")
+                # self._log(f"[water] micro-cluster supprimé ({len(comp)} tuile(s))")
             else:
                 large_components.append(comp)
 
@@ -825,9 +828,9 @@ class Map:
 
                 if converted > 0:
                     bridges_built += 1
-                    self._log(
-                        f"[water] pont créé entre comp {i} et comp {j} ({converted} tuile(s) converties)"
-                    )
+                    # self._log(
+                    #     f"[water] pont créé entre comp {i} et comp {j} ({converted} tuile(s) converties)"
+                    # )
 
                 # Fusionner les deux composantes dans comp_sets pour les prochaines paires.
                 comp_sets[i] = set_i | set_j
@@ -921,7 +924,7 @@ class Map:
                         del border_cache[k]
 
                     widened += 1
-                    self._log(f"[water] élargissement : tuile {best} convertie en eau")
+                    # self._log(f"[water] élargissement : tuile {best} convertie en eau")
 
             self._log(
                 f"[water] passe d'élargissement {pass_num + 1} : {widened} tuile(s) ajoutée(s)"
@@ -1663,3 +1666,19 @@ class Map:
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.width and 0 <= ny < self.height:
                 yield nx, ny
+
+    def _validate_integrity(self):
+        """
+        Vérifie que chaque cellule de la grille correspond à une tuile valide et que les tuiles
+        référencées contiennent bien ces cellules.
+        Cette validation est cruciale pour éviter les incohérences qui pourraient causer des bugs
+        difficiles à diagnostiquer plus tard dans le pipeline de génération ou lors du gameplay.
+        """
+        for y in range(self.height):
+            for x in range(self.width):
+                tid = self.grid[y][x]
+                if tid is None:
+                    raise RuntimeError(f"Cell ({x},{y}) has no tile")
+
+                if (x, y) not in self.tiles[tid].cells:
+                    raise RuntimeError(f"Inconsistency: cell ({x},{y}) not in tile {tid}")
