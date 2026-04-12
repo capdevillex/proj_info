@@ -1021,6 +1021,23 @@ class Map:
                     count += 1
         return count
 
+    def _rebuild_tiles_from_grid(self):
+        self.tiles.clear()
+
+        cells_by_id = defaultdict(list)
+
+        for y in range(self.height):
+            for x in range(self.width):
+                tid = self.grid[y][x]
+                if tid is not None:
+                    cells_by_id[tid].append((x, y))
+
+        for tid, cells in cells_by_id.items():
+            tile = Tile(tid, cells)
+            biome = Counter(self.biomes[y][x] for x, y in cells).most_common(1)[0][0]
+            tile.biome = biome
+            self.tiles[tid] = tile
+
     def _merge_water_tiles(self, target_size: int = 12):
         """
         Fusionne les tuiles d'eau proches en super-tuiles plus grandes pour améliorer la jouabilité.
@@ -1063,6 +1080,7 @@ class Map:
 
         self._log("[Fusion F] Reconstruction des tuiles")
         self._reconstruct_tiles(water_groups, land_tiles)
+        self._rebuild_tiles_from_grid()
 
         self._log(f"[Fusion] Terminé - {len(self.tiles)} tuiles au total")
 
@@ -1137,7 +1155,7 @@ class Map:
         # Rayon de base pour la densité cible
         r_base = math.sqrt(
             len(water_cells_set)
-            / (max(1, len(water_cells_set) / (self.avg_cells_per_tile * target_size)))
+            / (max(1, len(water_cells_set) / (self.avg_cells_per_tile * target_size * 1.2)))
         )
 
         # Paramètres de densité : 1.5x plus dense à la côte
@@ -1152,8 +1170,8 @@ class Map:
 
         def get_local_r(pos):
             d = distance_map.get(pos, 0)
-            # Interpolation douce du rayon : sature à 50 pixels de la côte
-            t = min(d / 50.0, 1.0)
+            # Interpolation douce du rayon : sature à self.avg_cells_per_tile pixels de la côte
+            t = min(d / self.avg_cells_per_tile, 1.0)
             return r_min + (r_max - r_min) * t
 
         water_candidates = list(water_cells_set)
