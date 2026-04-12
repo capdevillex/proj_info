@@ -263,7 +263,7 @@ class RenderPipeline:
                 True,
                 (255, 255, 255),
             )
-            screen.blit(text_info, (10, 10))
+            screen.blit(text_info, (10, 70))
 
         self.fps = (self.fps * 0.85) + (1 / dt * (1 - 0.85))
         text_FPS = self.font.render(
@@ -271,4 +271,4 @@ class RenderPipeline:
             True,
             (255, 255, 255),
         )
-        screen.blit(text_FPS, (10, 30))
+        screen.blit(text_FPS, (10, 90))
