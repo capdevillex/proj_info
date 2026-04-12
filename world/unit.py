@@ -70,3 +70,14 @@ class Unit:
             UnitType.SETTLEMENT: 4,
         }
         return sizes.get(self.unit_type, 2)
+
+    def get_visibility_mask(self, map_):
+        """Calcule le bitmask de visibilité pour cette unité."""
+        visible_tiles = set()
+        visible_tiles.add(self.tile_id)
+        for neighbor_id in map_.tiles[self.tile_id].neighbors:
+            visible_tiles.add(neighbor_id)
+        mask = 0
+        for tile_id in visible_tiles:
+            mask |= 1 << tile_id
+        return mask
