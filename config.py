@@ -6,7 +6,7 @@ class GameConfig:
     HEIGHT = 300
     WIDTH = (HEIGHT * 16) // 9
 
-    FPS = 200
+    FPS = 60
 
     SCREEN_WIDTH = WIDTH * TILE_SIZE
     SCREEN_HEIGHT = HEIGHT * TILE_SIZE
