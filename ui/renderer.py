@@ -23,7 +23,7 @@ class RenderPipeline:
             UnitType.SOLDIER: pygame.image.load("img\\soldat.png").convert_alpha(),
             UnitType.ARCHER: pygame.image.load("img\\archer.png").convert_alpha(),
             UnitType.CAVALRY: pygame.image.load("img\\cavalier.png").convert_alpha(),
-            UnitType.SETTLEMENT: pygame.image.load("img\\colon.png").convert_alpha()
+            UnitType.SETTLEMENT: pygame.image.load("img\\colon.png").convert_alpha(),
         }
         self.default_image = pygame.image.load("img\\soldat.png").convert_alpha()
 
@@ -153,7 +153,7 @@ class RenderPipeline:
                 base_image = self.unit_images.get(unit.unit_type, self.default_image)
 
                 # 2. Calculer la taille souhaitée
-                base_diameter = unit.get_size() * 2 
+                base_diameter = unit.get_size() * 2
                 scaled_size = max(1, int(base_diameter * cam.zoom))
 
                 # 3. Redimensionner LA bonne image
@@ -260,10 +260,10 @@ class RenderPipeline:
             )
             screen.blit(text_info, (10, 10))
 
-            self.fps = (self.fps * 0.85) + (1 / dt * (1 - 0.85))
+        self.fps = (self.fps * 0.85) + (1 / dt * (1 - 0.85))
         text_FPS = self.font.render(
             f"FPS : {self.fps:.1f} | seed {game_map.seed}",
             True,
             (255, 255, 255),
-            )
+        )
         screen.blit(text_FPS, (10, 30))
