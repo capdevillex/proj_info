@@ -1,55 +1,66 @@
-"""
-Module de Génération Procédurale de Monde (Grid-Based Voronoi Map)
+""" "
+Module de Génération Procédurale de Monde (Hybrid Voronoi/Poisson 4X Map)
 
 Ce module orchestre la création d'un monde structuré en provinces (Tiles) à partir d'une grille 2D.
-La génération suit une approche hybride mêlant partitionnement spatial (Voronoï), échantillonnage de
-Blue Noise (Ebeida/Poisson) et bruit cohérent (Perlin).
+Il utilise un pipeline combinant partitionnement spatial, bruit cohérent, optimisation topologique
+et post-traitements hydrographiques.
 
 ---
 
 ### Pipeline de Génération :
 
-1.  **Placement des points d'attraction (Blue Noise) :**
-    * Initialisation de points d'attraction via l'algorithme d'Ebeida (Poisson-disk sampling simplifié).
-    * Cette méthode garantit une distribution homogène des centres de provinces, évitant
-        les clusters inesthétiques tout en conservant un aspect organique.
-    * *Optionnel :* Relaxation de Lloyd pour stabiliser les centroïdes.
+1.  **Placement des points d'attraction :**
+    * Utilise un échantillonnage de type Poisson-disk (Phase I d'Ebeida et al.) pour distribuer les
+        centres de provinces.
+    * Garantit une distance minimale $r$ entre les points via une grille d'accélération, assurant
+        une distribution homogène sans l'aspect rigide d'une grille régulière.
 
-2.  **Cartographie des Biomes (Bruit Cohérent) :**
-    * Génération d'une carte de bruit de Perlin multi-octave.
-    * Segmentation de la valeur du bruit en seuils discrets pour définir les biomes
-        (Eau, Plaine, Forêt, Montagne).
-    * Assure une continuité spatiale (les forêts bordent les plaines, etc.).
+2.  **Cartographie des Biomes (Bruit de Perlin & Modèle Climatique) :**
+    * Génération d'une carte de bruit de Perlin multi-octave influencée par un gradient
+        radial négatif (favorisant l'eau aux bordures de la carte).
+    * Détermination des biomes (Eau, Plaine, Forêt, Montagne) par seuillage discret.
+    * **Modèle de Chaleur :** Un second bruit indépendant définit les zones de Désert
+        par superposition sur les biomes de Plaine.
 
 3.  **Partitionnement de Voronoï Discret :**
-    * Chaque cellule de la grille est assignée à la capitale la plus proche via une
-        recherche accélérée par KD-Tree.
-    * Unification des biomes : La province adopte le biome majoritaire de ses cellules
-        constituantes, et réécrase ensuite le biome de chaque cellule pour garantir
-        l'homogénéité interne.
+    * Assignation de chaque cellule $(x, y)$ de la grille à la capitale la plus proche
+        via une structure spatiale KD-Tree pour optimiser la recherche.
 
-4.  **Optimisation Topologique et Nettoyage :**
-    * **BFS :** Détection et réassignation des fragments isolés (îles de pixels)
-        vers la province voisine la plus dominante.
-    * **Contraintes morphologiques :** Stabilisation des formes pour éviter les
-        provinces en "U" ou excessivement morcelées.
-    * **Filtrage de taille :** Fusion systématique des micro-provinces sous un seuil
-        de surface critique.
+4.  **Nettoyage Morphologique (BFS & Re-assignation) :**
+    * Détection des composantes connexes par BFS pour identifier les fragments isolés
+        ou les îles de pixels.
+    * Fusion des micro-provinces sous un seuil de surface critique vers les voisins
+        dominants pour garantir la jouabilité et l'esthétique des formes.
 
-5.  **Instanciation et Topologie (Graphe) :**
-    * Calcul des propriétés finales de chaque objet `Tile` (Centroïde, Surface, Biome).
-    * **Graphe d'Adjacence :** Analyse des frontières de cellules pour identifier les
-        provinces voisines. Ce graphe sert de base au calcul de pathfinding et aux
-        algorithmes de diffusion.
+5.  **Cohérence Hydrographique (Système de Ponts et Corridors) :**
+    * **Filtrage :** Suppression des micro-lacs isolés.
+    * **Connectivité :** Algorithme de recherche de chemin (BFS sur graphe de tuiles)
+        pour relier les masses d'eau significatives proches en convertissant des tuiles
+        terrestres (hors montagnes) en détroits.
+    * **Élargissement :** Analyse des frontières de pixels pour épaissir les corridors
+        d'eau trop fins, évitant les passages maritimes visuellement atrophiés.
+
+6.  **Fusion des Tuiles d'Eau (Super-tuiles) :**
+    * Regroupement des petites tuiles d'eau en vastes zones maritimes pour optimiser la jouabilité
+        maritime.
+    * **Distance Transform :** Calcul de la distance de Manhattan par rapport aux côtes.
+    * **Sampling Adaptatif :** Placement de nouveaux points d'attraction maritimes plus
+        espacés au large et plus denses près des côtes.
+    * **Relaxation de Lloyd avec Répulsion :** Centrage des super-tuiles avec un gradient
+        les poussant vers le large pour des formes de mers plus naturelles.
+
+7.  **Instanciation de la Topologie (Graphe d'Adjacence) :**
+    * Calcul des propriétés finales des objets `Tile` (Biome majoritaire, Cellules, ID).
+    * Construction du graphe de voisinage final (adjacence 4 direction + diagonales) permettant le
+        pathfinding et les mécaniques de diffusion.
 
 ---
 
-### Mécaniques de Jeu et Déplacement :
-* **Coût de mouvement :** Le temps de trajet entre deux provinces est calculé par la
-    distance euclidienne entre les centres, pondérée par un coefficient de friction
-    propre au biome de destination.
-* **Déterminisme :** La génération est entièrement pilotée par une graine (seed),
-    permettant une reproductibilité parfaite de la géographie et des biomes.
+### Propriétés Techniques :
+* **Complexité Spatiale :** Optimisée par KD-Tree et grilles d'accélération locales.
+* **Déterminisme :** Génération 100% pilotée par une `seed` unique.
+* **Connectivité Garantie :** Chaque province est une composante connexe unique de pixels
+    grâce aux phases de nettoyage BFS et de propagation simultanée (Priority Queue).
 """
 
 import heapq
@@ -59,10 +70,10 @@ from collections import defaultdict, Counter, deque
 
 from scipy.spatial import KDTree
 
-from utils.noise import perlin_noise
-from world.biome import Biome
 
-from world.unit import Unit
+from world.tile import Tile
+from world.biome import Biome
+from utils.noise import perlin_noise
 
 VORONOI_AREA_CORRECTION = 1.556  # facteur de correction empirique
 
@@ -94,184 +105,6 @@ def ratio_area_perimeter(cells: List):
             if (nx, ny) not in cell_set:
                 perimeter += 1
     return area / (perimeter + 10**-12)
-
-
-class Tile:
-    """
-    Représente une unité territoriale (province) cohérente sur la carte.
-
-    Une province regroupe un ensemble de cellules (pixels/coordonnées) issues d'une
-    segmentation de Voronoï. Elle porte des propriétés physiques et topologiques
-    utilisées pour le gameplay et le rendu.
-
-    Attributes:
-        id (int): Identifiant unique de la tuile.
-        cells (List[Tuple[int, int]]): Liste des coordonnées (x, y) composant la tuile.
-        center (Tuple[float, float]): Point central (centroïde) géométrique de la tuile.
-        area (int): Nombre total de cellules (surface).
-        neighbors (Set[int]): Ensemble des IDs des tuiles adjacentes.
-        biome (Biome): Type de terrain dominant assigné à la tuile.
-
-        units (List[Unit]): NOUVEAU - Liste des unités présentes sur cette tuile
-    """
-
-    def __init__(self, id_, cells):
-        self.id = id_
-        self.cells = cells
-        self.center = self._compute_center()
-        self.area = len(cells)
-        self.neighbors = set()
-        self.biome = Biome.BLANK
-
-        # NOUVEAU : initialiser la liste d'unités vide
-        self.units = []
-
-    def _compute_center(self):
-        """
-        Calcule le centre de masse moyen de la tuile.
-
-        Returns:
-            Tuple[float, float]: Coordonnées (x, y) du centre géométrique.
-        """
-        x = sum(c[0] + 0.5 for c in self.cells) / len(self.cells)
-        y = sum(c[1] + 0.5 for c in self.cells) / len(self.cells)
-        return (x, y)
-
-    # ========== NOUVELLES MÉTHODES POUR GÉRER LES UNITÉS ==========
-
-    def add_unit(self, unit):
-        """
-        Ajoute une unité à cette tuile.
-
-        Args:
-            unit (Unit): L'unité à ajouter
-
-        Exemple :
-            tile = game_map.tiles[5]
-            unit = Unit(tile_id=5, unit_type=UnitType.SOLDIER)
-            tile.add_unit(unit)
-        """
-        if unit not in self.units:
-            self.units.append(unit)
-            unit.tile_id = self.id  # S'assurer que l'unité sait sur quelle tuile elle est
-
-    def remove_unit(self, unit):
-        """
-        Retire une unité de cette tuile.
-
-        Args:
-            unit (Unit): L'unité à retirer
-
-        Retour :
-            bool : True si l'unité a été trouvée et retirée, False sinon
-
-        Exemple :
-            if tile.remove_unit(unit):
-                print("Unité retirée")
-        """
-        if unit in self.units:
-            self.units.remove(unit)
-            return True
-        return False
-
-    def remove_unit_by_id(self, unit_id):
-        """
-        Retire une unité par son ID.
-
-        Args:
-            unit_id (int): L'ID de l'unité à retirer
-
-        Retour :
-            Unit : L'unité retirée, ou None si non trouvée
-
-        Exemple :
-            removed = tile.remove_unit_by_id(5)
-            if removed:
-                print(f"Unité {removed.id} retirée")
-        """
-        for unit in self.units[:]:  # Copie pour éviter les problèmes lors de la modification
-            if unit.id == unit_id:
-                self.units.remove(unit)
-                return unit
-        return None
-
-    def get_units(self):
-        """
-        Retourne la liste des unités sur cette tuile.
-
-        Retour :
-            List[Unit] : Liste des unités
-
-        Exemple :
-            units = tile.get_units()
-            for unit in units:
-                print(unit)
-        """
-        return self.units.copy()  # Retourner une copie pour éviter les modifications externes
-
-    def get_unit_by_id(self, unit_id):
-        """
-        Trouve une unité par son ID sur cette tuile.
-
-        Args:
-            unit_id (int): L'ID de l'unité à chercher
-
-        Retour :
-            Unit : L'unité trouvée, ou None si non trouvée
-
-        Exemple :
-            unit = tile.get_unit_by_id(5)
-            if unit:
-                print(f"Trouvée : {unit}")
-        """
-        for unit in self.units:
-            if unit.id == unit_id:
-                return unit
-        return None
-
-    def has_units(self):
-        """
-        Vérifie si la tuile a des unités.
-
-        Retour :
-            bool : True si au moins une unité est présente
-
-        Exemple :
-            if tile.has_units():
-                print(f"Cette tuile a {len(tile.units)} unité(s)")
-        """
-
-        return len(self.units) > 0
-
-    def get_units_by_owner(self, owner):
-        # utile si mind bender/priest
-        """
-        Récupère toutes les unités d'un propriétaire sur cette tuile.
-
-        Args:
-            owner (int): L'ID du propriétaire
-
-        Retour :
-            List[Unit] : Les unités du propriétaire
-
-        Exemple :
-            units_joueur_0 = tile.get_units_by_owner(0)
-        """
-        return [unit for unit in self.units if unit.owner == owner]
-
-    def clear_units(self):
-        """
-        Retire toutes les unités de cette tuile.
-
-        """
-        removed = self.units.copy()
-        self.units.clear()
-        return removed
-
-    def __repr__(self):
-        """Représentation textuelle de la tuile"""
-        units_str = f", {len(self.units)} unit(s)" if self.units else ""
-        return f"Tile(id={self.id}, biome={self.biome.name}, area={self.area}{units_str})"
 
 
 class Map:
@@ -1039,7 +872,7 @@ class Map:
 
         self._log(f"[Fusion] Terminé - {len(self.tiles)} tuiles au total")
 
-    # ========== MÉTHODES DÉDIÉES POUR LE PIPELINE DE FUSION ==========
+    # Méthodes dédiées au partitionnement des tuiles d'eau
 
     def _collect_water_and_land_cells(self):
         """
@@ -1572,6 +1405,8 @@ class Map:
             next_id += 1
 
         self.tiles = new_tiles
+
+    # Méthodes du pipeline de génération
 
     def _build_neighbors(self):
         """
