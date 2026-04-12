@@ -1024,14 +1024,57 @@ class Map:
     def _merge_water_tiles(self, target_size: int = 12):
         """
         Fusionne les tuiles d'eau proches en super-tuiles plus grandes pour améliorer la jouabilité.
-        Algorithme :
-            1. On collecte les cellules d'eau et on prépare une Distance Transform pour mesurer la distance à la terre la plus proche.
-            2. On applique un Poisson Disk Sampling adaptatif (inspiré d'Ebeida) sur les cellules d'eau, où le rayon de rejet varie en fonction de la distance à la côte : plus on est proche de la terre, plus les points d'attraction sont denses, créant des tuiles d'eau plus petites et détaillées près des côtes, et plus espacés au large pour éviter les micro-tuiles d'eau.
-            3. On effectue une relaxation de Lloyd sur les points d'attraction pour améliorer la régularité des tuiles d'eau, en introduisant une répulsion supplémentaire près des côtes pour éviter que les tuiles d'eau ne deviennent trop grandes et irrégulières à proximité de la terre.
-            4. Enfin, on réassigne les cellules d'eau aux nouveaux points d'attraction via un Voronoï discret, ce qui fusionne efficacement les tuiles d'eau proches en de plus grandes entités cohérentes, tout en préservant les détails côtiers essentiels pour la jouabilité et l'esthétique de la carte.
-            5. On reconstruit les tuiles d'eau fusionnées et on met à jour les biomes en conséquence.
+
+        Pipeline :
+            A. Distance Transform : Calcul de la distance à la côte pour chaque cellule d'eau
+            B. Poisson Disk Sampling adaptatif : Placement des points d'attraction avec densité variable
+            C. Relaxation de Lloyd : Amélioration de la régularité avec répulsion côtière
+            D. Assignation Voronoï : Propagation par flood fill simultané
+            E. Nettoyage et réassignation : Traitement des tuiles problématiques
+            F. Reconstruction : Création des nouvelles tuiles
         """
-        # 1. Collecte des cellules d'eau et préparation de la Distance Transform
+        self._log("[Fusion] Début de la fusion des tuiles d'eau")
+
+        # Collecte initiale
+        water_cells_set, land_cells, land_tiles = self._collect_water_and_land_cells()
+
+        if not water_cells_set:
+            self._log("[Fusion] Aucune cellule d'eau à fusionner")
+            return
+
+        # Pipeline de fusion
+        self._log("[Fusion A] Distance Transform")
+        distance_map = self._compute_distance_transform(water_cells_set, land_cells)
+
+        self._log("[Fusion B] Poisson Disk Sampling adaptatif")
+        seeds = self._adaptive_poisson_sampling(water_cells_set, distance_map, target_size)
+        self._log(f"[Fusion B] {len(seeds)} points d'attraction générés")
+
+        self._log("[Fusion C] Relaxation de Lloyd avec répulsion côtière")
+        seeds = self._lloyd_relaxation_with_repulsion(seeds, water_cells_set, distance_map)
+
+        self._log("[Fusion D] Assignation Voronoï par flood fill")
+        grid_assignment = self._voronoi_flood_fill(seeds, water_cells_set)
+
+        self._log("[Fusion E] Nettoyage et réassignation des tuiles problématiques")
+        water_groups = self._cleanup_and_reassign_problematic_tiles(
+            grid_assignment, seeds, water_cells_set, target_size
+        )
+
+        self._log("[Fusion F] Reconstruction des tuiles")
+        self._reconstruct_tiles(water_groups, land_tiles)
+
+        self._log(f"[Fusion] Terminé - {len(self.tiles)} tuiles au total")
+
+    # ========== MÉTHODES DÉDIÉES POUR LE PIPELINE DE FUSION ==========
+
+    def _collect_water_and_land_cells(self):
+        """
+        Collecte les cellules d'eau et de terre.
+
+        Returns:
+            Tuple[set, set, list]: (water_cells_set, land_cells, land_tiles)
+        """
         water_cells_set = set()
         land_cells = set()
         land_tiles = []
@@ -1043,11 +1086,19 @@ class Map:
                 land_tiles.append(tile)
                 land_cells.update(tile.cells)
 
-        if not water_cells_set:
-            return
+        return water_cells_set, land_cells, land_tiles
 
-        # ÉTAPE A : DISTANCE TRANSFORM (Manhattan simplifiée pour la performance)
-        # Calcule la distance de chaque cellule d'eau à la terre la plus proche
+    def _compute_distance_transform(self, water_cells_set, land_cells):
+        """
+        Calcule la distance de chaque cellule d'eau à la terre la plus proche (Manhattan).
+
+        Args:
+            water_cells_set: Ensemble des cellules d'eau
+            land_cells: Ensemble des cellules de terre
+
+        Returns:
+            Dict: Mapping (x, y) -> distance
+        """
         distance_map = {pos: float("inf") for pos in water_cells_set}
         dist_queue = deque()
 
@@ -1059,6 +1110,7 @@ class Map:
                     dist_queue.append((cx, cy))
                     break
 
+        # Propagation BFS
         while dist_queue:
             curr = dist_queue.popleft()
             d = distance_map[curr]
@@ -1068,19 +1120,32 @@ class Map:
                     distance_map[neighbor] = d + 1
                     dist_queue.append(neighbor)
 
-        # ÉTAPE B : POISSON DISK SAMPLING ADAPTATIF (Ebeida encore)
-        # Rayon de base pour la densité cible (target_size)
+        return distance_map
+
+    def _adaptive_poisson_sampling(self, water_cells_set, distance_map, target_size):
+        """
+        Poisson Disk Sampling adaptatif avec densité variable selon la distance à la côte.
+
+        Args:
+            water_cells_set: Ensemble des cellules d'eau
+            distance_map: Mapping (x, y) -> distance à la côte
+            target_size: Taille cible des tuiles
+
+        Returns:
+            List[Tuple[float, float]]: Liste des points d'attraction (seeds)
+        """
+        # Rayon de base pour la densité cible
         r_base = math.sqrt(
             len(water_cells_set)
             / (max(1, len(water_cells_set) / (self.avg_cells_per_tile * target_size)))
         )
 
-        # Paramètres de densité : 1.5x plus dense à la côte -> r_coast = r_base / sqrt(1.5)
-        r_min = r_base * 0.85  # Près des côtes
-        r_max = r_base * 1.75  # Large (3x moins dense environ)
+        # Paramètres de densité : 1.5x plus dense à la côte
+        r_min = r_base  # Près des côtes
+        r_max = r_base * 1.75  # Large
 
         seeds = []
-        # Grille d'accélération basée sur r_max pour la sécurité
+        # Grille d'accélération basée sur r_max
         cell_size = r_max / 1.414
         grid_w, grid_h = int(self.width / cell_size) + 1, int(self.height / cell_size) + 1
         accel_grid = [[-1 for _ in range(grid_w)] for _ in range(grid_h)]
@@ -1107,7 +1172,6 @@ class Map:
                     if idx != -1:
                         sx, sy = seeds[idx]
                         dist_sq = (sx - px) ** 2 + (sy - py) ** 2
-                        # Rayon effectif : moyenne ou max pour assurer la transition
                         combined_r = max(local_r, get_local_r((int(sx), int(sy))))
                         if dist_sq < combined_r**2:
                             too_close = True
@@ -1119,9 +1183,24 @@ class Map:
                 accel_grid[gy][gx] = len(seeds)
                 seeds.append((px, py))
 
-        # ÉTAPE C : RELAXATION DE LLOYD AVEC RÉPULSION CÔTIÈRE
-        for _ in range(3):  # 2 itérations suffisent
+        return seeds
+
+    def _lloyd_relaxation_with_repulsion(self, seeds, water_cells_set, distance_map, iterations=3):
+        """
+        Relaxation de Lloyd avec répulsion côtière.
+
+        Args:
+            seeds: Liste des points d'attraction
+            water_cells_set: Ensemble des cellules d'eau
+            distance_map: Mapping (x, y) -> distance à la côte
+            iterations: Nombre d'itérations
+
+        Returns:
+            List[Tuple[float, float]]: Seeds relaxés
+        """
+        for iteration in range(iterations):
             groups = defaultdict(list)
+
             # BFS temporaire pour assigner les cellules aux seeds actuelles
             temp_assignment = {
                 (int(s[0]), int(s[1])): i
@@ -1169,11 +1248,24 @@ class Map:
                     new_seeds.append((tx, ty))
                 else:
                     new_seeds.append(old_seed)
+
             seeds = new_seeds
 
-        # ÉTAPE 4 : PROPAGATION PAR FLOOD FILL SIMULTANÉ (BFS)
+        return seeds
+
+    def _voronoi_flood_fill(self, seeds, water_cells_set):
+        """
+        Assignation Voronoï par propagation simultanée (flood fill avec priority queue).
+
+        Args:
+            seeds: Liste des points d'attraction
+            water_cells_set: Ensemble des cellules d'eau
+
+        Returns:
+            Dict: Mapping (x, y) -> seed_index
+        """
         grid_assignment = {}
-        priority_queue = []  # (cost, x, y, seed_index, x_seed, y_seed)
+        priority_queue = []
 
         for i, seed in enumerate(seeds):
             pos = (int(seed[0]), int(seed[1]))
@@ -1197,49 +1289,296 @@ class Map:
                         priority_queue, (new_cost, neighbor[0], neighbor[1], s_idx, sx, sy)
                     )
 
-        # ÉTAPE E : NETTOYAGE ET FUSION
+        return grid_assignment
+
+    def _cleanup_and_reassign_problematic_tiles(
+        self, grid_assignment, seeds, water_cells_set, target_size
+    ):
+        """
+        Nettoyage et réassignation des tuiles problématiques (trop petites).
+
+        Nouvelle approche :
+        - Identifier les tuiles problématiques
+        - Supprimer ces tuiles et leurs voisines directes
+        - Collecter toutes les cellules à réassigner
+        - Pour chaque composante connexe, faire une assignation BFS avec n_comp - 1 points
+          (n_comp = nombre de tuiles supprimées dans cette composante)
+
+        Args:
+            grid_assignment: Mapping (x, y) -> seed_index
+            seeds: Liste des points d'attraction
+            water_cells_set: Ensemble des cellules d'eau
+            target_size: Taille cible des tuiles
+
+        Returns:
+            Dict: Mapping seed_index -> list of cells
+        """
+        # Grouper les cellules par seed
         water_groups = defaultdict(list)
         for pos, s_idx in grid_assignment.items():
             water_groups[s_idx].append(pos)
 
         min_area = (self.avg_cells_per_tile * target_size) * 0.4
-        remap = {idx: idx for idx in range(len(seeds))}
 
-        # Fusion des orphelins (identique à ton code mais sécurisé)
-        sorted_indices = sorted(water_groups.keys(), key=lambda i: len(water_groups[i]))
-        for s_idx in sorted_indices:
-            cells = water_groups[s_idx]
+        # Identifier les tuiles problématiques (trop petites)
+        problematic_indices = set()
+        for s_idx, cells in water_groups.items():
             if 0 < len(cells) < min_area:
-                neighbor_indices = set()
-                for cx, cy in cells:
-                    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                        nb = (cx + dx, cy + dy)
-                        if nb in grid_assignment:
-                            nb_idx = remap[grid_assignment[nb]]
-                            if nb_idx != s_idx:
-                                neighbor_indices.add(nb_idx)
+                problematic_indices.add(s_idx)
 
-                if neighbor_indices:
-                    target_idx = min(
-                        neighbor_indices,
-                        key=lambda idx: (
-                            len(water_groups[idx] + water_groups[s_idx])
-                            / (self._shared_pixel_border(s_idx, idx) + 1)
-                            / (1 + ratio_area_perimeter(water_groups[idx] + water_groups[s_idx]))
-                            ** 2
-                        ),
-                    )
-                    water_groups[target_idx].extend(cells)
-                    for c in cells:
-                        grid_assignment[c] = target_idx  # Mise à jour pour fusions suivantes
-                    remap[s_idx] = target_idx
-                    water_groups[s_idx] = []
+        if not problematic_indices:
+            self._log("[Fusion E] Aucune tuile problématique détectée")
+            return water_groups
 
-        # ÉTAPE F : RECONSTRUCTION
+        self._log(f"[Fusion E] {len(problematic_indices)} tuiles problématiques détectées")
+
+        # Construire le graphe d'adjacence entre tuiles
+        tile_neighbors = defaultdict(set)
+        for pos, s_idx in grid_assignment.items():
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                neighbor_pos = (pos[0] + dx, pos[1] + dy)
+                if neighbor_pos in grid_assignment:
+                    neighbor_idx = grid_assignment[neighbor_pos]
+                    if neighbor_idx != s_idx:
+                        tile_neighbors[s_idx].add(neighbor_idx)
+
+        # Collecter les tuiles à supprimer (problématiques + leurs voisines)
+        tiles_to_remove = set(problematic_indices)
+        for prob_idx in problematic_indices:
+            tiles_to_remove.update(tile_neighbors[prob_idx])
+            for neighbor in tile_neighbors[prob_idx]:
+                tiles_to_remove.update(tile_neighbors[neighbor])
+
+        self._log(f"[Fusion E] {len(tiles_to_remove)} tuiles à supprimer (incluant voisines)")
+
+        # Collecter toutes les cellules à réassigner
+        cells_to_reassign = set()
+        for s_idx in tiles_to_remove:
+            cells_to_reassign.update(water_groups[s_idx])
+            del water_groups[s_idx]
+
+        if not cells_to_reassign:
+            return water_groups
+
+        # Identifier les composantes connexes dans les cellules à réassigner
+        components = self._find_connected_components(cells_to_reassign)
+        num_components = len(components)
+
+        self._log(
+            f"[Fusion E] {len(cells_to_reassign)} cellules à réassigner en {num_components} composante(s)"
+        )
+
+        # Traiter chaque composante connexe séparément
+        next_seed_idx = max(water_groups.keys()) + 1 if water_groups else 0
+
+        for comp_idx, component in enumerate(components):
+            # Calculer combien de tuiles ont été supprimées dans cette composante
+            # (approximation basée sur la taille de la composante)
+            comp_size = len(component)
+
+            # Nombre de seeds pour cette composante : au moins 1, sinon basé sur la taille
+            num_seeds_for_comp = max(1, comp_size // (self.avg_cells_per_tile * target_size))
+
+            self._log(
+                f"[Fusion E] Composante {comp_idx + 1}/{num_components} : "
+                f"{comp_size} cellules, {num_seeds_for_comp} seed(s)"
+            )
+
+            # Générer des seeds pour cette composante
+            comp_seeds = self._generate_seeds_for_cells(component, num_seeds_for_comp)
+
+            # Assigner les cellules de cette composante avec BFS (garantit la connexité)
+            comp_assignment = self._assign_cells_to_seeds_bfs(component, comp_seeds)
+
+            # Intégrer les nouvelles assignations
+            for local_idx, cells in comp_assignment.items():
+                if cells:  # Ne pas créer de groupes vides
+                    water_groups[next_seed_idx] = cells
+                    next_seed_idx += 1
+
+        self._log(f"[Fusion E] Réassignation terminée - {len(water_groups)} groupes d'eau")
+
+        return water_groups
+
+    def _find_connected_components(self, cells_set):
+        """
+        Trouve les composantes connexes dans un ensemble de cellules.
+
+        Args:
+            cells_set: Ensemble de cellules (x, y)
+
+        Returns:
+            List[set]: Liste des composantes connexes
+        """
+        visited = set()
+        components = []
+
+        for start_cell in cells_set:
+            if start_cell in visited:
+                continue
+
+            # BFS pour trouver la composante
+            component = set()
+            queue = deque([start_cell])
+            visited.add(start_cell)
+
+            while queue:
+                cell = queue.popleft()
+                component.add(cell)
+
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    neighbor = (cell[0] + dx, cell[1] + dy)
+                    if neighbor in cells_set and neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append(neighbor)
+
+            components.append(component)
+
+        return components
+
+    def _generate_seeds_for_cells(self, cells_set, num_seeds):
+        """
+        Génère des points d'attraction pour un ensemble de cellules.
+
+        Args:
+            cells_set: Ensemble de cellules
+            num_seeds: Nombre de seeds à générer
+
+        Returns:
+            List[Tuple[float, float]]: Liste des seeds
+        """
+        if num_seeds <= 0:
+            return []
+
+        cells_list = list(cells_set)
+
+        if num_seeds >= len(cells_list):
+            # Un seed par cellule
+            return [(x + 0.5, y + 0.5) for x, y in cells_list]
+
+        # Échantillonnage aléatoire simple
+        sampled = random.sample(cells_list, num_seeds)
+        return [(x + 0.5, y + 0.5) for x, y in sampled]
+
+    def _assign_cells_to_seeds(self, cells_set, seeds):
+        """
+        Assigne des cellules aux seeds les plus proches (méthode simple, sans garantie de connexité).
+
+        ATTENTION : Cette méthode peut créer des tuiles non-connexes si des bras de terre
+        traversent la zone. Utilisez _assign_cells_to_seeds_bfs pour garantir la connexité.
+
+        Args:
+            cells_set: Ensemble de cellules à assigner
+            seeds: Liste des seeds
+
+        Returns:
+            Dict: Mapping seed_index -> list of cells
+        """
+        if not seeds:
+            return {}
+
+        assignment = defaultdict(list)
+
+        for cell in cells_set:
+            # Trouver le seed le plus proche
+            min_dist = float("inf")
+            closest_idx = 0
+
+            for i, seed in enumerate(seeds):
+                dist_sq = (cell[0] - seed[0]) ** 2 + (cell[1] - seed[1]) ** 2
+                if dist_sq < min_dist:
+                    min_dist = dist_sq
+                    closest_idx = i
+
+            assignment[closest_idx].append(cell)
+
+        return assignment
+
+    def _assign_cells_to_seeds_bfs(self, cells_set, seeds):
+        """
+        Assigne des cellules aux seeds en utilisant un BFS simultané.
+
+        Cette méthode garantit que chaque tuile créée est connexe (pas de bras de terre
+        qui la traverse). Le BFS propage depuis chaque seed simultanément, en respectant
+        la connexité 4-adjacente.
+
+        Args:
+            cells_set: Ensemble de cellules à assigner (doit être connexe)
+            seeds: Liste des seeds
+
+        Returns:
+            Dict: Mapping seed_index -> list of cells (chaque groupe est garanti connexe)
+        """
+        if not seeds:
+            return {}
+
+        if len(seeds) == 1:
+            # Un seul seed : toutes les cellules lui appartiennent
+            return {0: list(cells_set)}
+
+        # Initialisation : chaque seed démarre sur la cellule la plus proche
+        assignment = {}
+        priority_queue = []
+
+        for seed_idx, seed in enumerate(seeds):
+            # Trouver la cellule la plus proche de ce seed
+            min_dist = float("inf")
+            closest_cell = None
+
+            for cell in cells_set:
+                dist_sq = (cell[0] - seed[0]) ** 2 + (cell[1] - seed[1]) ** 2
+                if dist_sq < min_dist:
+                    min_dist = dist_sq
+                    closest_cell = cell
+
+            if closest_cell:
+                assignment[closest_cell] = seed_idx
+                # Priority queue : (distance au seed, x, y, seed_idx)
+                heapq.heappush(priority_queue, (0, closest_cell[0], closest_cell[1], seed_idx))
+
+        # BFS simultané depuis tous les seeds
+        while priority_queue:
+            dist, x, y, seed_idx = heapq.heappop(priority_queue)
+
+            current_cell = (x, y)
+
+            # Si cette cellule a déjà été assignée à un autre seed, on skip
+            if assignment.get(current_cell) != seed_idx and current_cell in assignment:
+                continue
+
+            # Explorer les voisins 4-connexes
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                neighbor = (x + dx, y + dy)
+
+                # Vérifier que le voisin est dans l'ensemble et pas encore assigné
+                if neighbor in cells_set and neighbor not in assignment:
+                    # Calculer la distance au seed
+                    seed = seeds[seed_idx]
+                    new_dist = (neighbor[0] - seed[0]) ** 2 + (neighbor[1] - seed[1]) ** 2
+
+                    # Assigner et ajouter à la queue
+                    assignment[neighbor] = seed_idx
+                    heapq.heappush(priority_queue, (new_dist, neighbor[0], neighbor[1], seed_idx))
+
+        # Convertir en format de sortie : seed_idx -> list of cells
+        result = defaultdict(list)
+        for cell, seed_idx in assignment.items():
+            result[seed_idx].append(cell)
+
+        return result
+
+    def _reconstruct_tiles(self, water_groups, land_tiles):
+        """
+        Reconstruit les tuiles (terre + eau fusionnée).
+
+        Args:
+            water_groups: Mapping seed_index -> list of cells
+            land_tiles: Liste des tuiles de terre existantes
+        """
         new_tiles = {}
         next_id = 0
 
-        # Terres (on garde tes objets Tile existants)
+        # Terres (on garde les objets Tile existants)
         for tile in sorted(land_tiles, key=lambda t: t.id):
             tile.id = next_id
             for x, y in tile.cells:
@@ -1247,7 +1586,7 @@ class Map:
             new_tiles[next_id] = tile
             next_id += 1
 
-        # Mers
+        # Mers fusionnées
         for s_idx, cells in water_groups.items():
             if not cells:
                 continue
