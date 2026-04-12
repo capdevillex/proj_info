@@ -10,14 +10,13 @@ from ui.ui_manager import UIManager
 from ui.ui_utils import get_hovered_tile, compute_tile_size
 from ui.button import Button
 from world.unit import Unit, UnitType
-from world.biome import Biome 
+from world.biome import Biome
 
 
 pygame.init()
 
 font = pygame.font.SysFont(None, 20)
 button_font = pygame.font.SysFont(None, 18)
-
 
 
 # -------------------------
@@ -94,23 +93,26 @@ def main():
 
                     # Vérifier les boutons
                     action = ui_manager.handle_click(
-                        mouse_pos, game_map,
-                        selected_unit_type, selected_unit_water_affinity
+                        mouse_pos, game_map, selected_unit_type, selected_unit_water_affinity
                     )
 
                     # Gérer l'action retournée
                     if action == "next_turn":
                         turn_manager.next_turn(game_map)
-                    
+
                     # Si en mode placement, essayer de placer une unité
                     elif ui_manager.placement_button.is_active:
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
                         if hovered_tile:
                             if hovered_tile.has_units():
                                 print(f"❌La tuile {hovered_tile.id} a déjà une unité !")
-                            elif (hovered_tile.biome == Biome.WATER
-                                and not selected_unit_water_affinity):
-                                print(f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!")
+                            elif (
+                                hovered_tile.biome == Biome.WATER
+                                and not selected_unit_water_affinity
+                            ):
+                                print(
+                                    f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!"
+                                )
                             else:
                                 unit = Unit(
                                     tile_id=hovered_tile.id,
@@ -143,7 +145,7 @@ def main():
         unit_type_text = button_font.render(
             f"Type d'unité sélectionnée: {selected_unit_type.name} (1-4 pour changer)",
             True,
-            (200, 200, 200)
+            (200, 200, 200),
         )
         screen.blit(unit_type_text, (gc.BUTTON_X, gc.BUTTON_Y + gc.BUTTON_HEIGHT + 10))
 
