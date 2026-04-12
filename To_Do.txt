@@ -1,12 +1,12 @@
 -----------A FAIRE-------------
 
 Faire bouger les unités en vdv
-ajouter génération des ressources (V : coming soon)
-Placement du HUD relativement aux bordures de l'écran (V : WIP)
-Ajouter side bar retractable avec les ressources dont on dispose dessus. (V : coming soon)
+Ajouter génération des ressources (V : coming soon)
 Ajouter FOW  (après déplacement unit)
 
 ----------FAIT-----------------
 
 X : Changer le fonctionnement des boutons, faire en sorte que ce soit une classe bouton avec la positon, taille et couleur en paramètres)
 V : réparer génération buggée
+V : Placement du HUD relativement aux bordures de l'écran
+V : Ajouter side bar retractable avec les ressources dont on dispose dessus
