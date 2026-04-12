@@ -61,7 +61,7 @@ class UIManager:
     
     def update(self, mouse_pos):
         """Met à jour tous les boutons"""
-        self.placement_button.update(mouse_pos)
+ 	       self.placement_button.update(mouse_pos)
         self.next_turn_button.update(mouse_pos)
     
     def draw(self, screen):
