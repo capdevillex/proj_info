@@ -3,12 +3,14 @@ import pygame
 
 from config import GameConfig as gc
 from world.map import Map
-from world.biome import Biome
-from world.unit import Unit, UnitType  
 from world.clock import TurnManager
-from ui.camera import Camera, world_to_screen, screen_to_world
+from ui.camera import Camera
 from ui.renderer import RenderPipeline
-from ui.button import Button  
+from ui.ui_manager import UIManager
+from ui.ui_utils import get_hovered_tile, compute_tile_size
+from ui.button import Button
+from world.unit import Unit, UnitType
+from world.biome import Biome 
 
 
 pygame.init()
@@ -16,128 +18,6 @@ pygame.init()
 font = pygame.font.SysFont(None, 20)
 button_font = pygame.font.SysFont(None, 18)
 
-
-# -------------------------
-# 🧰 UTILS
-# -------------------------
-def lighten(color, amount=40):
-    return tuple(min(255, c + amount) for c in color)
-
-
-def compute_tile_size(window_w, window_h):
-    return min(window_w // gc.WIDTH, window_h // gc.HEIGHT)
-
-
-def draw_centers(screen, game_map, tile_size, cam):
-    for tile in game_map.tiles.values():
-        x, y = tile.center
-        wx = x * tile_size
-        wy = y * tile_size
-        sx, sy = world_to_screen(wx, wy, cam.x, cam.y, cam.zoom)
-
-        pygame.draw.circle(screen, (255, 255, 255), (sx, sy), 3)
-
-        text = font.render(f"{tile.area}:{tile.id}", True, (255, 255, 255))
-        screen.blit(text, (sx - 10, sy - 15))
-
-
-def get_hovered_tile(game_map, cam, tile_size):
-    mouse_x, mouse_y = pygame.mouse.get_pos()
-
-    world_x, world_y = screen_to_world(mouse_x, mouse_y, cam.x, cam.y, cam.zoom)
-
-    grid_x = int(world_x // tile_size)
-    grid_y = int(world_y // tile_size)
-
-    if 0 <= grid_x < game_map.width and 0 <= grid_y < game_map.height:
-        tile_id = game_map.grid[grid_y][grid_x]
-        return game_map.tiles.get(tile_id)
-
-    return None
-
-
-# ========================
-# 🎨 GESTION DES BOUTONS
-# ========================
-class UIManager:
-    """
-    Gestionnaire centralisé de tous les boutons UI.
-    
-    Permet de gérer facilement plusieurs boutons sans dupliquer du code.
-    """
-    
-    def __init__(self, font):
-        """Crée tous les boutons UI"""
-        
-        # Bouton "Placer Unité" - TOGGLEABLE
-        self.placement_button = Button(
-            x=gc.BUTTON_X,
-            y=gc.BUTTON_Y,
-            width=gc.BUTTON_WIDTH,
-            height=gc.BUTTON_HEIGHT,
-            text="Placer Unité",
-            font=font,
-            color=gc.BUTTON_COLOR,
-            hover_color=gc.BUTTON_HOVER_COLOR,
-            active_color=gc.BUTTON_ACTIVE_COLOR,
-            is_toggleable=True  # ← Toggle on/off avec clic
-        )
-        
-        # Bouton "Tour Suivant" - NON TOGGLEABLE
-        self.next_turn_button = Button(
-            x=gc.SCREEN_WIDTH - 160,
-            y=10,
-            width=150,
-            height=40,
-            text="Fin du tour",
-            font=font,
-            color=(60, 60, 60),
-            hover_color=(100, 100, 100),
-            active_color=(100, 100, 100),
-            is_toggleable=False  # ← Juste clic, pas de toggle
-        )
-        
-        # Tu peux ajouter d'autres boutons aussi facilement :
-        # self.save_button = Button(...)
-        # self.load_button = Button(...)
-        # etc.
-    
-    def update(self, mouse_pos):
-        """Met à jour tous les boutons"""
-        self.placement_button.update(mouse_pos)
-        self.next_turn_button.update(mouse_pos)
-    
-    def draw(self, screen):
-        """Dessine tous les boutons"""
-        self.placement_button.draw(screen)
-        self.next_turn_button.draw(screen)
-    
-    def handle_click(self, mouse_pos, game_map, selected_unit_type, selected_unit_water_affinity):
-        """
-        Gère les clics sur les boutons.
-        
-        Args:
-            mouse_pos: Position du clic
-            game_map: La carte du jeu
-            selected_unit_type: Type d'unité sélectionné
-            selected_unit_water_affinity: Affinité eau de l'unité
-        
-        Returns:
-            str: Action à effectuer ("place_unit", "next_turn", None)
-        """
-        
-        # Bouton Placer Unité
-        if self.placement_button.is_clicked(mouse_pos):
-            self.placement_button.toggle()
-            status = "ACTIVÉ" if self.placement_button.is_active else "DÉSACTIVÉ"
-            print(f"Mode placement {status}")
-            return None  # Pas d'action immédiate, juste toggle
-        
-        # Bouton Tour Suivant
-        if self.next_turn_button.is_clicked(mouse_pos):
-            return "next_turn"
-        
-        return None
 
 
 # -------------------------
