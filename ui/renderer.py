@@ -1,7 +1,12 @@
+from pathlib import Path
+
 import pygame
 
 from ui.camera import world_to_screen
 from world.unit import UnitType
+
+
+img_path = Path(".") / "img"
 
 
 class RenderPipeline:
@@ -20,12 +25,12 @@ class RenderPipeline:
 
         """dico avec les chemins des images des unités"""
         self.unit_images = {
-            UnitType.SOLDIER: pygame.image.load("img\\soldat.png").convert_alpha(),
-            UnitType.ARCHER: pygame.image.load("img\\archer.png").convert_alpha(),
-            UnitType.CAVALRY: pygame.image.load("img\\cavalier.png").convert_alpha(),
-            UnitType.SETTLEMENT: pygame.image.load("img\\colon.png").convert_alpha(),
+            UnitType.SOLDIER: pygame.image.load(img_path / "soldat.png").convert_alpha(),
+            UnitType.ARCHER: pygame.image.load(img_path / "archer.png").convert_alpha(),
+            UnitType.CAVALRY: pygame.image.load(img_path / "cavalier.png").convert_alpha(),
+            UnitType.SETTLEMENT: pygame.image.load(img_path / "colon.png").convert_alpha(),
         }
-        self.default_image = pygame.image.load("img\\soldat.png").convert_alpha()
+        self.default_image = pygame.image.load(img_path / "soldat.png").convert_alpha()
 
     def clear_cache(self):
         """Vide les surfaces mises en cache pour forcer un recalcul total."""
