@@ -101,6 +101,9 @@ def main():
                         turn_manager.next_turn(game_map)
 
                     # Si en mode placement, essayer de placer une unité
+                    elif action == "quit":
+                        running = False
+                    
                     elif ui_manager.placement_button.is_active:
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
                         if hovered_tile:
@@ -123,8 +126,7 @@ def main():
                                 hovered_tile.add_unit(unit)
                                 print(f"✅ Unité placée sur tuile {hovered_tile.id} : {unit}")
 
-                    elif action == "quit":
-                        running = False
+                    
 
         # -------- UPDATE --------
         camera.update(dt, game_map, tile_size, window_w, window_h)
