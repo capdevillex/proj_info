@@ -1,3 +1,5 @@
+import pygame
+
 from ui.button import Button
 from config import GameConfig as gc
 
@@ -40,6 +42,18 @@ class UIManager:
             is_toggleable=False  # ← Juste clic, pas de toggle
         )
         
+        self.quit_button = Button(
+        	x = 10,
+        	y = gc.SCREEN_HEIGHT-50,
+        	height = 40,
+        	width = 150,
+        	text = "Quitter",
+        	font = font,
+        	color=(60, 60, 60),
+            hover_color=(100, 100, 100),
+            active_color=(100, 100, 100),
+            is_toggleable=False
+        )
         # Tu peux ajouter d'autres boutons aussi facilement :
         # self.save_button = Button(...)
         # self.load_button = Button(...)
@@ -54,8 +68,12 @@ class UIManager:
         """Dessine tous les boutons"""
         self.placement_button.draw(screen)
         self.next_turn_button.draw(screen)
+        self.quit_button.draw(screen)
     
-    def handle_click(self, mouse_pos, game_map, selected_unit_type, selected_unit_water_affinity):
+    def handle_click(self,
+    	mouse_pos, game_map,
+    	selected_unit_type,
+    	selected_unit_water_affinity):
         """
         Gère les clics sur les boutons.
         
@@ -79,5 +97,9 @@ class UIManager:
         # Bouton Tour Suivant
         if self.next_turn_button.is_clicked(mouse_pos):
             return "next_turn"
+
+        # Boutin pour fermer le jeu
+        if self.quit_button.is_clicked(mouse_pos):
+        	return "quit"
         
         return None

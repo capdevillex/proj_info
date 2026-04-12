@@ -51,9 +51,8 @@ def main():
         tile_size = compute_tile_size(window_w, window_h)
 
         # -------- INPUT --------
+
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
@@ -88,7 +87,7 @@ def main():
             if event.type == pygame.MOUSEWHEEL:
                 camera.apply_zoom(pygame.mouse.get_pos(), event.y)
 
-            # ✨ NOUVEAU : Gestion unifiée des clics
+            # ICI: Gestion unifiée des clics
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Clic gauche
                     mouse_pos = pygame.mouse.get_pos()
@@ -121,6 +120,9 @@ def main():
                                 )
                                 hovered_tile.add_unit(unit)
                                 print(f"✅ Unité placée sur tuile {hovered_tile.id} : {unit}")
+
+                    elif action == "quit":
+                        running = False
 
         # -------- UPDATE --------
         camera.update(dt, game_map, tile_size, window_w, window_h)
