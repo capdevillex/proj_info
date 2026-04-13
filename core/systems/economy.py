@@ -1,8 +1,6 @@
 class Economy:
     def update(self, game_state):
         """Met à jour les ressources du joueur en fonction des unités et des villes."""
-        # Réinitialiser les ressources
-        game_state.resources = {"gold": 0, "food": 0, "production": 0}
 
         # Calculer les ressources générées par les villes
         for city in game_state.cities:
