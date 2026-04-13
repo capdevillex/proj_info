@@ -3,18 +3,16 @@
 Phase 0 :
     Ajouter FOW (après déplacement unit) (V: in progress)
     Combat basique (sans edge-case terrain) (X : je vais essayer de me casser les dents dessus)
-    Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies 
-    
-    
+    Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
+
 =======
     Combat basique (sans edge-case terrain)
     Reprendre système de mouvement (encore) pour faire BFS (X : on it)
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
 
 Phase 1 :
-    Économie (production / nourriture / or) (V: in progress)
-    Colonisation (colon) (V: in progress)
     Villes simples (V: in progress)
+    Expansion des villes
     Construction basique (ferme, scierie, mine, etc.)
     Ajouter routes (bonus déplacement)
     système de sauvegarde de partie
@@ -23,7 +21,6 @@ Phase 2 :
     Tech tree
         - système de recherche
         - arbre simple
-    Expansion des villes
     IA basique, citées états
     Combat avancé (modificateur de terrain, spécialisation des units)
     Attrition logistique (distance à route ou ville)
@@ -58,4 +55,6 @@ X : Clic à travers les boutons
 X : Ajouter ennemis (d'abord placé à la main)
 X : Reprendre système de mouvement (encore) pour faire BFS
 V : Ajouter génération des ressources
+V : Économie (production / nourriture / or)
+V : Colonisation (colon)
 
