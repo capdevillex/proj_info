@@ -28,6 +28,20 @@ class UnitType(Enum):
     BABY = 6
 
 
+# Portée d'attaque pour chaque type d'unité
+# 0 = ne peut pas attaquer
+# 1 = corps à corps (attaque adjacente uniquement)
+# 2+ = attaque à distance (portée de N tuiles)
+ATTACK_RANGE = {
+    UnitType.SOLDIER: 1,      # Corps à corps
+    UnitType.CAVALRY: 1,      # Corps à corps
+    UnitType.ARCHER: 2,       # Attaque à distance (2 tuiles)
+    UnitType.COLON: 0,        # Ne peut pas attaquer
+    UnitType.COLONIE: 0,      # Ne peut pas attaquer
+    UnitType.BABY: 1,         # Corps à corps
+}
+
+
 class Unit:
     """
     Représente une unité sur la carte.
@@ -63,6 +77,10 @@ class Unit:
         self.has_moved = False
         self.upkeep_cost = 0
         self.can_dash = False
+        
+        # Propriétés de combat
+        self.attack_range = ATTACK_RANGE[unit_type]  # Portée d'attaque
+        self.is_melee = self.attack_range == 1  # True si corps à corps
 
     def __repr__(self):
         """Représentation textuelle de l'unité"""
