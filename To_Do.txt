@@ -3,7 +3,6 @@
 Phase 0 :
 
     Ajouter génération des ressources (V : coming soon)
-    Créer un moteur de jeu central (V: in progress)
     Ajouter FOW (après déplacement unit) (V: in progress)
     Combat basique (sans edge-case terrain)
     Gestion des collisions (mouvements avec eau, autres unités etc) (X : On it)
@@ -49,3 +48,4 @@ V : Placement du HUD relativement aux bordures de l'écran
 V : Ajouter side bar retractable avec les ressources dont on dispose dessus
 X : Implémenter déplacement des unités (coût simple : distance centre à centre des tuiles)
 X : Ajouter sélection d’unité
+V : Création d'un moteur de jeu central
