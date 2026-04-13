@@ -4,8 +4,7 @@ Phase 0 :
 
     Ajouter génération des ressources (V : coming soon)
     Ajouter FOW (après déplacement unit) (V: in progress)
-    Combat basique (sans edge-case terrain)
-    Reprendre système de mouvement (encore) pour faire BFS (X : on it)
+    Combat basique (sans edge-case terrain) (X : je vais essayer de me casser les dents dessus)
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies 
     
     
@@ -55,3 +54,4 @@ V : Création d'un moteur de jeu central
 X : Gestion des collisions (mouvements avec eau, autres unités etc)
 X : Clic à travers les boutons
 X : Ajouter ennemis (d'abord placé à la main)
+X : Reprendre système de mouvement (encore) pour faire BFS
