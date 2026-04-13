@@ -2,7 +2,7 @@
 
 Phase 0 :
     Ajouter FOW (après déplacement unit) (V: in progress)
-    Combat basique (sans edge-case terrain) (X : je vais essayer de me casser les dents dessus)
+    
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
 
 =======
@@ -57,4 +57,5 @@ X : Reprendre système de mouvement (encore) pour faire BFS
 V : Ajouter génération des ressources
 V : Économie (production / nourriture / or)
 V : Colonisation (colon)
+X : Combat basique (sans edge-case terrain)
 
