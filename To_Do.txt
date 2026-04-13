@@ -5,6 +5,7 @@ Phase 0 :
     Ajouter génération des ressources (V : coming soon)
     Ajouter FOW (après déplacement unit) (V: in progress)
     Combat basique (sans edge-case terrain)
+    Ajouter ennemis (d'abord placé à la main)(X : On it)
     
 
 Phase 1 :
@@ -50,3 +51,4 @@ X : Implémenter déplacement des unités (coût simple : distance centre à cen
 X : Ajouter sélection d’unité
 V : Création d'un moteur de jeu central
 X : Gestion des collisions (mouvements avec eau, autres unités etc)
+X : Clic à travers les boutons
