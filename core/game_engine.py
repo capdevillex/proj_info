@@ -5,6 +5,7 @@ from core.systems import Movement, Combat, Economy, Visibility
 from world.unit import Unit, UnitType
 from world.map import Map
 from world.biome import Biome
+from world.movement import MovementSystem  # ✨ Importer le système centralisé
 
 
 class GameEngine:
@@ -19,7 +20,7 @@ class GameEngine:
         self.state = game_state
 
         # Systèmes de jeu
-        self.movement = Movement()
+        self.movement = MovementSystem  # ✨ Utiliser le système centralisé
         self.combat = Combat()
         self.economy = Economy()
         self.visibility = Visibility()
@@ -69,12 +70,14 @@ class GameEngine:
         # Mettre à jour la visibilité
         self.visibility.update(self.state)
 
-        print(f"✅ Unité {unit_type.name} créée sur tuile {tile_id}")
+        print(f"✅ Unité {unit_type.name} numéro {new_unit.id} créée sur tuile {tile_id}")
         return new_unit
 
     def move_unit(self, unit: Unit, target_tile_id: int) -> bool:
         """
         Déplace une unité vers une tuile cible.
+        
+        ✨ MAINTENANT : Juste un wrapper qui appelle MovementSystem !
 
         Args:
             unit: L'unité à déplacer
@@ -83,18 +86,12 @@ class GameEngine:
         Returns:
             True si le mouvement a réussi, False sinon
         """
-        # Vérifier que l'unité peut bouger
-        if not unit.can_move():
-            print(f"❌ L'unité {unit.id} ne peut pas bouger ce tour")
-            return False
-
-        # Utiliser le système de mouvement
-        success = self.movement.move(self.state, unit, target_tile_id)
+        # ✨ Utiliser le système centralisé 
+        success = self.movement.execute_move(self.state.map, unit, target_tile_id)
 
         if success:
             # Mettre à jour la visibilité après le mouvement
             self.visibility.update(self.state)
-            print(f"✅ Unité {unit.id} déplacée vers tuile {target_tile_id}")
 
         return success
 

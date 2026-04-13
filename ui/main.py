@@ -15,8 +15,7 @@ from ui.button import Button
 from world.unit import Unit, UnitType
 from world.biome import Biome
 from world.selector import UnitSelector
-from world.movement import get_reachable_tiles
-
+from world.movement import MovementSystem
 
 pygame.init()
 
@@ -41,7 +40,7 @@ def main():
     seed = random.randint(0, 1000)
     gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
 
-    # ✨ NOUVEAU : Créer le moteur de jeu
+    
     game_engine = GameEngine(gs)
 
     camera = Camera()
@@ -83,7 +82,7 @@ def main():
                         tile_area=gc.TILE_AVG_AREA,
                     )
                     game_map = gs.map
-                    # ✨ NOUVEAU : Recréer le moteur de jeu
+                    # ✨ Recréer le moteur de jeu
                     game_engine = GameEngine(gs)
                     renderer.clear_cache()
 
@@ -124,9 +123,8 @@ def main():
                         mouse_pos, gs.map, selected_unit_type, selected_unit_water_affinity
                     )
 
-                    # Gérer l'action retournée
+                    # Gérer l'action retournée avec le moteur de jeu
                     if action == "next_turn":
-                        # ✨ NOUVEAU : Utiliser le moteur de jeu pour gérer le tour
                         game_engine.end_turn()
                         unit_selector.deselect_unit()
                     elif action == "quit":
@@ -159,7 +157,7 @@ def main():
                                 unit_selector.deselect_unit()
                                 print("Unité désélectionnée")
                             else:
-                                # ✨ NOUVEAU : Utiliser le moteur de jeu pour déplacer l'unité
+                                # ✨ Utiliser le moteur de jeu pour déplacer l'unité
                                 if game_engine.move_unit(
                                     unit_selector.selected_unit, hovered_tile.id
                                 ):
@@ -172,7 +170,7 @@ def main():
                     if ui_manager.placement_button.is_active:
                         hovered_tile = get_hovered_tile(gs.map, camera, tile_size)
                         if hovered_tile:
-                            # ✨ NOUVEAU : Utiliser le moteur de jeu pour placer l'unité
+                            # ✨ Utiliser le moteur de jeu pour placer l'unité
                             game_engine.spawn_unit(
                                 unit_type=selected_unit_type,
                                 tile_id=hovered_tile.id,
@@ -198,26 +196,11 @@ def main():
         # Une seule ligne pour dessiner tous les boutons
         ui_manager.draw(screen)
 
+        # ✅ Affichage des zones accessibles
         if unit_selector.is_unit_selected():
-            # Afficher les zones accessibles en bleu transparent
-            reachable = unit_selector.get_reachable_tiles()
-            for tile_id in reachable:
-                tile = game_map.tiles[tile_id]
-                tile_x, tile_y = tile.center
-                world_x = tile_x * tile_size
-                world_y = tile_y * tile_size
-                screen_x, screen_y = world_to_screen(
-                    world_x, world_y, camera.x, camera.y, camera.zoom
-                )
-
-                # Dessiner un petit overlay bleu
-                pygame.draw.circle(
-                    screen,
-                    (100, 150, 255, 100),
-                    (int(screen_x), int(screen_y)),
-                    int(3 * camera.zoom),
-                    1,
-                )
+            # ✨ Utiliser MovementSystem pour obtenir les tuiles accessibles
+            reachable = MovementSystem.get_reachable_tiles(game_map, unit_selector.selected_unit)
+            renderer.render_reachable_tiles(screen, game_map, camera, tile_size, reachable)
 
         # Afficher le type d'unité sélectionné (positionné en bas à droite)
         unit_type_text = button_font.render(

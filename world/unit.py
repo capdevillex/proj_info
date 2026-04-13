@@ -43,7 +43,7 @@ class Unit:
         UnitType.SOLDIER: 3,
         UnitType.CAVALRY: 5,
         UnitType.ARCHER: 2,
-        UnitType.COLON: 2,  # Immobile
+        UnitType.COLON: 2,  
         UnitType.COLONIE: 0,
     }
 

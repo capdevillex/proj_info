@@ -7,7 +7,7 @@ Gère :
 - Déplacement quand on clique sur une zone
 """
 
-from world.movement import get_reachable_tiles, is_tile_reachable
+from world.movement import get_reachable_tiles
 
 
 class UnitSelector:
