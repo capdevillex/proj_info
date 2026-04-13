@@ -1,8 +1,11 @@
 from pathlib import Path
+from typing import Optional
 
 import pygame
 
 from ui.camera import world_to_screen
+from world.resources import Resource
+from world.tile import Tile
 from world.unit import UnitType
 
 
@@ -57,6 +60,23 @@ class RenderPipeline:
                     (x * tile_size, y * tile_size, tile_size, tile_size),
                 )
 
+        for tile in game_map.tiles.values():
+            if tile.resource and tile.resource != Resource.NONE:
+                resource_img = img_path / (tile.resource.name.lower() + ".png")
+
+                if resource_img:
+                    try:
+                        img = pygame.image.load(resource_img).convert_alpha()
+                        img = pygame.transform.scale(img, (15, 15))
+                        surface.blit(
+                            img,
+                            (
+                                tile.center[0] * tile_size - tile_size * 5 // 2,
+                                tile.center[1] * tile_size - tile_size * 5 // 2,
+                            ),
+                        )
+                    except Exception as e:
+                        print(f"Erreur lors du chargement de l'image {resource_img}: {e}")
         return surface
 
     def build_border_surface(self, game_map, tile_size):
