@@ -30,7 +30,7 @@ class City:
         self.tile_ids: Set[int] = {center_tile_id}
 
         # Production de ressources par tour
-        self.production: Dict[str, float] = {
+        self.production: Dict[str, int] = {
             "food": 0,
             "wood": 0,
             "stone": 0,
@@ -132,4 +132,4 @@ class City:
 
     def __repr__(self):
         """Représentation textuelle de la ville"""
-        return f"City(id={self.id}, name='{self.name}', owner={self.owner}, tiles={len(self.tile_ids)}, production={self.get_total_production():.1f})"
+        return f"City(id={self.id}, name='{self.name}', owner={self.owner}, tiles={len(self.tile_ids)}, production={self.production})"
