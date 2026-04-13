@@ -198,7 +198,7 @@ def main():
 
         # -------- RENDER --------
         screen.fill((0, 0, 0))
-        renderer.render(screen, gs.map, camera, tile_size, hovered_tile, dt)
+        renderer.render(screen, gs, camera, tile_size, hovered_tile, dt)
 
         # Une seule ligne pour dessiner tous les boutons
         ui_manager.draw(screen)
