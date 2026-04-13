@@ -40,7 +40,6 @@ def main():
     seed = random.randint(0, 1000)
     gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
 
-    
     game_engine = GameEngine(gs)
 
     camera = Camera()
@@ -157,7 +156,6 @@ def main():
                                 unit_selector.deselect_unit()
                                 print("Unité désélectionnée")
                             else:
-                                # ✨ Utiliser le moteur de jeu pour déplacer l'unité
                                 if game_engine.move_unit(
                                     unit_selector.selected_unit, hovered_tile.id
                                 ):
@@ -170,7 +168,6 @@ def main():
                     if ui_manager.placement_button.is_active:
                         hovered_tile = get_hovered_tile(gs.map, camera, tile_size)
                         if hovered_tile:
-                            # ✨ Utiliser le moteur de jeu pour placer l'unité
                             game_engine.spawn_unit(
                                 unit_type=selected_unit_type,
                                 tile_id=hovered_tile.id,

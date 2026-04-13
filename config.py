@@ -23,7 +23,6 @@ class GameConfig:
         Biome.DESERT: (194, 178, 128),
     }
 
-    # NOUVEAU : Configuration du bouton
     BUTTON_WIDTH = 150
     BUTTON_HEIGHT = 40
     BUTTON_X = 10
