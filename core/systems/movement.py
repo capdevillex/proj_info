@@ -1,97 +1,252 @@
 """
-Module de gestion du mouvement des unités.
+Module de gestion du mouvement des unités - AMÉLIORÉ AVEC DIJKSTRA.
 
 Gère :
-- Calcul des distances entre tuiles (Tchebychev)
+- Calcul des chemins optimaux avec coûts de déplacement variables (Dijkstra)
+- Pénalités de mouvement basées sur le biome (montagne, forêt, etc.)
 - Détermination des zones accessibles pour une unité
 - Validation et exécution des mouvements
-- Toute la logique de mouvement est ici !
 """
 
+import heapq
 from collections import deque
-from world.unit import Unit
+from world.unit import Unit, UnitType
 from world.map import Map
 from world.tile import Tile
+from world.biome import Biome
 
 
 class Movement:
     """
     Système centralisé de gestion des mouvements d'unités.
     
-    Encapsule TOUTE la logique de mouvement :
-    - Calcul des distances
-    - Zones accessibles
-    - Validation des mouvements
-    - Exécution des mouvements
+    Utilise l'algorithme de Dijkstra pour respecter les coûts de déplacement variables.
+    Supporte les pénalités de terrain (montagne coûte plus cher que plaine, etc.)
     """
     
+    # Dictionnaire des coûts de mouvement par biome
+    # Un coût de 1.0 = 1 point de mouvement normal
+    # Un coût de 2.0 = terrain difficile (coûte 2 points)
+    TERRAIN_COSTS = {
+        Biome.BLANK: 1.0,        # Plaine vide = normal
+        Biome.PLAIN: 1.0,        # Plaine = normal
+        Biome.FOREST: 1.5,       # Forêt = un peu difficile
+        Biome.MOUNTAIN: 2.0,     # Montagne = très difficile (coûte 2x)
+        Biome.DESERT: 1.2,       # Désert = légèrement difficile
+        Biome.WATER: float('inf') # Eau = non traversable par défaut
+    }
+    
+    # Modifiants de coût spécifiques à chaque type d'unité
+    # La cavalerie est rapide, les colons sont lents en montagne
+    UNIT_TERRAIN_MODIFIERS = {
+        UnitType.SOLDIER: {},     # Pas de modifiant spécial
+        UnitType.CAVALRY: {       # La cavalerie adore les plaines
+            Biome.PLAIN: 0.8,     # Plus rapide en plaine
+            Biome.FOREST: 1.8,    # Très lente en forêt
+            Biome.MOUNTAIN: 2.5,  # Très difficile en montagne
+        },
+        UnitType.ARCHER: {},      # Pareil que soldat
+        UnitType.COLON: {         # Le colon traverse tout mais lentement
+            Biome.MOUNTAIN: 1,
+            Biome.FOREST: 1,
+            Biome.WATER: 1,
+            Biome.DESERT: 1,
+        },
+        UnitType.COLONIE: {},     # N'a pas de max_distance
+        UnitType.BABY: {Biome.WATER: 2},        # Pareil que soldat
+    }
+
     @staticmethod
-    def chebyshev_distance_grid(map_: Map, start_tile_id: int, max_distance: int) -> dict:
+    def get_movement_cost(biome: Biome, unit_type: UnitType) -> float:
         """
-        Calcule la distance de Tchebychev de chaque tuile par rapport à start_tile_id.
+        Calcule le coût de mouvement pour une tuile donnée et un type d'unité.
+        
+        Args:
+            biome: Type de biome de la tuile
+            unit_type: Type d'unité se déplaçant
+            
+        Returns:
+            float: Coût en points de mouvement (1.0 = normal, 2.0 = 2x plus cher)
+        """
+        # Coût de base du biome
+        base_cost = Movement.TERRAIN_COSTS.get(biome, 1.0)
+        
+        # Appliquer le modifiant de l'unité si disponible
+        modifiers = Movement.UNIT_TERRAIN_MODIFIERS.get(unit_type, {})
+        if biome in modifiers:
+            return modifiers[biome]
+        
+        return base_cost
 
-        Distance de Tchebychev = max(|x1-x2|, |y1-y2|)
-        C'est parfait pour les grilles avec mouvements diagonaux !
-
+    @staticmethod
+    def dijkstra_reachable(map_: Map, start_tile_id: int, max_movement: float, unit_type: UnitType) -> dict:
+        """
+        Utilise Dijkstra pour calculer toutes les tuiles accessibles avec des coûts variables.
+        
+        Retourne aussi la distance de mouvement consommée pour atteindre chaque tuile.
+        
         Args:
             map_: L'objet Map
             start_tile_id: ID de la tuile de départ
-            max_distance: Distance maximale à calculer
-
+            max_movement: Points de mouvement disponibles
+            unit_type: Type d'unité pour calculer les coûts
+            
         Returns:
-            dict: {tile_id: distance}
+            dict: {tile_id: mouvement_consommé}
         """
-        distances = {}
-        start_tile = map_.tiles[start_tile_id]
-        distances[start_tile_id] = 0
-        queue = deque([start_tile_id])
-
-        while queue:
-            current_tile_id = queue.popleft()
-            current_distance = distances[current_tile_id]
-
-            # Si on a atteint la distance max, on arrête pour cette branche
-            if current_distance >= max_distance:
+        # heap = [(coût_total, tile_id)]
+        heap = [(0, start_tile_id)]
+        distances = {start_tile_id: 0}
+        visited = set()
+        
+        while heap:
+            current_cost, current_tile_id = heapq.heappop(heap)
+            
+            # Si déjà visité, skip
+            if current_tile_id in visited:
                 continue
-
-            # Vérifier les tuiles voisines
+            visited.add(current_tile_id)
+            
+            # Si on dépasse le mouvement max, on arrête cette branche
+            if current_cost > max_movement:
+                continue
+            
+            # Vérifier les voisins
             current_tile = map_.tiles[current_tile_id]
             for neighbor_tile_id in current_tile.neighbors:
-                if neighbor_tile_id not in distances:
-                    distances[neighbor_tile_id] = current_distance + 1
-                    queue.append(neighbor_tile_id)
-
+                if neighbor_tile_id in visited:
+                    continue
+                
+                neighbor_tile = map_.tiles[neighbor_tile_id]
+                
+                # Calcul du coût pour se déplacer vers ce voisin
+                terrain_cost = Movement.get_movement_cost(neighbor_tile.biome, unit_type)
+                
+                # Si le terrain est intraversable, skip
+                if terrain_cost == float('inf'):
+                    continue
+                
+                new_cost = current_cost + terrain_cost
+                
+                # Si on a trouvé un chemin meilleur, on l'ajoute
+                if neighbor_tile_id not in distances or new_cost < distances[neighbor_tile_id]:
+                    distances[neighbor_tile_id] = new_cost
+                    heapq.heappush(heap, (new_cost, neighbor_tile_id))
+        
         return distances
 
     @staticmethod
     def get_reachable_tiles(map_: Map, unit: Unit) -> set:
         """
         Récupère toutes les tuiles accessibles pour une unité donnée.
-
+        
+        Utilise maintenant Dijkstra pour respecter les coûts de terrain !
+        
         Args:
             map_: L'objet Map
             unit: L'unité à vérifier
-
+            
         Returns:
             set: IDs des tuiles accessibles
         """
         if not unit.can_move():
             return set()
-
-        distances = Movement.chebyshev_distance_grid(map_, unit.tile_id, unit.max_distance)
-
-        # Retourner toutes les tuiles à distance <= max_distance
-        # on fait le tri des cases où on ne peut pas aller (eau/unité déjà présente)
-        reachable = {
-            tile_id
-            for tile_id, distance in distances.items()
-            if distance <= unit.max_distance
-            and distance > 0
-            and not map_.tiles[tile_id].has_units()
-            and (unit.water_affinity or not map_.tiles[tile_id].is_water())
-        }
+        
+        # Utiliser Dijkstra au lieu du BFS simple
+        distances = Movement.dijkstra_reachable(
+            map_,
+            unit.tile_id,
+            unit.max_distance,
+            unit.unit_type
+        )
+        
+        # Retourner toutes les tuiles accessibles
+        reachable = set()
+        for tile_id, movement_cost in distances.items():
+            # On exclut la tuile de départ (distance > 0)
+            if movement_cost == 0:
+                continue
+            
+            # On ne dépasse pas le mouvement max
+            if movement_cost > unit.max_distance:
+                continue
+            
+            tile = map_.tiles[tile_id]
+            
+            # On ne peut pas aller sur une tuile avec une unité
+            if tile.has_units():
+                continue
+            
+            # On respecte l'affinité avec l'eau
+            if not unit.water_affinity and tile.is_water():
+                continue
+            
+            reachable.add(tile_id)
         
         return reachable
+
+    @staticmethod
+    def get_path_to_tile(map_: Map, unit: Unit, target_tile_id: int) -> list:
+        """
+        Calcule le chemin optimal (plus court) pour aller d'une unité à une tuile cible.
+        
+        Args:
+            map_: L'objet Map
+            unit: L'unité qui se déplace
+            target_tile_id: ID de la tuile cible
+            
+        Returns:
+            list: Liste des IDs des tuiles du chemin [start, ..., target]
+                  ou liste vide si pas de chemin
+        """
+        if not unit.can_move():
+            return []
+        
+        # BFS simple pour trouver le chemin
+        queue = deque([(unit.tile_id, [unit.tile_id])])
+        visited = {unit.tile_id}
+        
+        while queue:
+            current_tile_id, path = queue.popleft()
+            
+            if current_tile_id == target_tile_id:
+                return path
+            
+            # Vérifier les voisins
+            current_tile = map_.tiles[current_tile_id]
+            for neighbor_tile_id in current_tile.neighbors:
+                if neighbor_tile_id not in visited:
+                    visited.add(neighbor_tile_id)
+                    new_path = path + [neighbor_tile_id]
+                    queue.append((neighbor_tile_id, new_path))
+        
+        return []  # Pas de chemin trouvé
+
+    @staticmethod
+    def calculate_movement_cost_to_tile(map_: Map, unit: Unit, target_tile_id: int) -> float:
+        """
+        Calcule le coût total en points de mouvement pour atteindre une tuile cible.
+        
+        Utilise le chemin optimal.
+        
+        Args:
+            map_: L'objet Map
+            unit: L'unité
+            target_tile_id: ID de la tuile cible
+            
+        Returns:
+            float: Coût en points de mouvement, ou -1 si pas accessible
+        """
+        distances = Movement.dijkstra_reachable(
+            map_,
+            unit.tile_id,
+            unit.max_distance,
+            unit.unit_type
+        )
+        
+        if target_tile_id in distances:
+            return distances[target_tile_id]
+        return -1
 
     @staticmethod
     def execute_move(map_: Map, unit: Unit, target_tile_id: int) -> bool:
@@ -109,7 +264,7 @@ class Movement:
             map_: L'objet Map
             unit: L'unité à déplacer
             target_tile_id: ID de la tuile de destination
-
+            
         Returns:
             bool: True si le mouvement a réussi, False sinon
         """
@@ -119,22 +274,20 @@ class Movement:
             print(f"❌ L'unité {unit.id} ne peut pas bouger ce tour")
             return False
 
-        # vérifier que la nouvelle tuile est accessible
-
-        if not (target_tile_id in Movement.get_reachable_tiles(map_, unit)):
+        # Vérifier que la nouvelle tuile est accessible
+        if target_tile_id not in Movement.get_reachable_tiles(map_, unit):
+            print(f"❌ La tuile {target_tile_id} n'est pas accessible pour l'unité {unit.id}")
             return False
 
-        #  Retirer de l'ancienne tuile
+        # Retirer de l'ancienne tuile
         old_tile = map_.tiles[unit.tile_id]
         old_tile.remove_unit(unit)
 
-        #Ajouter à la nouvelle tuile
+        # Ajouter à la nouvelle tuile
         new_tile = map_.tiles[target_tile_id]
         new_tile.add_unit(unit)
 
         # Marquer comme ayant bougé
         unit.move_to_tile(target_tile_id)
-
-        print(f"✅ Unité {unit.id} déplacée vers tuile {target_tile_id}")
+        
         return True
-
