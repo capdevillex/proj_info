@@ -44,7 +44,7 @@ class Unit:
         UnitType.SOLDIER: 3,
         UnitType.CAVALRY: 5,
         UnitType.ARCHER: 2,
-        UnitType.COLON: 2,  
+        UnitType.COLON: 1,  
         UnitType.COLONIE: 0,
         UnitType.BABY: 3
     }
