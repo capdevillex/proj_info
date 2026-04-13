@@ -10,6 +10,7 @@ class Combat:
         UnitType.SOLDIER: {UnitType.CAVALRY: 1.5, UnitType.ARCHER: 0.7},  # Soldat > Cavalerie
         UnitType.ARCHER: {UnitType.SOLDIER: 1.5, UnitType.CAVALRY: 0.7},  # Archer > Soldat
         UnitType.CAVALRY: {UnitType.ARCHER: 1.5, UnitType.SOLDIER: 0.7},  # Cavalerie > Archer
+        UnitType.BABY: {UnitType.ARCHER: 1.5, UnitType.SOLDIER: 0.7},
     }
 
     # Stats de base des unités
@@ -18,6 +19,7 @@ class Combat:
         UnitType.CAVALRY: {"attack": 12, "defense": 6, "hp": 90},
         UnitType.ARCHER: {"attack": 8, "defense": 5, "hp": 70},
         UnitType.COLON: {"attack": 2, "defense": 3, "hp": 50},
+        UnitType.BABY: {"attack": 5, "defense": 3, "hp": 50}
     }
 
     # Modificateurs de terrain pour la défense
