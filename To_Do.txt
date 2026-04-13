@@ -7,7 +7,6 @@ Phase 0 :
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
 
 
-
 Phase 1 :
     Économie (production / nourriture / or) (V: in progress)
     Colonisation (colon) (V: in progress)
