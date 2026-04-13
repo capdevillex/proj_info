@@ -9,8 +9,8 @@ Phase 0 :
 
 Phase 1 :
     Économie (production / nourriture / or) (V: in progress)
-    Colonisation (colon)
-    Villes simples
+    Colonisation (colon) (V: in progress)
+    Villes simples (V: in progress)
     Construction basique (ferme, scierie, mine, etc.)
     Ajouter routes (bonus déplacement)
     système de sauvegarde de partie
