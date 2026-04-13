@@ -502,7 +502,7 @@ class RenderPipeline:
         for tile_id in reachable_tile_ids:
             tile = game_map.tiles[tile_id]
 
-            # ✨ Pour CHAQUE cellule de la tuile
+            # Pour CHAQUE cellule de la tuile
             for cell_x, cell_y in tile.cells:
                 # Convertir en coordonnées monde
                 world_x = cell_x * tile_size
@@ -518,7 +518,7 @@ class RenderPipeline:
                 rect_width = int(tile_size * cam.zoom)
                 rect_height = int(tile_size * cam.zoom)
 
-                # ✨ Dessiner LE RECTANGLE BLEU directement
+                # Dessiner LE RECTANGLE BLEU directement
                 pygame.draw.rect(
                     overlay_surface,
                     (100, 150, 255, 80),
