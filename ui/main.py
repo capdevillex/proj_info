@@ -55,6 +55,8 @@ def main():
     # Type d'unité à placer par défaut
     selected_unit_type = UnitType.SOLDIER
     selected_unit_water_affinity = False
+    selected_enn_unit_type = UnitType.BABY
+    selected_enn_unit_water_affinity = False
 
     running = True
     turn_manager = TurnManager()
@@ -126,7 +128,8 @@ def main():
                         ui_manager.placement_button.rect.collidepoint(mouse_pos) or
                         ui_manager.toggle_sidebar_button.rect.collidepoint(mouse_pos) or
                         ui_manager.next_turn_button.rect.collidepoint(mouse_pos) or
-                        ui_manager.quit_button.rect.collidepoint(mouse_pos)
+                        ui_manager.quit_button.rect.collidepoint(mouse_pos) or
+                        ui_manager.placement_button_enn.rect.collidepoint(mouse_pos)
                     )
 
                     if clic_sur_ui:
@@ -148,6 +151,14 @@ def main():
                                 unit_type=selected_unit_type,
                                 tile_id=hovered_tile.id,
                                 owner=gs.current_player,
+                                water_affinity=selected_unit_water_affinity,
+                            )
+                        #Priorité Abis : mode placement ennemi (si actif tu connais)
+                        elif ui_manager.placement_button_enn.is_active:
+                            game_engine.spawn_unit(
+                                unit_type=selected_enn_unit_type,
+                                tile_id=hovered_tile.id,
+                                owner=1,
                                 water_affinity=selected_unit_water_affinity,
                             )
                         
