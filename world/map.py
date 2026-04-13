@@ -414,10 +414,12 @@ class Map:
 
         Cette étape garantit que toute la carte est couverte et sans trous.
         """
+        if self.kdtree is None:
+            raise RuntimeError("This should not happen")
         coords = [(x, y) for y in range(self.height) for x in range(self.width)]
         _, indices = self.kdtree.query(coords)
         for i, (x, y) in enumerate(coords):
-            self.grid[y][x] = int(indices[i])
+            self.grid[y][x] = int(indices[i])  # type: ignore
 
     def _nearest_capital(self, pos):
         """
