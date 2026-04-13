@@ -82,7 +82,7 @@ class RenderPipeline:
 
         for tile in game_map.tiles.values():
             if tile.resource and tile.resource != Resource.NONE:
-                resource_img = img_path / (tile.resource.name.lower() + ".png")
+                resource_img = img_path / (tile.resource.value + ".png")
 
                 if resource_img:
                     try:
