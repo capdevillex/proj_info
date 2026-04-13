@@ -2,7 +2,6 @@ import random
 import pygame
 from pathlib import Path
 
-
 from config import GameConfig as gc
 from core.game_state import GameState
 from core.game_engine import GameEngine
@@ -11,7 +10,6 @@ from ui.camera import Camera, world_to_screen
 from ui.renderer import RenderPipeline
 from ui.ui_manager import UIManager
 from ui.ui_utils import get_hovered_tile, compute_tile_size
-from ui.button import Button
 from world.unit import Unit, UnitType
 from world.biome import Biome
 from world.selector import UnitSelector
@@ -19,23 +17,20 @@ from core.systems.movement import Movement
 
 pygame.init()
 
-font = pygame.font.SysFont(None, 20)
-button_font = pygame.font.SysFont(None, 18)
+font = pygame.font.SysFont("consolas,monospace", 15)
+button_font = pygame.font.SysFont("consolas,monospace", 15)
 
 img_path = Path(".") / "img"
 
 
-# -------------------------
-# 🚀 MAIN
-# -------------------------
 def main():
     screen = pygame.display.set_mode((gc.SCREEN_WIDTH, gc.SCREEN_HEIGHT), pygame.RESIZABLE)
-    pygame.display.set_caption("4X Map Generator, en fait c'est un début de jeu mais voila quoi")
+    pygame.display.set_caption("Imperium Novum (4X Prototype)")
 
     try:
         icone = pygame.image.load(img_path / "Logo.png")
         pygame.display.set_icon(icone)
-    except:
+    except Exception:
         pass
 
     clock = pygame.time.Clock()
@@ -44,12 +39,9 @@ def main():
     gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
 
     game_engine = GameEngine(gs)
-
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
-
     ui_manager = UIManager(game_engine, button_font)
-
     unit_selector = UnitSelector()
 
     # Type d'unité à placer par défaut
@@ -60,16 +52,18 @@ def main():
 
     running = True
     turn_manager = TurnManager()
-
     game_map = gs.map
 
+    fps_smooth = 60.0
+
     while running:
-        dt = clock.tick(gc.FPS) / 1000
+        dt = clock.tick(gc.FPS) / 1000.0
+        dt = min(dt, 0.05)  # cap pour éviter les sauts d'animation
+
         window_w, window_h = screen.get_size()
         tile_size = compute_tile_size(window_w, window_h)
 
         # -------- INPUT --------
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -89,6 +83,7 @@ def main():
                     )
                     game_map = gs.map
                     game_engine = GameEngine(gs)
+                    ui_manager.game_engine = game_engine
                     renderer.clear_cache()
 
                 if event.key == pygame.K_c:
@@ -122,15 +117,7 @@ def main():
                         mouse_pos, gs.map, selected_unit_type, selected_unit_water_affinity
                     )
 
-                    # On définit si le clic a été "consommé" par un élément d'interface
-                    clic_sur_ui = (
-                        action is not None
-                        or ui_manager.placement_button.rect.collidepoint(mouse_pos)
-                        or ui_manager.toggle_sidebar_button.rect.collidepoint(mouse_pos)
-                        or ui_manager.next_turn_button.rect.collidepoint(mouse_pos)
-                        or ui_manager.quit_button.rect.collidepoint(mouse_pos)
-                        or ui_manager.placement_button_enn.rect.collidepoint(mouse_pos)
-                    )
+                    clic_sur_ui = action is not None or ui_manager.is_mouse_over_ui(mouse_pos)
 
                     if clic_sur_ui:
                         if action == "next_turn":
@@ -141,11 +128,9 @@ def main():
                         # On arrête le traitement ici pour ne pas cliquer "à travers" le bouton
                         continue
 
-                    # 2. Si on n'est PAS sur l'UI, on gère le monde
                     hovered_tile = get_hovered_tile(game_map, camera, tile_size)
 
                     if hovered_tile:
-                        # Priorité A : Mode placement (si actif)
                         if ui_manager.placement_button.is_active:
                             game_engine.spawn_unit(
                                 unit_type=selected_unit_type,
@@ -153,13 +138,12 @@ def main():
                                 owner=gs.current_player,
                                 water_affinity=selected_unit_water_affinity,
                             )
-                        # Priorité Abis : mode placement ennemi (si actif tu connais)
                         elif ui_manager.placement_button_enn.is_active:
                             game_engine.spawn_unit(
                                 unit_type=selected_enn_unit_type,
                                 tile_id=hovered_tile.id,
                                 owner=1,
-                                water_affinity=selected_unit_water_affinity,
+                                water_affinity=selected_enn_unit_water_affinity,
                             )
 
                         # Priorité B : Sélection d'unité
@@ -207,8 +191,13 @@ def main():
         mouse_pos = pygame.mouse.get_pos()
         ui_manager.update(mouse_pos, dt)
 
-        # -------- RENDER --------
-        screen.fill((0, 0, 0))
+        # Transmettre l'état courant à l'UIManager
+        ui_manager.hovered_tile = hovered_tile
+        fps_smooth = fps_smooth * 0.9 + (1.0 / max(dt, 0.001)) * 0.1
+        ui_manager.fps_value = fps_smooth
+
+        # RENDER
+        screen.fill((6, 8, 14))
         renderer.render(screen, gs, camera, tile_size, hovered_tile, dt)
 
         ui_manager.draw(screen)
@@ -217,14 +206,7 @@ def main():
             reachable = Movement.get_reachable_tiles(game_map, unit_selector.selected_unit)
             renderer.render_reachable_tiles(screen, game_map, camera, tile_size, reachable)
 
-        unit_type_text = button_font.render(
-            f"Type: {selected_unit_type.name} (1-4)",
-            True,
-            (200, 200, 200),
-        )
-        text_rect = unit_type_text.get_rect()
-        text_rect.bottomright = (window_w - 10, window_h - 10)
-        screen.blit(unit_type_text, text_rect)
+        ui_manager.draw(screen, selected_unit_type)
 
         pygame.display.flip()
 

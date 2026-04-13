@@ -30,3 +30,6 @@ class GameConfig:
     BUTTON_COLOR = (100, 100, 200)
     BUTTON_HOVER_COLOR = (150, 150, 255)
     BUTTON_ACTIVE_COLOR = (255, 100, 100)
+
+    SIDEBAR_WIDTH = 210  # largeur de la barre latérale gauche
+    STATUS_H = 52  # hauteur barre de statut bas

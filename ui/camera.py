@@ -1,17 +1,19 @@
 import math
 import pygame
 
+from config import GameConfig as gc
+
 
 def speed_coeff(zoom):
     return max(1, 1 / (math.atan((zoom - 1.2) * math.pi) / math.pi + 0.4))
 
 
 def world_to_screen(x, y, camera_x, camera_y, zoom):
-    return int((x - camera_x) * zoom), int((y - camera_y) * zoom)
+    return int((x - camera_x) * zoom) + gc.SIDEBAR_WIDTH, int((y - camera_y) * zoom)
 
 
 def screen_to_world(x, y, camera_x, camera_y, zoom):
-    return (x / zoom + camera_x), (y / zoom + camera_y)
+    return ((x - gc.SIDEBAR_WIDTH) / zoom + camera_x), (y / zoom + camera_y)
 
 
 class Camera:

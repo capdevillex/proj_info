@@ -7,6 +7,7 @@ from ui.camera import world_to_screen
 from world.resources import Resource
 from world.tile import Tile
 from world.unit import UnitType
+from config import GameConfig as gc
 
 
 img_path = Path(".") / "img"
@@ -278,7 +279,7 @@ class RenderPipeline:
 
         return surface, (min_x * tile_size, min_y * tile_size)
 
-    # NOUVEAU : Méthode pour dessiner les unités
+    # Méthode pour dessiner les unités
     def render_units(self, screen, game_map, cam, tile_size):
         """
         Dessine toutes les unités de la carte.
@@ -374,7 +375,7 @@ class RenderPipeline:
         self.render_overlay(screen, game_state.map, cam, tile_size, hovered_tile)
         self.render_units(screen, game_state.map, cam, tile_size)
         self.render_cities(screen, game_state, cam, tile_size)
-        self.render_ui(screen, game_state.map, hovered_tile, dt)
+        # self.render_ui(screen, game_state.map, hovered_tile, dt)
 
     def render_world(self, screen, game_map, game_state, cam, tile_size):
         if self.map_surface is None or self.map_dirty:
@@ -396,11 +397,13 @@ class RenderPipeline:
             self.city_dirty = False
 
         window_w, window_h = pygame.display.get_window_size()
+        view_w = window_w - gc.SIDEBAR_WIDTH
+        view_h = window_h - gc.STATUS_H
         view_rect = pygame.Rect(
             int(cam.x),
             int(cam.y),
-            int(window_w / cam.zoom),
-            int(window_h / cam.zoom),
+            int(view_w / cam.zoom),
+            int(view_h / cam.zoom),
         )
         map_rect = self.map_surface.get_rect()
 
@@ -408,7 +411,7 @@ class RenderPipeline:
         if clipped.width <= 0 or clipped.height <= 0:
             return
 
-        offset_x = (clipped.x - view_rect.x) * cam.zoom
+        offset_x = (clipped.x - view_rect.x) * cam.zoom + gc.SIDEBAR_WIDTH
         offset_y = (clipped.y - view_rect.y) * cam.zoom
 
         sub = self.map_surface.subsurface(clipped)
@@ -535,7 +538,7 @@ class RenderPipeline:
                 True,
                 (255, 255, 255),
             )
-            screen.blit(text_info, (10, 70))
+            screen.blit(text_info, (gc.SIDEBAR_WIDTH + 10, 70))
 
         self.fps = (self.fps * 0.85) + (1 / dt * (1 - 0.85))
         text_FPS = self.font.render(
@@ -543,4 +546,4 @@ class RenderPipeline:
             True,
             (255, 255, 255),
         )
-        screen.blit(text_FPS, (10, 90))
+        screen.blit(text_FPS, (gc.SIDEBAR_WIDTH + 10, 90))
