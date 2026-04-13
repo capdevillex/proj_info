@@ -5,7 +5,6 @@ from pathlib import Path
 
 from config import GameConfig as gc
 from core.game_state import GameState
-from world.map import Map
 from world.clock import TurnManager
 from ui.camera import Camera, world_to_screen
 from ui.renderer import RenderPipeline
@@ -39,7 +38,7 @@ def main():
     clock = pygame.time.Clock()
 
     seed = random.randint(0, 1000)
-    gs = GameState(gc.WIDTH, gc.HEIGHT, seed, log=gc.LOG_MAP_GENERATION, tile_size=gc.TILE_SIZE)
+    gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
 
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
@@ -73,7 +72,11 @@ def main():
                     renderer.border_dirty = True
                     seed = random.randint(0, 1000)
                     gs = GameState(
-                        gc.WIDTH, gc.HEIGHT, seed, log=gc.LOG_MAP_GENERATION, tile_size=gc.TILE_SIZE
+                        gc.WIDTH,
+                        gc.HEIGHT,
+                        seed,
+                        log=gc.LOG_MAP_GENERATION,
+                        tile_area=gc.TILE_AVG_AREA,
                     )
                     game_map = gs.map
                     renderer.clear_cache()

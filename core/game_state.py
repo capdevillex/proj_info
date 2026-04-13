@@ -5,8 +5,8 @@ from world.unit import Unit
 
 
 class GameState:
-    def __init__(self, width, height, seed, tile_size, log):
-        self.map = Map(width, height, seed, tile_size, log)
+    def __init__(self, width, height, seed, tile_area, log):
+        self.map = Map(width, height, seed, tile_area, log)
         self.units: List[Unit] = []
         self.cities = []
 

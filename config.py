@@ -3,7 +3,8 @@ from world.biome import Biome
 
 class GameConfig:
     TILE_SIZE = 2
-    HEIGHT = 300
+    TILE_AVG_AREA = 35
+    HEIGHT = 250
     WIDTH = (HEIGHT * 16) // 9
 
     FPS = 60
