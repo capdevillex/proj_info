@@ -5,7 +5,7 @@ Phase 0 :
     Ajouter génération des ressources (V : coming soon)
     Ajouter FOW (après déplacement unit) (V: in progress)
     Combat basique (sans edge-case terrain)
-    Gestion des collisions (mouvements avec eau, autres unités etc) (X : On it)
+    
 
 Phase 1 :
     Économie (production / nourriture / or) (V: in progress)
@@ -49,3 +49,4 @@ V : Ajouter side bar retractable avec les ressources dont on dispose dessus
 X : Implémenter déplacement des unités (coût simple : distance centre à centre des tuiles)
 X : Ajouter sélection d’unité
 V : Création d'un moteur de jeu central
+X : Gestion des collisions (mouvements avec eau, autres unités etc)
