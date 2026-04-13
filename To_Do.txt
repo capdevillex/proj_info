@@ -2,7 +2,7 @@
 
 Phase 0 :
     Ajouter FOW (après déplacement unit) (V: in progress)
-    
+    Développer système de combat
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
 
 =======
