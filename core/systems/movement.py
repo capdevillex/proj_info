@@ -1,4 +1,6 @@
-class MovementSystem:
+class Movement:
+    """Système de gestion des mouvements des unités."""
+
     def move(self, state, unit_id, target_tile):
         unit = state.units[unit_id]
 

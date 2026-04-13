@@ -1,4 +1,6 @@
-class CombatSystem:
+class Combat:
+    """Système de gestion des combats entre unités."""
+
     def resolve(self, state, attacker_id, defender_id):
         attacker = state.units[attacker_id]
         defender = state.units[defender_id]
