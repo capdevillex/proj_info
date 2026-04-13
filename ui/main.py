@@ -15,7 +15,7 @@ from ui.button import Button
 from world.unit import Unit, UnitType
 from world.biome import Biome
 from world.selector import UnitSelector
-from world.movement import MovementSystem
+from core.systems.movement import Movement
 
 pygame.init()
 
@@ -196,7 +196,7 @@ def main():
         # ✅ Affichage des zones accessibles
         if unit_selector.is_unit_selected():
             # ✨ Utiliser MovementSystem pour obtenir les tuiles accessibles
-            reachable = MovementSystem.get_reachable_tiles(game_map, unit_selector.selected_unit)
+            reachable = Movement.get_reachable_tiles(game_map, unit_selector.selected_unit)
             renderer.render_reachable_tiles(screen, game_map, camera, tile_size, reachable)
 
         # Afficher le type d'unité sélectionné (positionné en bas à droite)

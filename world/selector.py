@@ -7,7 +7,7 @@ Gère :
 - Déplacement quand on clique sur une zone
 """
 
-from world.movement import get_reachable_tiles
+from core.systems.movement import Movement
 
 
 class UnitSelector:
@@ -36,7 +36,7 @@ class UnitSelector:
         
         # Si l'unité peut bouger, calculer les zones accessibles
         if unit.can_move():
-            self.reachable_tiles = get_reachable_tiles(map_, unit)
+            self.reachable_tiles = Movement.get_reachable_tiles(map_, unit)
         else:
             self.reachable_tiles = set()
     

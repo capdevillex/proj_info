@@ -5,7 +5,7 @@ from core.systems import Movement, Combat, Economy, Visibility
 from world.unit import Unit, UnitType
 from world.map import Map
 from world.biome import Biome
-from world.movement import MovementSystem  # ✨ Importer le système centralisé
+from core.systems.movement import Movement  # ✨ Importer le système centralisé
 
 
 class GameEngine:
@@ -20,7 +20,7 @@ class GameEngine:
         self.state = game_state
 
         # Systèmes de jeu
-        self.movement = MovementSystem  # ✨ Utiliser le système centralisé
+        self.movement = Movement  # ✨ Utiliser le système centralisé
         self.combat = Combat()
         self.economy = Economy()
         self.visibility = Visibility()
