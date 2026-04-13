@@ -200,7 +200,7 @@ def main():
         screen.fill((6, 8, 14))
         renderer.render(screen, gs, camera, tile_size, hovered_tile, dt)
 
-        ui_manager.draw(screen)
+        ui_manager.draw(screen, selected_unit_type)
 
         if unit_selector.is_unit_selected():
             reachable = Movement.get_reachable_tiles(game_map, unit_selector.selected_unit)
