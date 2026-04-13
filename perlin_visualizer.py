@@ -192,10 +192,10 @@ class PerlinVisualizer:
                     self.needs_update = True
 
                 # Lacunarité (Z/S)
-                elif event.key == pygame.K_w:
+                elif event.key == pygame.K_z:
                     self.lacunarity = min(3.0, self.lacunarity + 0.1)
                     self.needs_update = True
-                elif event.key == pygame.K_z:
+                elif event.key == pygame.K_s:
                     self.lacunarity = max(1.5, self.lacunarity - 0.1)
                     self.needs_update = True
 
