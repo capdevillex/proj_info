@@ -283,46 +283,46 @@ class RenderPipeline:
         """Affiche un overlay bleu transparent sur les tuiles accessibles."""
         if not reachable_tile_ids:
             return
-        
+
         view_rect = self.last_view_rect
         offset_x, offset_y = self.last_offset
-        
+
         # Créer UNE surface overlay
         overlay_surface = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-        
+
         for tile_id in reachable_tile_ids:
             tile = game_map.tiles[tile_id]
-            
+
             # ✨ Pour CHAQUE cellule de la tuile
             for cell_x, cell_y in tile.cells:
                 # Convertir en coordonnées monde
                 world_x = cell_x * tile_size
                 world_y = cell_y * tile_size
-                
+
                 # Convertir en coordonnées écran
                 rel_x = world_x - view_rect.x
                 rel_y = world_y - view_rect.y
                 screen_x = rel_x * cam.zoom + offset_x
                 screen_y = rel_y * cam.zoom + offset_y
-                
+
                 # Taille du rectangle
                 rect_width = int(tile_size * cam.zoom)
                 rect_height = int(tile_size * cam.zoom)
-                
+
                 # ✨ Dessiner LE RECTANGLE BLEU directement
                 pygame.draw.rect(
                     overlay_surface,
                     (100, 150, 255, 80),
-                    (int(screen_x), int(screen_y), rect_width, rect_height)
+                    (int(screen_x), int(screen_y), rect_width, rect_height),
                 )
-        
+
         # Blitter l'overlay sur l'écran UNE SEULE FOIS
         screen.blit(overlay_surface, (0, 0))
 
-    def render_ui(self, screen, game_map, hovered_tile, dt):
+    def render_ui(self, screen, game_map, hovered_tile: Tile, dt):
         if hovered_tile:
             text_info = self.font.render(
-                f"Tile {hovered_tile.id:>5} | {hovered_tile.biome:>7} | {hovered_tile.area}",
+                f"Tile {hovered_tile.id:>5} | {hovered_tile.biome.name:>8} | {hovered_tile.resource.name:>7}| {hovered_tile.area}",
                 True,
                 (255, 255, 255),
             )
