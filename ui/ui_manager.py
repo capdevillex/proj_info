@@ -75,13 +75,27 @@ class UIManager:
             y=0,
             width=120,
             height=self.sidebar_collapsed_height,
-            text="▼ Ressources",
+            text="Ressources",
             font=font,
             color=(40, 40, 40),
             hover_color=(70, 70, 70),
             active_color=(70, 70, 70),
             is_toggleable=False,
         )
+
+        self.placement_button_enn = Button(
+            x=0,
+            y=0,
+            width=gc.BUTTON_WIDTH,
+            height=gc.BUTTON_HEIGHT,
+            text="Placer Unité Ennemies",
+            font=font,
+            color=gc.BUTTON_COLOR,
+            hover_color=gc.BUTTON_HOVER_COLOR,
+            active_color=gc.BUTTON_ACTIVE_COLOR,
+            is_toggleable=True,
+        )
+
 
     def update_positions(self, screen_width, screen_height):
         """Met à jour les positions des boutons en fonction de la taille de l'écran"""
@@ -99,12 +113,17 @@ class UIManager:
             (screen_width - self.toggle_sidebar_button.rect.width) // 2, 0
         )
 
+        # Bouton pour unités ennemies en bas à droite (j'espère mdr)
+        self.placement_button_enn.set_position(screen_width-gc.BUTTON_WIDTH-10,screen_height-10-gc.BUTTON_HEIGHT)        
+        
+
     def update(self, mouse_pos, dt):
-        """Met à jour tous les boutons et la sidebar"""
+        #Met à jour tous les boutons et plus (sidebar)
         self.placement_button.update(mouse_pos)
         self.next_turn_button.update(mouse_pos)
         self.quit_button.update(mouse_pos)
         self.toggle_sidebar_button.update(mouse_pos)
+        self.placement_button_enn
 
         # Animation de la sidebar
         target_height = (
@@ -129,6 +148,7 @@ class UIManager:
         self.next_turn_button.draw(screen)
         self.quit_button.draw(screen)
         self.toggle_sidebar_button.draw(screen)
+        self.placement_button_enn.draw(screen)
 
     def _draw_sidebar(self, screen):
         """Dessine la sidebar des ressources"""
@@ -202,5 +222,12 @@ class UIManager:
         # Bouton pour fermer le jeu
         if self.quit_button.is_clicked(mouse_pos):
             return "quit"
+
+        # Bouton unités ennemies
+        if self.placement_button_enn.is_clicked(mouse_pos):
+            self.placement_button_enn.toggle()
+            status = "ACTIVÉ" if self.placement_button_enn.is_active else "DÉSACTIVÉ"
+            print(f"Mode placement ennemis {status}")
+            return None
 
         return None
