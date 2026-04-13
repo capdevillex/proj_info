@@ -492,7 +492,7 @@ class RenderPipeline:
         screen.blit(scaled_surf, (screen_x, screen_y))
 
     def render_reachable_tiles(self, screen, game_map, cam, tile_size, reachable_tile_ids):
-        """Affiche un overlay bleu transparent sur les tuiles accessibles."""
+        """Affiche un overlay bleu transparent sur les tuiles accessibles (mouvement)."""
         if not reachable_tile_ids:
             return
 
@@ -525,6 +525,46 @@ class RenderPipeline:
                 pygame.draw.rect(
                     overlay_surface,
                     (100, 150, 255, 80),
+                    (int(screen_x), int(screen_y), rect_width, rect_height),
+                )
+
+        # Blitter l'overlay sur l'écran UNE SEULE FOIS
+        screen.blit(overlay_surface, (0, 0))
+
+    def render_attackable_tiles(self, screen, game_map, cam, tile_size, attackable_tile_ids):
+        """Affiche un overlay rouge transparent sur les tuiles attaquables (combat avec unités ennemies)."""
+        if not attackable_tile_ids:
+            return
+
+        view_rect = self.last_view_rect
+        offset_x, offset_y = self.last_offset
+
+        # Créer UNE surface overlay
+        overlay_surface = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+
+        for tile_id in attackable_tile_ids:
+            tile = game_map.tiles[tile_id]
+
+            # Pour CHAQUE cellule de la tuile
+            for cell_x, cell_y in tile.cells:
+                # Convertir en coordonnées monde
+                world_x = cell_x * tile_size
+                world_y = cell_y * tile_size
+
+                # Convertir en coordonnées écran
+                rel_x = world_x - view_rect.x
+                rel_y = world_y - view_rect.y
+                screen_x = rel_x * cam.zoom + offset_x
+                screen_y = rel_y * cam.zoom + offset_y
+
+                # Taille du rectangle
+                rect_width = int(tile_size * cam.zoom)
+                rect_height = int(tile_size * cam.zoom)
+
+                # Dessiner LE RECTANGLE ROUGE directement (avec même opacité que le bleu)
+                pygame.draw.rect(
+                    overlay_surface,
+                    (255, 100, 100, 80),  # RGBA: Rouge avec opacité 80
                     (int(screen_x), int(screen_y), rect_width, rect_height),
                 )
 

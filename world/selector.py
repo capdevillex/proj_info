@@ -3,8 +3,9 @@ Module de gestion de la sélection d'unités.
 
 Gère :
 - Sélection/désélection d'une unité
-- Affichage des zones accessibles
-- Déplacement quand on clique sur une zone
+- Affichage des zones accessibles (mouvement en bleu)
+- Affichage des zones attaquables (combat en rouge)
+- Déplacement ou attaque quand on clique sur une zone
 """
 
 from core.systems.movement import Movement
@@ -12,21 +13,24 @@ from core.systems.movement import Movement
 
 class UnitSelector:
     """
-    Gestionnaire de la sélection d'unités et des zones de mouvement.
+    Gestionnaire de la sélection d'unités et des zones de mouvement/combat.
     
     Permet de :
     - Sélectionner une unité
-    - Afficher les zones accessibles en bleu transparent
+    - Afficher les zones accessibles en bleu transparent (mouvement)
+    - Afficher les zones attaquables en rouge transparent (combat)
     - Déplacer l'unité si on clique sur une zone accessible
+    - Attaquer si on clique sur une zone attaquable
     """
     
     def __init__(self):
         self.selected_unit = None
-        self.reachable_tiles = set()
+        self.reachable_tiles = set()      # Tuiles accessibles pour le mouvement (BLEU)
+        self.attackable_tiles = set()     # Tuiles avec unités ennemies attaquables (ROUGE)
     
     def select_unit(self, unit, map_):
         """
-        Sélectionne une unité et calcule ses zones accessibles.
+        Sélectionne une unité et calcule ses zones accessibles et attaquables.
         
         Args:
             unit: L'unité à sélectionner
@@ -39,11 +43,18 @@ class UnitSelector:
             self.reachable_tiles = Movement.get_reachable_tiles(map_, unit)
         else:
             self.reachable_tiles = set()
+        
+        # Calculer les zones attaquables (indépendamment de can_move)
+        if unit.attack_range > 0:
+            self.attackable_tiles = Movement.get_attackable_tiles(map_, unit)
+        else:
+            self.attackable_tiles = set()
     
     def deselect_unit(self):
         """Désélectionne l'unité actuelle."""
         self.selected_unit = None
         self.reachable_tiles = set()
+        self.attackable_tiles = set()
     
     def try_move(self, map_, target_tile_id):
         """
@@ -60,7 +71,7 @@ class UnitSelector:
             return False
         
         # Vérifier que la cible est accessible
-        if not is_tile_reachable(map_, self.selected_unit, target_tile_id):
+        if target_tile_id not in self.reachable_tiles:
             return False
         
         # Déplacer l'unité
@@ -90,5 +101,17 @@ class UnitSelector:
         return self.selected_unit
     
     def get_reachable_tiles(self):
-        """Retourne l'ensemble des tuiles accessibles."""
+        """Retourne l'ensemble des tuiles accessibles (mouvement)."""
         return self.reachable_tiles
+    
+    def get_attackable_tiles(self):
+        """Retourne l'ensemble des tuiles attaquables (combat)."""
+        return self.attackable_tiles
+    
+    def is_tile_attackable(self, tile_id):
+        """Vérifie si une tuile contient une unité ennemie attaquable."""
+        return tile_id in self.attackable_tiles
+    
+    def is_tile_reachable(self, tile_id):
+        """Vérifie si une tuile est accessible pour le mouvement."""
+        return tile_id in self.reachable_tiles

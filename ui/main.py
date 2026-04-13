@@ -153,10 +153,20 @@ def main():
                                 if unit.can_move():
                                     unit_selector.select_unit(unit, game_map)
 
-                        # Priorité C : Mouvement d'unité déjà sélectionnée
+                        # Priorité C : Mouvement ou attaque d'unité déjà sélectionnée
                         else:
+                            # Vérifier si c'est la tuile de l'unité sélectionnée (désélectionner)
                             if hovered_tile.id == unit_selector.selected_unit.tile_id:
                                 unit_selector.deselect_unit()
+                            # Vérifier si on attaque une unité ennemie (tuile rouge)
+                            elif unit_selector.is_tile_attackable(hovered_tile.id):
+                                if game_engine.attack_unit(unit_selector.selected_unit, hovered_tile.id):
+                                    # Attaque réussie, désélectionner
+                                    unit_selector.deselect_unit()
+                                else:
+                                    # Attaque échouée mais pas grave, on laisse sélectionné
+                                    pass
+                            # Sinon, essayer de se déplacer (tuile bleue)
                             else:
                                 if game_engine.move_unit(
                                     unit_selector.selected_unit, hovered_tile.id
@@ -202,8 +212,15 @@ def main():
 
         ui_manager.draw(screen, selected_unit_type)
 
+        # Afficher les zones de mouvement et de combat pour l'unité sélectionnée
         if unit_selector.is_unit_selected():
-            reachable = Movement.get_reachable_tiles(game_map, unit_selector.selected_unit)
+            reachable = unit_selector.get_reachable_tiles()
+            attackable = unit_selector.get_attackable_tiles()
+            
+            # Afficher les tuiles attaquables en ROUGE (avant les tuiles accessibles pour la visibilité)
+            renderer.render_attackable_tiles(screen, game_map, camera, tile_size, attackable)
+            
+            # Afficher les tuiles accessibles en BLEU
             renderer.render_reachable_tiles(screen, game_map, camera, tile_size, reachable)
 
         ui_manager.draw(screen, selected_unit_type)

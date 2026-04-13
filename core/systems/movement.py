@@ -249,7 +249,87 @@ class Movement:
         return -1
 
     @staticmethod
-    def execute_move(map_: Map, unit: Unit, target_tile_id: int) -> bool:
+    def get_attackable_tiles(map_: Map, unit: Unit) -> set:
+        """
+        Récupère toutes les tuiles contenant des unités ennemies que l'unité donnée peut attaquer.
+        
+        Basé sur la portée d'attaque de l'unité (attack_range).
+        
+        Args:
+            map_: L'objet Map
+            unit: L'unité attaquante
+            
+        Returns:
+            set: IDs des tuiles contenant des unités ennemies attaquables
+        """
+        if unit.attack_range == 0:
+            # Cette unité ne peut pas attaquer
+            return set()
+        
+        attackable = set()
+        
+        # Utiliser Dijkstra pour trouver toutes les tuiles à portée
+        distances = Movement.dijkstra_reachable(
+            map_,
+            unit.tile_id,
+            unit.attack_range,  # Portée d'attaque au lieu de portée de mouvement
+            unit.unit_type
+        )
+        
+        # Récupérer toutes les tuiles ennemies à portée
+        for tile_id, distance in distances.items():
+            # On exclut la tuile de l'attaquant
+            if distance == 0:
+                continue
+            
+            # On ne dépasse pas la portée d'attaque
+            if distance > unit.attack_range:
+                continue
+            
+            tile = map_.tiles[tile_id]
+            
+            # Vérifier s'il y a une unité ennemie sur cette tuile
+            if tile.has_units():
+                for enemy_unit in tile.units:
+                    # Vérifier que c'est une unité ennemie
+                    if enemy_unit.owner != unit.owner:
+                        attackable.add(tile_id)
+                        break  # On ajoute la tuile, pas besoin de vérifier d'autres unités
+        
+        return attackable
+
+    @staticmethod
+    def get_tiles_in_range(map_: Map, tile_id: int, range_: int) -> set:
+        """
+        Récupère toutes les tuiles dans un certain rayon autour d'une tuile.
+        Utile pour calculer les zones d'effet ou les portées d'attaque.
+        
+        Args:
+            map_: L'objet Map
+            tile_id: ID de la tuile centrale
+            range_: Portée (distance max)
+            
+        Returns:
+            set: IDs des tuiles dans le rayon
+        """
+        tiles_in_range = set()
+        queue = deque([(tile_id, 0)])
+        visited = {tile_id}
+        
+        while queue:
+            current_tile_id, current_distance = queue.popleft()
+            
+            if current_distance > 0:  # Exclure la tuile de départ
+                tiles_in_range.add(current_tile_id)
+            
+            if current_distance < range_:
+                current_tile = map_.tiles[current_tile_id]
+                for neighbor_tile_id in current_tile.neighbors:
+                    if neighbor_tile_id not in visited:
+                        visited.add(neighbor_tile_id)
+                        queue.append((neighbor_tile_id, current_distance + 1))
+        
+        return tiles_in_range
         """
         EXÉCUTE le mouvement d'une unité.
         
