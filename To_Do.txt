@@ -1,14 +1,15 @@
 -----------A FAIRE-------------
 
 Phase 0 :
-    
+
     Ajouter génération des ressources (V : coming soon)
-    Ajouter FOW (après déplacement unit)
+    Créer un moteur de jeu central (V: in progress)
+    Ajouter FOW (après déplacement unit) (V: in progress)
     Combat basique (sans edge-case terrain)
     Gestion des collisions (mouvements avec eau, autres unités etc) (X : On it)
 
 Phase 1 :
-    Économie (production / nourriture / or)
+    Économie (production / nourriture / or) (V: in progress)
     Colonisation (colon)
     Villes simples
     Construction basique (ferme, scierie, mine, etc.)
