@@ -44,6 +44,12 @@ class Tile:
         y = sum(c[1] + 0.5 for c in self.cells) / len(self.cells)
         return (x, y)
 
+    def is_water(self):
+        """Indique si la tuile est de type eau."""
+        return self.biome in {
+            Biome.WATER,
+        }
+
     # ========== MÉTHODES POUR GÉRER LES UNITÉS ==========
 
     def add_unit(self, unit):

@@ -166,19 +166,18 @@ class RenderPipeline:
 
                 # 4. Centrer et afficher
                 img_rect = scaled_img.get_rect(center=(screen_x, screen_y))
-                
 
                 # Pas de numéro ici, gestion de l'opacité
                 opacity = unit.get_opacity()  # Retourne 1.0 ou 0.5
-                alpha = int(255 * opacity)  
-                scaled_img.set_alpha(alpha)  
+                alpha = int(255 * opacity)
+                scaled_img.set_alpha(alpha)
                 screen.blit(scaled_img, img_rect)
 
     def render(self, screen, game_state, cam, tile_size, hovered_tile, dt):
         self.render_world(screen, game_state.map, cam, tile_size)
         self.render_overlay(screen, game_state.map, cam, tile_size, hovered_tile)
-        self.render_units(screen, game_state, cam, tile_size)
-        self.render_ui(screen, game_state, hovered_tile, dt)
+        self.render_units(screen, game_state.map, cam, tile_size)
+        self.render_ui(screen, game_state.map, hovered_tile, dt)
 
     def render_world(self, screen, game_map, cam, tile_size):
         if self.map_surface is None or self.map_dirty:

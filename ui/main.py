@@ -5,6 +5,7 @@ from pathlib import Path
 
 from config import GameConfig as gc
 from core.game_state import GameState
+from core.game_engine import GameEngine
 from world.clock import TurnManager
 from ui.camera import Camera, world_to_screen
 from ui.renderer import RenderPipeline
@@ -39,6 +40,9 @@ def main():
 
     seed = random.randint(0, 1000)
     gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
+
+    # ✨ NOUVEAU : Créer le moteur de jeu
+    game_engine = GameEngine(gs)
 
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
@@ -79,6 +83,8 @@ def main():
                         tile_area=gc.TILE_AVG_AREA,
                     )
                     game_map = gs.map
+                    # ✨ NOUVEAU : Recréer le moteur de jeu
+                    game_engine = GameEngine(gs)
                     renderer.clear_cache()
 
                 if event.key == pygame.K_c:
@@ -120,7 +126,9 @@ def main():
 
                     # Gérer l'action retournée
                     if action == "next_turn":
-                        turn_manager.next_turn(game_map)
+                        # ✨ NOUVEAU : Utiliser le moteur de jeu pour gérer le tour
+                        game_engine.end_turn()
+                        unit_selector.deselect_unit()
                     elif action == "quit":
                         running = False
 
@@ -151,42 +159,26 @@ def main():
                                 unit_selector.deselect_unit()
                                 print("Unité désélectionnée")
                             else:
-                                # Essayer de déplacer l'unité
-                                if unit_selector.try_move(game_map, hovered_tile.id):
+                                # ✨ NOUVEAU : Utiliser le moteur de jeu pour déplacer l'unité
+                                if game_engine.move_unit(
+                                    unit_selector.selected_unit, hovered_tile.id
+                                ):
+                                    unit_selector.deselect_unit()
                                     print(f"✅ Unité déplacée vers tuile {hovered_tile.id}")
                                 else:
                                     print(f"❌ Déplacement impossible vers tuile {hovered_tile.id}")
 
-                    # ✨ NOUVEAU : Si en mode placement, placer une unité
-                    if (
-                        ui_manager.placement_button.is_active
-                        and not unit_selector.is_unit_selected()
-                    ):
-                        hovered_tile = get_hovered_tile(game_map, camera, tile_size)
-                        turn_manager.next_turn(gs.map)
-
                     # Si en mode placement, essayer de placer une unité
-                    elif ui_manager.placement_button.is_active:
+                    if ui_manager.placement_button.is_active:
                         hovered_tile = get_hovered_tile(gs.map, camera, tile_size)
                         if hovered_tile:
-                            if hovered_tile.has_units():
-                                print(f"❌La tuile {hovered_tile.id} a déjà une unité !")
-                            elif (
-                                hovered_tile.biome == Biome.WATER
-                                and not selected_unit_water_affinity
-                            ):
-                                print(
-                                    f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!"
-                                )
-                            else:
-                                unit = Unit(
-                                    tile_id=hovered_tile.id,
-                                    unit_type=selected_unit_type,
-                                    owner=0,
-                                    water_affinity=selected_unit_water_affinity,
-                                )
-                                hovered_tile.add_unit(unit)
-                                print(f"✅ Unité placée sur tuile {hovered_tile.id} : {unit}")
+                            # ✨ NOUVEAU : Utiliser le moteur de jeu pour placer l'unité
+                            game_engine.spawn_unit(
+                                unit_type=selected_unit_type,
+                                tile_id=hovered_tile.id,
+                                owner=gs.current_player,
+                                water_affinity=selected_unit_water_affinity,
+                            )
 
         # -------- UPDATE --------
         camera.update(dt, gs.map, tile_size, window_w, window_h)

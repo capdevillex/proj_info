@@ -59,6 +59,7 @@ class Unit:
         self.y = y
         self.max_distance = self.MAX_DISTANCE[unit_type]
         self.has_moved = False
+        self.upkeep_cost = 0
 
     def __repr__(self):
         """Représentation textuelle de l'unité"""
