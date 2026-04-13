@@ -25,6 +25,7 @@ class UnitType(Enum):
     ARCHER = 3
     COLON = 4
     COLONIE = 5
+    BABY = 6
 
 
 class Unit:
@@ -45,6 +46,7 @@ class Unit:
         UnitType.ARCHER: 2,
         UnitType.COLON: 2,  
         UnitType.COLONIE: 0,
+        UnitType.BABY: 3
     }
 
     def __init__(self, tile_id, water_affinity, unit_type=UnitType.SOLDIER, owner=0, x=0.0, y=0.0):
@@ -60,13 +62,15 @@ class Unit:
         self.max_distance = self.MAX_DISTANCE[unit_type]
         self.has_moved = False
         self.upkeep_cost = 0
+        self.can_dash = False
 
     def __repr__(self):
         """Représentation textuelle de l'unité"""
         return f"Unit(id={self.id}, tile_id={self.tile_id}, type={self.unit_type.name}, owner={self.owner})"
 
+    """
     def get_color(self):
-        """Retourne la couleur pour dessiner l'unité."""
+        #Retourne la couleur pour dessiner l'unité.
         colors = {
             UnitType.SOLDIER: (255, 100, 100),  # Rouge
             UnitType.CAVALRY: (100, 200, 255),  # Bleu
@@ -74,6 +78,7 @@ class Unit:
             UnitType.COLON: (255, 255, 100),  # Jaune
         }
         return colors.get(self.unit_type, (200, 200, 200))
+    """
 
     def get_size(self):
         """Retourne la taille (rayon) pour dessiner l'unité."""
