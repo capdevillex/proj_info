@@ -2,6 +2,7 @@ from typing import List
 
 from world.unit import Unit
 from world.biome import Biome
+from world.resources import Resource
 
 
 class Tile:
@@ -22,13 +23,14 @@ class Tile:
         units (List[Unit]): NOUVEAU - Liste des unités présentes sur cette tuile
     """
 
-    def __init__(self, id_, cells):
+    def __init__(self, id_, cells, biome=Biome.BLANK, resource=Resource.NONE):
         self.id = id_
         self.cells = cells
         self.center = self._compute_center()
         self.area = len(cells)
         self.neighbors = set()
-        self.biome = Biome.BLANK
+        self.biome = biome
+        self.resource = resource
 
         # NOUVEAU : initialiser la liste d'unités vide
         self.units: List[Unit] = []
