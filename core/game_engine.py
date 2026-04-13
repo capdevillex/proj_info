@@ -1,4 +1,4 @@
-from typing import List, Dict, Set, Tuple, Optional, Union, Any
+from typing import List, Dict, Optional, Any
 
 from core.game_state import GameState
 from core.systems import Movement, Combat, Economy, Visibility
@@ -76,7 +76,7 @@ class GameEngine:
     def move_unit(self, unit: Unit, target_tile_id: int) -> bool:
         """
         Déplace une unité vers une tuile cible.
-        
+
         ✨ MAINTENANT : Juste un wrapper qui appelle MovementSystem !
 
         Args:
@@ -86,7 +86,7 @@ class GameEngine:
         Returns:
             True si le mouvement a réussi, False sinon
         """
-        # ✨ Utiliser le système centralisé 
+        # ✨ Utiliser le système centralisé
         success = self.movement.execute_move(self.state.map, unit, target_tile_id)
 
         if success:
@@ -183,7 +183,7 @@ class GameEngine:
 
     # ========== GESTION DES VILLES (PHASE 1) ==========
 
-    def found_city(self, colon_unit: Unit, city_name: str = None) -> bool:
+    def found_city(self, colon_unit: Unit, city_name: str) -> bool:
         """
         Fonde une ville à l'emplacement d'un colon.
 

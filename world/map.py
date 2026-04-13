@@ -72,6 +72,7 @@ from scipy.spatial import KDTree
 
 
 from world.tile import Tile
+from world.resources import Resource
 from world.biome import Biome
 from utils.noise import perlin_noise
 
@@ -86,6 +87,40 @@ WATER_CONNECT_MIN_SIZE = 8
 
 # Distance maximale (en sauts de tuile) entre deux masses d'eau pour les relier.
 WATER_BRIDGE_MAX_HOPS = 3
+
+BIOME_RESOURCE_MAP = {
+    Biome.WATER: [],  # 100% NONE implicite
+    Biome.PLAIN: [
+        (0.30, Resource.FOOD1),
+        (0.15, Resource.FOOD2),
+        (0.07, Resource.FOOD3),
+        (0.175, Resource.STONE1),
+        (0.12, Resource.STONE2),
+        (0.07, Resource.STONE3),
+        # 11.5% NONE implicite
+    ],
+    Biome.FOREST: [
+        (0.65, Resource.WOOD1),
+        (0.28, Resource.WOOD2),
+        (0.07, Resource.WOOD3),
+        # 0% NONE implicite
+    ],
+    Biome.MOUNTAIN: [
+        (0.7 * 0.60, Resource.IRON1),
+        (0.7 * 0.23, Resource.IRON2),
+        (0.7 * 0.07, Resource.IRON3),
+        (0.3 * 0.60, Resource.GOLD1),
+        (0.3 * 0.23, Resource.GOLD2),
+        (0.3 * 0.07, Resource.GOLD3),
+        # 10% NONE implicite
+    ],
+    Biome.DESERT: [
+        (0.10, Resource.FOOD1),
+        (0.30, Resource.STONE1),
+        (0.15, Resource.IRON1),
+        # 45% NONE implicite
+    ],
+}
 
 
 def ratio_area_perimeter(cells: List):
@@ -823,9 +858,8 @@ class Map:
                     cells_by_id[tid].append((x, y))
 
         for tid, cells in cells_by_id.items():
-            tile = Tile(tid, cells)
             biome = Counter(self.biomes[y][x] for x, y in cells).most_common(1)[0][0]
-            tile.biome = biome
+            tile = Tile(tid, cells, biome, self._random_resource_for_biome(biome))
             self.tiles[tid] = tile
 
     def _merge_water_tiles(self, target_size: int = 12):
@@ -1398,15 +1432,37 @@ class Map:
         for s_idx, cells in water_groups.items():
             if not cells:
                 continue
-            w_tile = Tile(next_id, cells)
-            w_tile.biome = Biome.WATER
+            w_tile = Tile(next_id, cells, Biome.WATER)
             for x, y in cells:
                 self.grid[y][x] = next_id
                 self.biomes[y][x] = Biome.WATER
             new_tiles[next_id] = w_tile
             next_id += 1
 
+        del self.tiles  # Libérer les anciennes tuiles pour éviter les références obsolètes
         self.tiles = new_tiles
+
+    def _random_resource_for_biome(self, biome):
+        """
+        Attribue une ressource aléatoire à une tuile en fonction de son biome et de probabilités définies dans BIOME_RESOURCE_MAP.
+
+        Args:
+            biome: Biome de la tuile
+
+        Returns:
+            Resource: Ressource attribuée à la tuile
+        """
+        if biome not in BIOME_RESOURCE_MAP:
+            return Resource.NONE
+
+        entries = BIOME_RESOURCE_MAP[biome]
+        total = sum(p for p, _ in entries)
+        none_prob = max(0.0, 1.0 - total)
+
+        resources = [r for _, r in entries] + [Resource.NONE]
+        probabilities = [p for p, _ in entries] + [none_prob]
+
+        return random.choices(resources, probabilities)[0]
 
     # Méthodes du pipeline de génération
 

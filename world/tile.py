@@ -186,4 +186,4 @@ class Tile:
     def __repr__(self):
         """Représentation textuelle de la tuile"""
         units_str = f", {len(self.units)} unit(s)" if self.units else ""
-        return f"Tile(id={self.id}, biome={self.biome.name}, area={self.area}{units_str})"
+        return f"Tile(id={self.id}, biome={self.biome.name}, resource={self.resource.name}, area={self.area}{units_str})"
