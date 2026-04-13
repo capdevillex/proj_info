@@ -26,3 +26,9 @@ class GameEngine:
     def end_turn(self):
         self.economy.update(self.state)
         self.state.turn += 1
+
+    def spawn_unit(self, unit_type, tile_id):
+        """Place une nouvelle unité du type spécifié sur la tuile donnée."""
+        new_unit = Unit(unit_type, tile_id, owner=self.state.current_player)
+        self.state.units.append(new_unit)
+        self.visibility.update(self.state)

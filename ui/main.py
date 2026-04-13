@@ -4,9 +4,10 @@ from pathlib import Path
 
 
 from config import GameConfig as gc
+from core.game_state import GameState
 from world.map import Map
 from world.clock import TurnManager
-from ui.camera import Camera,world_to_screen
+from ui.camera import Camera, world_to_screen
 from ui.renderer import RenderPipeline
 from ui.ui_manager import UIManager
 from ui.ui_utils import get_hovered_tile, compute_tile_size
@@ -31,14 +32,14 @@ img_path = Path(".") / "img"
 def main():
     screen = pygame.display.set_mode((gc.SCREEN_WIDTH, gc.SCREEN_HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("4X Map Generator, en fait c'est un début de jeu mais voila quoi")
-    
+
     icone = pygame.image.load(img_path / "Logo.png")
     pygame.display.set_icon(icone)
 
     clock = pygame.time.Clock()
 
     seed = random.randint(0, 1000)
-    game_map = Map(gc.WIDTH, gc.HEIGHT, seed, log=gc.LOG_MAP_GENERATION)
+    gs = GameState(gc.WIDTH, gc.HEIGHT, seed, log=gc.LOG_MAP_GENERATION, tile_size=gc.TILE_SIZE)
 
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
@@ -53,6 +54,8 @@ def main():
 
     running = True
     turn_manager = TurnManager()
+
+    game_map = gs.map
 
     while running:
         dt = clock.tick(gc.FPS) / 1000
@@ -69,7 +72,10 @@ def main():
                     renderer.map_dirty = True
                     renderer.border_dirty = True
                     seed = random.randint(0, 1000)
-                    game_map = Map(gc.WIDTH, gc.HEIGHT, seed, log=gc.LOG_MAP_GENERATION)
+                    gs = GameState(
+                        gc.WIDTH, gc.HEIGHT, seed, log=gc.LOG_MAP_GENERATION, tile_size=gc.TILE_SIZE
+                    )
+                    game_map = gs.map
                     renderer.clear_cache()
 
                 if event.key == pygame.K_c:
@@ -106,7 +112,7 @@ def main():
 
                     # Vérifier les boutons UI
                     action = ui_manager.handle_click(
-                        mouse_pos, game_map, selected_unit_type, selected_unit_water_affinity
+                        mouse_pos, gs.map, selected_unit_type, selected_unit_water_affinity
                     )
 
                     # Gérer l'action retournée
@@ -114,26 +120,28 @@ def main():
                         turn_manager.next_turn(game_map)
                     elif action == "quit":
                         running = False
-                    
+
                     # Ici gestion du mouvement des unités
                     elif not unit_selector.is_unit_selected():
                         # Si aucune unité sélectionnée, chercher une unité cliquée
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
-                        
+
                         if hovered_tile and hovered_tile.has_units():
                             unit = hovered_tile.units[0]
-                            
+
                             # Sélectionner l'unité si elle peut bouger
                             if unit.can_move():
                                 unit_selector.select_unit(unit, game_map)
-                                print(f"✅ Unité {unit.id} sélectionnée - Distance max: {unit.max_distance}")
+                                print(
+                                    f"✅ Unité {unit.id} sélectionnée - Distance max: {unit.max_distance}"
+                                )
                             else:
                                 print(f"❌ Unité {unit.id} a déjà bougé ce tour !")
-                    
+
                     else:
                         # Une unité est sélectionnée, essayer de la déplacer
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
-                        
+
                         if hovered_tile:
                             # Vérifier si on clique sur la même tuile (désélection)
                             if hovered_tile.id == unit_selector.selected_unit.tile_id:
@@ -145,16 +153,28 @@ def main():
                                     print(f"✅ Unité déplacée vers tuile {hovered_tile.id}")
                                 else:
                                     print(f"❌ Déplacement impossible vers tuile {hovered_tile.id}")
-                    
+
                     # ✨ NOUVEAU : Si en mode placement, placer une unité
-                    if ui_manager.placement_button.is_active and not unit_selector.is_unit_selected():
+                    if (
+                        ui_manager.placement_button.is_active
+                        and not unit_selector.is_unit_selected()
+                    ):
                         hovered_tile = get_hovered_tile(game_map, camera, tile_size)
+                        turn_manager.next_turn(gs.map)
+
+                    # Si en mode placement, essayer de placer une unité
+                    elif ui_manager.placement_button.is_active:
+                        hovered_tile = get_hovered_tile(gs.map, camera, tile_size)
                         if hovered_tile:
                             if hovered_tile.has_units():
                                 print(f"❌La tuile {hovered_tile.id} a déjà une unité !")
-                            elif (hovered_tile.biome == Biome.WATER
-                                and not selected_unit_water_affinity):
-                                print(f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!")
+                            elif (
+                                hovered_tile.biome == Biome.WATER
+                                and not selected_unit_water_affinity
+                            ):
+                                print(
+                                    f"❌La tuile {hovered_tile.id} est pleine de flotte l'unité va se noyer!"
+                                )
                             else:
                                 unit = Unit(
                                     tile_id=hovered_tile.id,
@@ -165,11 +185,9 @@ def main():
                                 hovered_tile.add_unit(unit)
                                 print(f"✅ Unité placée sur tuile {hovered_tile.id} : {unit}")
 
-                    
-
         # -------- UPDATE --------
-        camera.update(dt, game_map, tile_size, window_w, window_h)
-        hovered_tile = get_hovered_tile(game_map, camera, tile_size)
+        camera.update(dt, gs.map, tile_size, window_w, window_h)
+        hovered_tile = get_hovered_tile(gs.map, camera, tile_size)
 
         # Mettre à jour les positions des boutons en fonction de la taille de l'écran
         ui_manager.update_positions(window_w, window_h)
@@ -180,7 +198,7 @@ def main():
 
         # -------- RENDER --------
         screen.fill((0, 0, 0))
-        renderer.render(screen, game_map, camera, tile_size, hovered_tile, dt)
+        renderer.render(screen, gs.map, camera, tile_size, hovered_tile, dt)
 
         # Une seule ligne pour dessiner tous les boutons
         ui_manager.draw(screen)
@@ -193,10 +211,18 @@ def main():
                 tile_x, tile_y = tile.center
                 world_x = tile_x * tile_size
                 world_y = tile_y * tile_size
-                screen_x, screen_y = world_to_screen(world_x, world_y, camera.x, camera.y, camera.zoom)
-                
+                screen_x, screen_y = world_to_screen(
+                    world_x, world_y, camera.x, camera.y, camera.zoom
+                )
+
                 # Dessiner un petit overlay bleu
-                pygame.draw.circle(screen, (100, 150, 255, 100), (int(screen_x), int(screen_y)), int(3 * camera.zoom), 1)
+                pygame.draw.circle(
+                    screen,
+                    (100, 150, 255, 100),
+                    (int(screen_x), int(screen_y)),
+                    int(3 * camera.zoom),
+                    1,
+                )
 
         # Afficher le type d'unité sélectionné (positionné en bas à droite)
         unit_type_text = button_font.render(
