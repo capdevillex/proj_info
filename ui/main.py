@@ -48,7 +48,7 @@ def main():
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
 
-    ui_manager = UIManager(button_font)
+    ui_manager = UIManager(game_engine, button_font)
 
     unit_selector = UnitSelector()
 
@@ -124,12 +124,12 @@ def main():
 
                     # On définit si le clic a été "consommé" par un élément d'interface
                     clic_sur_ui = (
-                        action is not None or 
-                        ui_manager.placement_button.rect.collidepoint(mouse_pos) or
-                        ui_manager.toggle_sidebar_button.rect.collidepoint(mouse_pos) or
-                        ui_manager.next_turn_button.rect.collidepoint(mouse_pos) or
-                        ui_manager.quit_button.rect.collidepoint(mouse_pos) or
-                        ui_manager.placement_button_enn.rect.collidepoint(mouse_pos)
+                        action is not None
+                        or ui_manager.placement_button.rect.collidepoint(mouse_pos)
+                        or ui_manager.toggle_sidebar_button.rect.collidepoint(mouse_pos)
+                        or ui_manager.next_turn_button.rect.collidepoint(mouse_pos)
+                        or ui_manager.quit_button.rect.collidepoint(mouse_pos)
+                        or ui_manager.placement_button_enn.rect.collidepoint(mouse_pos)
                     )
 
                     if clic_sur_ui:
@@ -143,7 +143,7 @@ def main():
 
                     # 2. Si on n'est PAS sur l'UI, on gère le monde
                     hovered_tile = get_hovered_tile(game_map, camera, tile_size)
-                    
+
                     if hovered_tile:
                         # Priorité A : Mode placement (si actif)
                         if ui_manager.placement_button.is_active:
@@ -153,7 +153,7 @@ def main():
                                 owner=gs.current_player,
                                 water_affinity=selected_unit_water_affinity,
                             )
-                        #Priorité Abis : mode placement ennemi (si actif tu connais)
+                        # Priorité Abis : mode placement ennemi (si actif tu connais)
                         elif ui_manager.placement_button_enn.is_active:
                             game_engine.spawn_unit(
                                 unit_type=selected_enn_unit_type,
@@ -161,14 +161,14 @@ def main():
                                 owner=1,
                                 water_affinity=selected_unit_water_affinity,
                             )
-                        
+
                         # Priorité B : Sélection d'unité
                         elif not unit_selector.is_unit_selected():
                             if hovered_tile.has_units():
                                 unit = hovered_tile.units[0]
                                 if unit.can_move():
                                     unit_selector.select_unit(unit, game_map)
-                        
+
                         # Priorité C : Mouvement d'unité déjà sélectionnée
                         else:
                             if hovered_tile.id == unit_selector.selected_unit.tile_id:
@@ -178,6 +178,26 @@ def main():
                                     unit_selector.selected_unit, hovered_tile.id
                                 ):
                                     unit_selector.deselect_unit()
+
+                elif event.button == 3:  # Clic droit
+                    mouse_pos = event.pos
+                    hovered_tile = get_hovered_tile(game_map, camera, tile_size)
+
+                    if hovered_tile and hovered_tile.has_units():
+                        # Récupérer l'unité sur la tuile
+                        unit = hovered_tile.units[0]
+
+                        # Si c'est un colon, fonder une ville
+                        if unit.unit_type == UnitType.COLON and unit.owner == gs.current_player:
+                            if game_engine.found_city(unit):
+                                # Désélectionner l'unité si elle était sélectionnée
+                                if (
+                                    unit_selector.is_unit_selected()
+                                    and unit_selector.selected_unit.id == unit.id
+                                ):
+                                    unit_selector.deselect_unit()
+                                # Marquer le rendu comme sale pour rafraîchir l'affichage
+                                renderer.city_dirty = True
 
         # -------- UPDATE --------
         camera.update(dt, gs.map, tile_size, window_w, window_h)

@@ -3,6 +3,7 @@ from typing import List, Dict, Optional, Any
 from core.game_state import GameState
 from core.systems import Movement, Combat, Economy, Visibility
 from world.unit import Unit, UnitType
+from world.city import City
 from world.map import Map
 from world.biome import Biome
 from core.systems.movement import Movement  # ✨ Importer le système centralisé
@@ -160,13 +161,6 @@ class GameEngine:
         # Mettre à jour l'économie
         self.economy.update(self.state)
 
-        # Afficher les ressources
-        print(
-            f"Ressources : Or={self.state.resources['gold']}, "
-            f"Nourriture={self.state.resources['food']}, "
-            f"Production={self.state.resources['production']}"
-        )
-
         # Réinitialiser le mouvement de toutes les unités
         for unit in self.state.units:
             unit.reset_movement()
@@ -181,15 +175,15 @@ class GameEngine:
         print(f"Début du tour {self.state.turn}")
         print(f"{'='*50}\n")
 
-    # ========== GESTION DES VILLES (PHASE 1) ==========
+    # ========== GESTION DES VILLES ==========
 
-    def found_city(self, colon_unit: Unit, city_name: str) -> bool:
+    def found_city(self, colon_unit: Unit, city_name: Optional[str] = None) -> bool:
         """
         Fonde une ville à l'emplacement d'un colon.
 
         Args:
             colon_unit: L'unité colon qui fonde la ville
-            city_name: Nom de la ville (optionnel)
+            city_name: Nom de la ville (optionnel, généré automatiquement si None)
 
         Returns:
             True si la ville a été fondée, False sinon
@@ -199,13 +193,100 @@ class GameEngine:
             print(f"❌ Seul un colon peut fonder une ville")
             return False
 
-        # TODO: Implémenter la création de ville (Phase 1)
-        # - Créer l'objet City
-        # - Retirer le colon
-        # - Ajouter la ville à l'état du jeu
+        # Vérifier que la tuile existe
+        tile = self.state.map.tiles.get(colon_unit.tile_id)
+        if not tile:
+            print(f"❌ Tuile {colon_unit.tile_id} inexistante")
+            return False
 
-        print(f"⚠️ Fondation de ville pas encore implémentée (Phase 1)")
-        return False
+        # Vérifier qu'il n'y a pas déjà une ville sur cette tuile
+        if self.state.get_city_at_tile(colon_unit.tile_id):
+            print(f"❌ Il y a déjà une ville sur cette tuile")
+            return False
+
+        # Vérifier que la tuile n'est pas de l'eau
+        if tile.is_water():
+            print(f"❌ Impossible de fonder une ville sur l'eau")
+            return False
+
+        # Générer un nom de ville si non fourni
+        if city_name is None:
+            city_name = self._generate_city_name(colon_unit.owner)
+
+        # Créer la ville
+        new_city = City(name=city_name, owner=colon_unit.owner, center_tile_id=colon_unit.tile_id)
+
+        # Ajouter la ville à l'état du jeu
+        self.state.add_city(new_city)
+
+        # Calculer la production initiale
+        new_city.calculate_production(self.state.map)
+
+        # Retirer le colon du jeu
+        self.remove_unit(colon_unit)
+
+        print(
+            f"✅ Ville '{city_name}' fondée sur la tuile {colon_unit.tile_id} par le joueur {colon_unit.owner}"
+        )
+
+        return True
+
+    def _generate_city_name(self, owner: int) -> str:
+        """
+        Génère un nom de ville automatiquement.
+
+        Args:
+            owner: ID du joueur propriétaire
+
+        Returns:
+            Nom de la ville
+        """
+        # Listes de noms de villes, je dois avouer avoir une inspiration limitée
+        city_names = [
+            "Nova",
+            "Bourg Palette",
+            "Arcadia",
+            "Zenith",
+            "Aurora",
+            "Elysium",
+            "Olympus",
+            "Volucité",
+            "Atlantis",
+            "Avalon",
+            "Carmin-sur-mer",
+            "Camelot",
+            "Eden",
+            "Relifac-le-Haut",
+            "Utopia",
+            "Paradis",
+            "Lavanville",
+            "Harmonie",
+            "Prospérité",
+            "Liberté",
+            "Féli-Cité",
+            "Espoir",
+            "Lumière",
+            "Auffrac-les-Congères",
+            "Victoire",
+            "Gloire",
+            "Honneur",
+        ]
+
+        # Récupérer les noms déjà utilisés
+        used_names = {city.name for city in self.state.cities if city.owner == owner}
+
+        # Trouver un nom disponible
+        for name in city_names:
+            if name not in used_names:
+                return name
+
+        # Si tous les noms sont pris, ajouter un numéro
+        base_name = city_names[0]
+        counter = 1
+        while f"{base_name} {counter}" in used_names:
+            counter += 1
+
+        return f"{base_name} {counter}"
 
     # ========== UTILITAIRES ==========
 

@@ -18,9 +18,12 @@ class RenderPipeline:
 
         self.map_surface = None
         self.border_surface = None
+        self.city_overlay_surface = None
+        self.city_border_surface = None
         self.tile_highlights = {}
         self.map_dirty = True
         self.border_dirty = True
+        self.city_dirty = True
         self.font = font
         self.biome_colors = biome_colors
 
@@ -36,13 +39,30 @@ class RenderPipeline:
         }
         self.default_image = pygame.image.load(img_path / "soldat.png").convert_alpha()
 
+        # Couleurs pour les différents propriétaires de villes
+        self.owner_colors = [
+            (100, 150, 255),  # Bleu pour joueur 0
+            (255, 100, 100),  # Rouge pour joueur 1
+            (100, 255, 100),  # Vert pour joueur 2
+            (255, 255, 100),  # Jaune pour joueur 3
+            (255, 100, 255),  # Magenta pour joueur 4
+            (100, 255, 255),  # Cyan pour joueur 5
+        ]
+
     def clear_cache(self):
         """Vide les surfaces mises en cache pour forcer un recalcul total."""
         self.tile_highlights = {}
         self.map_dirty = True
         self.border_dirty = True
+        self.city_dirty = True
         self.map_surface = None
         self.border_surface = None
+        self.city_overlay_surface = None
+        self.city_border_surface = None
+
+    def get_owner_color(self, owner_id):
+        """Retourne la couleur associée à un propriétaire."""
+        return self.owner_colors[owner_id % len(self.owner_colors)]
 
     def build_map_surface(self, game_map, tile_size):
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre la carte"""
@@ -77,6 +97,126 @@ class RenderPipeline:
                         )
                     except Exception as e:
                         print(f"Erreur lors du chargement de l'image {resource_img}: {e}")
+        return surface
+
+    def build_city_overlay_surface(self, game_map, game_state, tile_size):
+        """Construit une surface avec les teintes de couleur pour les villes."""
+        width_px = game_map.width * tile_size
+        height_px = game_map.height * tile_size
+
+        surface = pygame.Surface((width_px, height_px), pygame.SRCALPHA)
+
+        # Pour chaque ville, teinter ses tuiles
+        for city in game_state.cities:
+            owner_color = self.get_owner_color(city.owner)
+
+            # Créer une couleur semi-transparente pour la teinte
+            tint_color = (*owner_color, 60)  # Alpha à 60 pour une teinte légère
+
+            # Teinter toutes les tuiles de la ville
+            for tile_id in city.tile_ids:
+                if tile_id not in game_map.tiles:
+                    continue
+
+                tile = game_map.tiles[tile_id]
+
+                # Dessiner chaque cellule de la tuile avec la teinte
+                for x, y in tile.cells:
+                    pygame.draw.rect(
+                        surface, tint_color, (x * tile_size, y * tile_size, tile_size, tile_size)
+                    )
+
+        return surface
+
+    def build_city_border_surface(self, game_map, game_state, tile_size):
+        """Construit une surface avec les contours colorés des villes."""
+        width_px = game_map.width * tile_size
+        height_px = game_map.height * tile_size
+
+        surface = pygame.Surface((width_px, height_px), pygame.SRCALPHA)
+
+        # Pour chaque ville, dessiner les contours de ses tuiles
+        for city in game_state.cities:
+            owner_color = self.get_owner_color(city.owner)
+
+            # Créer un set des tuiles de la ville pour vérification rapide
+            city_tile_ids = city.tile_ids
+
+            # Parcourir toutes les cellules de toutes les tuiles de la ville
+            for tile_id in city_tile_ids:
+                if tile_id not in game_map.tiles:
+                    continue
+
+                tile = game_map.tiles[tile_id]
+
+                for x, y in tile.cells:
+                    # Vérifier les 4 directions pour dessiner les bordures
+                    for dx, dy in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
+                        nx, ny = x + dx, y + dy
+
+                        # Si on sort de la carte ou si la cellule voisine n'appartient pas à la ville
+                        if 0 <= nx < game_map.width and 0 <= ny < game_map.height:
+                            neighbor_tile_id = game_map.grid[ny][nx]
+
+                            # Dessiner une bordure si le voisin n'est pas dans la ville
+                            if neighbor_tile_id not in city_tile_ids:
+                                px = x * tile_size
+                                py = y * tile_size
+
+                                if dx == 1:  # Bordure droite
+                                    pygame.draw.line(
+                                        surface,
+                                        owner_color,
+                                        (px + tile_size, py),
+                                        (px + tile_size, py + tile_size),
+                                        2,
+                                    )
+                                elif dx == -1:  # Bordure gauche
+                                    pygame.draw.line(
+                                        surface, owner_color, (px, py), (px, py + tile_size), 2
+                                    )
+                                elif dy == 1:  # Bordure bas
+                                    pygame.draw.line(
+                                        surface,
+                                        owner_color,
+                                        (px, py + tile_size),
+                                        (px + tile_size, py + tile_size),
+                                        2,
+                                    )
+                                elif dy == -1:  # Bordure haut
+                                    pygame.draw.line(
+                                        surface, owner_color, (px, py), (px + tile_size, py), 2
+                                    )
+                        else:
+                            # Bordure de la carte
+                            px = x * tile_size
+                            py = y * tile_size
+
+                            if dx == 1 and nx >= game_map.width:
+                                pygame.draw.line(
+                                    surface,
+                                    owner_color,
+                                    (px + tile_size, py),
+                                    (px + tile_size, py + tile_size),
+                                    2,
+                                )
+                            elif dx == -1 and nx < 0:
+                                pygame.draw.line(
+                                    surface, owner_color, (px, py), (px, py + tile_size), 2
+                                )
+                            elif dy == 1 and ny >= game_map.height:
+                                pygame.draw.line(
+                                    surface,
+                                    owner_color,
+                                    (px, py + tile_size),
+                                    (px + tile_size, py + tile_size),
+                                    2,
+                                )
+                            elif dy == -1 and ny < 0:
+                                pygame.draw.line(
+                                    surface, owner_color, (px, py), (px + tile_size, py), 2
+                                )
+
         return surface
 
     def build_border_surface(self, game_map, tile_size):
@@ -194,13 +334,49 @@ class RenderPipeline:
                 scaled_img.set_alpha(alpha)
                 screen.blit(scaled_img, img_rect)
 
+    def render_cities(self, screen, game_state, cam, tile_size):
+        """
+        Dessine les noms des villes sur la carte.
+        """
+        for city in game_state.cities:
+            # Récupérer la tuile centrale de la ville
+            tile = game_state.map.tiles.get(city.center_tile_id)
+            if not tile:
+                continue
+
+            # Position du centre de la tuile
+            tile_center_x, tile_center_y = tile.center
+            world_x = tile_center_x * tile_size
+            world_y = tile_center_y * tile_size
+
+            # Convertir en coordonnées écran
+            screen_x, screen_y = world_to_screen(world_x, world_y, cam.x, cam.y, cam.zoom)
+            screen_x = round(screen_x)
+            screen_y = round(screen_y)
+
+            # Afficher le nom de la ville si le zoom est suffisant
+            if cam.zoom > 0.6:
+                city_name_surface = self.font.render(city.name, True, (255, 255, 255))
+                name_rect = city_name_surface.get_rect(center=(screen_x, screen_y))
+
+                # Fond semi-transparent pour le texte
+                bg_rect = name_rect.inflate(6, 4)
+                bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+                bg_surface.fill((0, 0, 0, 200))
+                screen.blit(bg_surface, bg_rect)
+
+                screen.blit(city_name_surface, name_rect)
+
+                screen.blit(city_name_surface, name_rect)
+
     def render(self, screen, game_state, cam, tile_size, hovered_tile, dt):
-        self.render_world(screen, game_state.map, cam, tile_size)
+        self.render_world(screen, game_state.map, game_state, cam, tile_size)
         self.render_overlay(screen, game_state.map, cam, tile_size, hovered_tile)
         self.render_units(screen, game_state.map, cam, tile_size)
+        self.render_cities(screen, game_state, cam, tile_size)
         self.render_ui(screen, game_state.map, hovered_tile, dt)
 
-    def render_world(self, screen, game_map, cam, tile_size):
+    def render_world(self, screen, game_map, game_state, cam, tile_size):
         if self.map_surface is None or self.map_dirty:
             self.map_surface = self.build_map_surface(game_map, tile_size)
             self.map_dirty = False
@@ -208,6 +384,16 @@ class RenderPipeline:
         if self.border_surface is None or self.border_dirty:
             self.border_surface = self.build_border_surface(game_map, tile_size)
             self.border_dirty = False
+
+        # Construire les surfaces de villes si nécessaire
+        if self.city_overlay_surface is None or self.city_dirty:
+            self.city_overlay_surface = self.build_city_overlay_surface(
+                game_map, game_state, tile_size
+            )
+            self.city_border_surface = self.build_city_border_surface(
+                game_map, game_state, tile_size
+            )
+            self.city_dirty = False
 
         window_w, window_h = pygame.display.get_window_size()
         view_rect = pygame.Rect(
@@ -226,7 +412,6 @@ class RenderPipeline:
         offset_y = (clipped.y - view_rect.y) * cam.zoom
 
         sub = self.map_surface.subsurface(clipped)
-
         scaled = pygame.transform.scale(
             sub,
             (
@@ -234,13 +419,25 @@ class RenderPipeline:
                 int(clipped.height * cam.zoom),
             ),
         )
-
         screen.blit(scaled, (offset_x, offset_y))
+
+        # Dessiner la teinte des villes
+        if self.city_overlay_surface:
+            sub_city = self.city_overlay_surface.subsurface(clipped)
+            scaled_city = pygame.transform.scale(
+                sub_city,
+                (
+                    int(clipped.width * cam.zoom),
+                    int(clipped.height * cam.zoom),
+                ),
+            )
+            screen.blit(scaled_city, (offset_x, offset_y))
 
         self.last_view_rect = view_rect
         self.last_clipped = clipped
         self.last_offset = (offset_x, offset_y)
 
+        # Dessiner les bordures de tuiles normales
         if cam.zoom > 1.2:
             sub_b = self.border_surface.subsurface(clipped)
             scaled_b = pygame.transform.scale(
@@ -251,6 +448,18 @@ class RenderPipeline:
                 ),
             )
             screen.blit(scaled_b, (offset_x, offset_y))
+
+        # Dessiner les bordures de villes (toujours visibles)
+        if self.city_border_surface:
+            sub_city_border = self.city_border_surface.subsurface(clipped)
+            scaled_city_border = pygame.transform.scale(
+                sub_city_border,
+                (
+                    int(clipped.width * cam.zoom),
+                    int(clipped.height * cam.zoom),
+                ),
+            )
+            screen.blit(scaled_city_border, (offset_x, offset_y))
 
     def render_overlay(self, screen, game_map, cam, tile_size, hovered_tile):
         if not hovered_tile:

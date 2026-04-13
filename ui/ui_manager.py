@@ -2,6 +2,7 @@ import pygame
 
 from ui.button import Button
 from config import GameConfig as gc
+from core.game_engine import GameEngine
 
 
 class UIManager:
@@ -11,8 +12,9 @@ class UIManager:
     Permet de gérer facilement plusieurs boutons sans dupliquer du code.
     """
 
-    def __init__(self, font):
+    def __init__(self, game_engine: GameEngine, font):
         """Crée tous les boutons UI"""
+        self.game_engine = game_engine
         self.font = font
         self.screen_width = gc.SCREEN_WIDTH
         self.screen_height = gc.SCREEN_HEIGHT
@@ -23,9 +25,6 @@ class UIManager:
         self.sidebar_collapsed_height = 25
         self.sidebar_animation_speed = 300  # pixels par seconde
         self.sidebar_current_height = self.sidebar_collapsed_height
-
-        # Ressources (pas encore implémentées dans le jeu)
-        self.resources = {"Nourriture": 100, "Or": 50, "Bois": 75, "Pierre": 30, "Fer": 20}
 
         # Bouton "Placer Unité" - TOGGLEABLE (en haut à gauche)
         self.placement_button = Button(
@@ -114,11 +113,12 @@ class UIManager:
         )
 
         # Bouton pour unités ennemies en bas à droite (j'espère mdr)
-        self.placement_button_enn.set_position(screen_width-gc.BUTTON_WIDTH-10,screen_height-10-gc.BUTTON_HEIGHT)        
-        
+        self.placement_button_enn.set_position(
+            screen_width - gc.BUTTON_WIDTH - 10, screen_height - 10 - gc.BUTTON_HEIGHT
+        )
 
     def update(self, mouse_pos, dt):
-        #Met à jour tous les boutons et plus (sidebar)
+        # Met à jour tous les boutons et plus (sidebar)
         self.placement_button.update(mouse_pos)
         self.next_turn_button.update(mouse_pos)
         self.quit_button.update(mouse_pos)
@@ -166,11 +166,19 @@ class UIManager:
         # Si la sidebar est suffisamment ouverte, afficher les ressources
         if self.sidebar_current_height > self.sidebar_collapsed_height + 10:
             # Calculer l'espacement entre les ressources
-            num_resources = len(self.resources)
+            num_resources = len(
+                self.game_engine.state.player_resources.get(
+                    self.game_engine.state.current_player, {}
+                )
+            )
             spacing = self.screen_width // (num_resources + 1)
 
             # Afficher chaque ressource
-            for i, (resource_name, amount) in enumerate(self.resources.items()):
+            for i, (resource_name, amount) in enumerate(
+                self.game_engine.state.player_resources[
+                    self.game_engine.state.current_player
+                ].items()
+            ):
                 x_pos = spacing * (i + 1)
                 y_pos = self.sidebar_collapsed_height + 10
 
