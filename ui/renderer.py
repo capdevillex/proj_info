@@ -15,7 +15,7 @@ img_path = Path(".") / "img"
 resource_scaling = {
     "gold": 1,
     "iron": 1,
-    "stone": 1.5,
+    "stone": 1.75,
     "wood": 1.3,
     "food": 2,
     "default": 1.0,
@@ -26,12 +26,14 @@ class RenderPipeline:
     def __init__(self, font, biome_colors):
         self.show_centers = False
 
-        self.map_surface = None
-        self.border_surface = None
-        self.city_overlay_surface = None
-        self.city_border_surface = None
+        self.map_sf = None
+        self.border_sf = None
+        self.resource_sf = None
+        self.city_overlay_sf = None
+        self.city_border_sf = None
         self.tile_highlights = {}
         self.map_dirty = True
+        self.resource_dirty = True
         self.border_dirty = True
         self.city_dirty = True
         self.font = font
@@ -55,7 +57,6 @@ class RenderPipeline:
             for r in Resource
             if r != Resource.NONE
         }
-        self.scaled_resource_cache = {}
 
         # Couleurs pour les différents propriétaires de villes
         self.owner_colors = [
@@ -73,46 +74,63 @@ class RenderPipeline:
         self.map_dirty = True
         self.border_dirty = True
         self.city_dirty = True
-        self.map_surface = None
-        self.border_surface = None
-        self.city_overlay_surface = None
-        self.city_border_surface = None
-
-    def get_scaled_resource(self, resource, size):
-        key = (resource, size)
-
-        if key in self.scaled_resource_cache:
-            return self.scaled_resource_cache[key]
-
-        base_img = self.rsrc_img[resource]
-        scaled = pygame.transform.scale(base_img, (size, size))
-
-        self.scaled_resource_cache[key] = scaled
-        return scaled
+        self.resource_dirty = True
+        self.map_sf = None
+        self.resource_sf = None
+        self.border_sf = None
+        self.city_overlay_sf = None
+        self.city_border_sf = None
 
     def get_owner_color(self, owner_id):
         """Retourne la couleur associée à un propriétaire."""
         return self.owner_colors[owner_id % len(self.owner_colors)]
 
-    def build_map_surface(self, game_map, tile_size):
+    def build_map_sf(self, game_map, tile_size):
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre la carte"""
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
         surface = pygame.Surface((width_px, height_px))
 
-        # 1. Rendu des biomes (fond)
         for tile in game_map.tiles.values():
             color = self.biome_colors[tile.biome]
-
             for x, y in tile.cells:
                 surface.fill(
                     color,
                     (x * tile_size, y * tile_size, tile_size, tile_size),
                 )
-
         return surface
 
-    def build_city_overlay_surface(self, game_map, game_state, tile_size):
+    def build_resource_sf(self, game_map, tile_size):
+        """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre les ressources des provinces"""
+        scale = gc.RESOURCE_BASE_SCALE
+        width_px = game_map.width * tile_size * scale
+        height_px = game_map.height * tile_size * scale
+        surface = pygame.Surface((width_px, height_px), pygame.SRCALPHA)
+
+        for tile in game_map.tiles.values():
+            if not tile.resource or tile.resource == Resource.NONE:
+                continue
+            try:
+                scale_factor = resource_scaling.get(
+                    tile.resource.value[:-1], resource_scaling["default"]
+                )
+                target_size = int(tile_size * scale_factor * 3 * scale)
+                base_img = self.rsrc_img[tile.resource]
+                img = pygame.transform.scale(base_img, (target_size, target_size))
+                world_x = tile.center[0] * tile_size * scale
+                world_y = tile.center[1] * tile_size * scale
+                surface.blit(
+                    img,
+                    (
+                        int(world_x - target_size // 2),
+                        int(world_y - target_size // 2),
+                    ),
+                )
+            except Exception as e:
+                print(f"Erreur ressource {tile.resource.value}: {e}")
+        return surface
+
+    def build_city_overlay_sf(self, game_map, game_state, tile_size):
         """Construit une surface avec les teintes de couleur pour les villes."""
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
@@ -141,7 +159,7 @@ class RenderPipeline:
 
         return surface
 
-    def build_city_border_surface(self, game_map, game_state, tile_size):
+    def build_city_border_sf(self, game_map, game_state, tile_size):
         """Construit une surface avec les contours colorés des villes."""
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
@@ -232,7 +250,7 @@ class RenderPipeline:
 
         return surface
 
-    def build_border_surface(self, game_map, tile_size):
+    def build_border_sf(self, game_map, tile_size):
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre les frontières des provinces"""
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
@@ -355,18 +373,18 @@ class RenderPipeline:
 
             # Afficher le nom de la ville si le zoom est suffisant
             if cam.zoom > 0.6:
-                city_name_surface = self.font.render(city.name, True, (255, 255, 255))
-                name_rect = city_name_surface.get_rect(center=(screen_x, screen_y))
+                city_name_sf = self.font.render(city.name, True, (255, 255, 255))
+                name_rect = city_name_sf.get_rect(center=(screen_x, screen_y))
 
                 # Fond semi-transparent pour le texte
                 bg_rect = name_rect.inflate(6, 4)
-                bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-                bg_surface.fill((0, 0, 0, 200))
-                screen.blit(bg_surface, bg_rect)
+                bg_sf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+                bg_sf.fill((0, 0, 0, 200))
+                screen.blit(bg_sf, bg_rect)
 
-                screen.blit(city_name_surface, name_rect)
+                screen.blit(city_name_sf, name_rect)
 
-                screen.blit(city_name_surface, name_rect)
+                screen.blit(city_name_sf, name_rect)
 
     def render(self, screen, game_state, cam, tile_size, hovered_tile, dt):
         self.render_world(screen, game_state.map, game_state, cam, tile_size)
@@ -376,22 +394,22 @@ class RenderPipeline:
         # self.render_ui(screen, game_state.map, hovered_tile, dt)
 
     def render_world(self, screen, game_map, game_state, cam, tile_size):
-        if self.map_surface is None or self.map_dirty:
-            self.map_surface = self.build_map_surface(game_map, tile_size)
+        if self.map_sf is None or self.map_dirty:
+            self.map_sf = self.build_map_sf(game_map, tile_size)
             self.map_dirty = False
 
-        if self.border_surface is None or self.border_dirty:
-            self.border_surface = self.build_border_surface(game_map, tile_size)
+        if self.resource_sf is None or self.resource_dirty:
+            self.resource_sf = self.build_resource_sf(game_map, tile_size)
+            self.resource_dirty = False
+
+        if self.border_sf is None or self.border_dirty:
+            self.border_sf = self.build_border_sf(game_map, tile_size)
             self.border_dirty = False
 
         # Construire les surfaces de villes si nécessaire
-        if self.city_overlay_surface is None or self.city_dirty:
-            self.city_overlay_surface = self.build_city_overlay_surface(
-                game_map, game_state, tile_size
-            )
-            self.city_border_surface = self.build_city_border_surface(
-                game_map, game_state, tile_size
-            )
+        if self.city_overlay_sf is None or self.city_dirty:
+            self.city_overlay_sf = self.build_city_overlay_sf(game_map, game_state, tile_size)
+            self.city_border_sf = self.build_city_border_sf(game_map, game_state, tile_size)
             self.city_dirty = False
 
         window_w, window_h = pygame.display.get_window_size()
@@ -403,7 +421,7 @@ class RenderPipeline:
             int(view_w / cam.zoom),
             int(view_h / cam.zoom),
         )
-        map_rect = self.map_surface.get_rect()
+        map_rect = self.map_sf.get_rect()
 
         clipped = view_rect.clip(map_rect)
         if clipped.width <= 0 or clipped.height <= 0:
@@ -412,7 +430,7 @@ class RenderPipeline:
         offset_x = (clipped.x - view_rect.x) * cam.zoom + gc.SIDEBAR_WIDTH
         offset_y = (clipped.y - view_rect.y) * cam.zoom
 
-        sub = self.map_surface.subsurface(clipped)
+        sub = self.map_sf.subsurface(clipped)
         scaled = pygame.transform.scale(
             sub,
             (
@@ -422,43 +440,29 @@ class RenderPipeline:
         )
         screen.blit(scaled, (offset_x, offset_y))
 
-        # Rendu des ressources
-        for tile in game_map.tiles.values():
-            if not tile.resource or tile.resource == Resource.NONE:
-                continue
-            tile_px = tile.center[0] * tile_size
-            tile_py = tile.center[1] * tile_size
-            if (
-                tile_px < view_rect.left - tile_size
-                or tile_px > view_rect.right + tile_size
-                or tile_py < view_rect.top - tile_size
-                or tile_py > view_rect.bottom + tile_size
-            ):  # CULLING : skip si hors écran
-                continue
+        # Rendu des ressources (pré-render)
+        scale = gc.RESOURCE_BASE_SCALE
 
-            try:
-                scale_factor = resource_scaling.get(
-                    tile.resource.value[:-1], resource_scaling["default"]
-                )
-                target_size = int(tile_size * scale_factor * cam.zoom * 3)
-                target_size = int(target_size / 4) * 4
-                img = self.get_scaled_resource(tile.resource, target_size)
-                pos_x, pos_y = world_to_screen(
-                    tile_px,
-                    tile_py,
-                    cam.x,
-                    cam.y,
-                    cam.zoom,
-                )
-
-                screen.blit(img, (pos_x - target_size // 2, pos_y - target_size // 2))
-
-            except Exception as e:
-                print(f"Erreur ressource {tile.resource.value}: {e}")
+        # convertir le clipped en coordonnées haute résolution
+        clipped_scaled = pygame.Rect(
+            clipped.x * scale,
+            clipped.y * scale,
+            clipped.width * scale,
+            clipped.height * scale,
+        )
+        sub_res = self.resource_sf.subsurface(clipped_scaled)
+        scaled_res = pygame.transform.scale(
+            sub_res,
+            (
+                int(clipped.width * cam.zoom),
+                int(clipped.height * cam.zoom),
+            ),
+        )
+        screen.blit(scaled_res, (offset_x, offset_y))
 
         # Dessiner la teinte des villes
-        if self.city_overlay_surface:
-            sub_city = self.city_overlay_surface.subsurface(clipped)
+        if self.city_overlay_sf:
+            sub_city = self.city_overlay_sf.subsurface(clipped)
             scaled_city = pygame.transform.scale(
                 sub_city,
                 (
@@ -474,7 +478,7 @@ class RenderPipeline:
 
         # Dessiner les bordures de tuiles normales
         if cam.zoom > 1.2:
-            sub_b = self.border_surface.subsurface(clipped)
+            sub_b = self.border_sf.subsurface(clipped)
             scaled_b = pygame.transform.scale(
                 sub_b,
                 (
@@ -485,8 +489,8 @@ class RenderPipeline:
             screen.blit(scaled_b, (offset_x, offset_y))
 
         # Dessiner les bordures de villes (toujours visibles)
-        if self.city_border_surface:
-            sub_city_border = self.city_border_surface.subsurface(clipped)
+        if self.city_border_sf:
+            sub_city_border = self.city_border_sf.subsurface(clipped)
             scaled_city_border = pygame.transform.scale(
                 sub_city_border,
                 (
@@ -532,7 +536,7 @@ class RenderPipeline:
         offset_x, offset_y = self.last_offset
 
         # Créer UNE surface overlay
-        overlay_surface = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        overlay_sf = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
 
         for tile_id in reachable_tile_ids:
             tile = game_map.tiles[tile_id]
@@ -555,13 +559,13 @@ class RenderPipeline:
 
                 # Dessiner LE RECTANGLE BLEU directement
                 pygame.draw.rect(
-                    overlay_surface,
+                    overlay_sf,
                     (100, 150, 255, 80),
                     (int(screen_x), int(screen_y), rect_width, rect_height),
                 )
 
         # Blitter l'overlay sur l'écran UNE SEULE FOIS
-        screen.blit(overlay_surface, (0, 0))
+        screen.blit(overlay_sf, (0, 0))
 
     def render_attackable_tiles(self, screen, game_map, cam, tile_size, attackable_tile_ids):
         """Affiche un overlay rouge transparent sur les tuiles attaquables (combat avec unités ennemies)."""
@@ -572,7 +576,7 @@ class RenderPipeline:
         offset_x, offset_y = self.last_offset
 
         # Créer UNE surface overlay
-        overlay_surface = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        overlay_sf = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
 
         for tile_id in attackable_tile_ids:
             tile = game_map.tiles[tile_id]
@@ -595,13 +599,13 @@ class RenderPipeline:
 
                 # Dessiner LE RECTANGLE ROUGE directement (avec même opacité que le bleu)
                 pygame.draw.rect(
-                    overlay_surface,
+                    overlay_sf,
                     (255, 100, 100, 80),  # RGBA: Rouge avec opacité 80
                     (int(screen_x), int(screen_y), rect_width, rect_height),
                 )
 
         # Blitter l'overlay sur l'écran UNE SEULE FOIS
-        screen.blit(overlay_surface, (0, 0))
+        screen.blit(overlay_sf, (0, 0))
 
     def render_ui(self, screen, game_map, hovered_tile: Tile, dt):
         if hovered_tile:
