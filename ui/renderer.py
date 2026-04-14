@@ -12,6 +12,15 @@ from config import GameConfig as gc
 
 img_path = Path(".") / "img"
 
+resource_scaling = {
+    "gold": 1,
+    "iron": 1,
+    "stone": 1.5,
+    "wood": 1.3,
+    "food": 2,
+    "default": 1.0,
+}
+
 
 class RenderPipeline:
     def __init__(self, font, biome_colors):
@@ -30,7 +39,7 @@ class RenderPipeline:
 
         self.fps = 60
 
-        """dico avec les chemins des images des unités"""
+        # dico avec les chemins des images des unités
         self.unit_images = {
             UnitType.SOLDIER: pygame.image.load(img_path / "soldat.png").convert_alpha(),
             UnitType.ARCHER: pygame.image.load(img_path / "archer.png").convert_alpha(),
@@ -39,6 +48,14 @@ class RenderPipeline:
             UnitType.BABY: pygame.image.load(img_path / "baby.png").convert_alpha(),
         }
         self.default_image = pygame.image.load(img_path / "soldat.png").convert_alpha()
+
+        # dico avec les images des ressources
+        self.rsrc_img = {
+            r: pygame.image.load(img_path / (r.value + ".png")).convert_alpha()
+            for r in Resource
+            if r != Resource.NONE
+        }
+        self.scaled_resource_cache = {}
 
         # Couleurs pour les différents propriétaires de villes
         self.owner_colors = [
@@ -61,6 +78,18 @@ class RenderPipeline:
         self.city_overlay_surface = None
         self.city_border_surface = None
 
+    def get_scaled_resource(self, resource, size):
+        key = (resource, size)
+
+        if key in self.scaled_resource_cache:
+            return self.scaled_resource_cache[key]
+
+        base_img = self.rsrc_img[resource]
+        scaled = pygame.transform.scale(base_img, (size, size))
+
+        self.scaled_resource_cache[key] = scaled
+        return scaled
+
     def get_owner_color(self, owner_id):
         """Retourne la couleur associée à un propriétaire."""
         return self.owner_colors[owner_id % len(self.owner_colors)]
@@ -69,9 +98,9 @@ class RenderPipeline:
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre la carte"""
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
-
         surface = pygame.Surface((width_px, height_px))
 
+        # 1. Rendu des biomes (fond)
         for tile in game_map.tiles.values():
             color = self.biome_colors[tile.biome]
 
@@ -81,23 +110,6 @@ class RenderPipeline:
                     (x * tile_size, y * tile_size, tile_size, tile_size),
                 )
 
-        for tile in game_map.tiles.values():
-            if tile.resource and tile.resource != Resource.NONE:
-                resource_img = img_path / (tile.resource.value + ".png")
-
-                if resource_img:
-                    try:
-                        img = pygame.image.load(resource_img).convert_alpha()
-                        img = pygame.transform.scale(img, (15, 15))
-                        surface.blit(
-                            img,
-                            (
-                                tile.center[0] * tile_size - tile_size * 5 // 2,
-                                tile.center[1] * tile_size - tile_size * 5 // 2,
-                            ),
-                        )
-                    except Exception as e:
-                        print(f"Erreur lors du chargement de l'image {resource_img}: {e}")
         return surface
 
     def build_city_overlay_surface(self, game_map, game_state, tile_size):
@@ -296,27 +308,13 @@ class RenderPipeline:
             # Convertir en coordonnées écran
             screen_x, screen_y = world_to_screen(world_x, world_y, cam.x, cam.y, cam.zoom)
 
-            # MODIFIÉ : Arrondir pour mieux centrer
+            # Arrondir pour mieux centrer
             screen_x = round(screen_x)
             screen_y = round(screen_y)
 
             # Dessiner chaque unité
-            """
-            for unit in tile.units:
-                color = unit.get_color()
-                size = max(1, int(unit.get_size() * cam.zoom))
-
-                # Dessiner le cercle
-                pygame.draw.circle(screen, color, (screen_x, screen_y), size)
-
-                # Bordure blanche
-                pygame.draw.circle(screen, (255, 255, 255), (screen_x, screen_y), size, 1)
-                """
-
-            # Dessiner chaque unité
             for unit in tile.units:
                 # 1. Récupérer l'image associée au type de cette unité
-                # La méthode .get() renvoie self.default_image si unit.unit_type n'est pas trouvé
                 base_image = self.unit_images.get(unit.unit_type, self.default_image)
 
                 # 2. Calculer la taille souhaitée
@@ -423,6 +421,40 @@ class RenderPipeline:
             ),
         )
         screen.blit(scaled, (offset_x, offset_y))
+
+        # Rendu des ressources
+        for tile in game_map.tiles.values():
+            if not tile.resource or tile.resource == Resource.NONE:
+                continue
+            tile_px = tile.center[0] * tile_size
+            tile_py = tile.center[1] * tile_size
+            if (
+                tile_px < view_rect.left - tile_size
+                or tile_px > view_rect.right + tile_size
+                or tile_py < view_rect.top - tile_size
+                or tile_py > view_rect.bottom + tile_size
+            ):  # CULLING : skip si hors écran
+                continue
+
+            try:
+                scale_factor = resource_scaling.get(
+                    tile.resource.value[:-1], resource_scaling["default"]
+                )
+                target_size = int(tile_size * scale_factor * cam.zoom * 3)
+                target_size = int(target_size / 4) * 4
+                img = self.get_scaled_resource(tile.resource, target_size)
+                pos_x, pos_y = world_to_screen(
+                    tile_px,
+                    tile_py,
+                    cam.x,
+                    cam.y,
+                    cam.zoom,
+                )
+
+                screen.blit(img, (pos_x - target_size // 2, pos_y - target_size // 2))
+
+            except Exception as e:
+                print(f"Erreur ressource {tile.resource.value}: {e}")
 
         # Dessiner la teinte des villes
         if self.city_overlay_surface:

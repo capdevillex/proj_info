@@ -58,4 +58,5 @@ V : Ajouter génération des ressources
 V : Économie (production / nourriture / or)
 V : Colonisation (colon)
 X : Combat basique (sans edge-case terrain)
-
+V : Amélioration du rendu des ressources
+V : Optimisation FPS

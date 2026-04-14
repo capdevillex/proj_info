@@ -160,7 +160,9 @@ def main():
                                 unit_selector.deselect_unit()
                             # Vérifier si on attaque une unité ennemie (tuile rouge)
                             elif unit_selector.is_tile_attackable(hovered_tile.id):
-                                if game_engine.attack_unit(unit_selector.selected_unit, hovered_tile.id):
+                                if game_engine.attack_unit(
+                                    unit_selector.selected_unit, hovered_tile.id
+                                ):
                                     # Attaque réussie, désélectionner
                                     unit_selector.deselect_unit()
                                 else:
@@ -216,10 +218,10 @@ def main():
         if unit_selector.is_unit_selected():
             reachable = unit_selector.get_reachable_tiles()
             attackable = unit_selector.get_attackable_tiles()
-            
+
             # Afficher les tuiles attaquables en ROUGE (avant les tuiles accessibles pour la visibilité)
             renderer.render_attackable_tiles(screen, game_map, camera, tile_size, attackable)
-            
+
             # Afficher les tuiles accessibles en BLEU
             renderer.render_reachable_tiles(screen, game_map, camera, tile_size, reachable)
 
