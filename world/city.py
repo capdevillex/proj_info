@@ -31,11 +31,11 @@ class City:
 
         # Production de ressources par tour
         self.production: Dict[str, int] = {
-            "food": 0,
+            "food": 1,
             "wood": 0,
             "stone": 0,
             "iron": 0,
-            "gold": 0,
+            "gold": 1,
         }
 
     def add_tile(self, tile_id: int):
@@ -72,8 +72,13 @@ class City:
             game_map (Map): La carte du jeu pour accéder aux tuiles
         """
         # Réinitialiser la production
-        for key in self.production:
-            self.production[key] = 0
+        self.production = {
+            "food": 1,
+            "wood": 0,
+            "stone": 0,
+            "iron": 0,
+            "gold": 1,
+        }
 
         # Calculer la production pour chaque tuile
         for tile_id in self.tile_ids:
