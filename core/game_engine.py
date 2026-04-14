@@ -78,7 +78,7 @@ class GameEngine:
         """
         Déplace une unité vers une tuile cible.
 
-        ✨ MAINTENANT : Juste un wrapper qui appelle MovementSystem !
+        MAINTENANT : Juste un wrapper qui appelle MovementSystem !
 
         Args:
             unit: L'unité à déplacer
@@ -87,7 +87,7 @@ class GameEngine:
         Returns:
             True si le mouvement a réussi, False sinon
         """
-        # ✨ Utiliser le système centralisé
+        # Utiliser le système centralisé
         success = self.movement.execute_move(self.state.map, unit, target_tile_id)
 
         if success:
@@ -125,9 +125,9 @@ class GameEngine:
     def attack(self, attacker: Unit, defender: Unit) -> bool:
         """
         Résout un combat entre deux unités.
-        
+
         Détruit le défenseur si ses dégâts dépassent un certain seuil.
-        
+
         Args:
             attacker: L'unité attaquante
             defender: L'unité défenseur
@@ -139,14 +139,14 @@ class GameEngine:
         if not self.combat.can_attack(self.state, attacker, defender):
             print(f"❌ L'attaque n'est pas possible")
             return False
-        
+
         result = self.combat.resolve(self.state, attacker, defender)
         damage = result.get("damage", 0)
-        
+
         # Logique simple : si les dégâts dépassent un seuil, le défenseur meurt
         # On peut améliorer cela avec un système de HP réel
         DAMAGE_THRESHOLD_FOR_DEATH = 15  # À ajuster selon le game balance
-        
+
         if damage >= DAMAGE_THRESHOLD_FOR_DEATH:
             print(f"💀 L'unité ennemie {defender.unit_type.name} est détruite !")
             self.remove_unit(defender)
@@ -154,17 +154,17 @@ class GameEngine:
         else:
             print(f"⚔️ L'unité ennemie {defender.unit_type.name} résiste à l'attaque !")
             return False
-    
+
     def attack_unit(self, attacker: Unit, target_tile_id: int) -> bool:
         """
         Attaque une unité ennemie sur une tuile cible.
-        
+
         À utiliser quand on clique sur une tuile rouge (attaquable).
-        
+
         Args:
             attacker: L'unité attaquante
             target_tile_id: ID de la tuile contenant l'ennemie à attaquer
-            
+
         Returns:
             True si l'attaque a réussi et l'ennemi est détruit, False sinon
         """
@@ -173,22 +173,23 @@ class GameEngine:
         if not target_tile or not target_tile.has_units():
             print(f"❌ Aucune unité sur la tuile {target_tile_id}")
             return False
-        
+
         # Récupérer l'unité ennemie
         defender = target_tile.units[0]  # On attaque la première unité
-        
+
         # Vérifier que c'est une unité ennemie
         if defender.owner == attacker.owner:
             print(f"❌ Impossible d'attaquer une unité alliée")
             return False
-        
+
         # Vérifier que l'unité attaquante peut attaquer (portée correcte)
         from core.systems.movement import Movement
+
         attackable_tiles = Movement.get_attackable_tiles(self.state.map, attacker)
         if target_tile_id not in attackable_tiles:
             print(f"❌ La cible n'est pas à portée d'attaque")
             return False
-        
+
         # Effectuer l'attaque
         return self.attack(attacker, defender)
 
