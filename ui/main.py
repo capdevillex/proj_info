@@ -1,19 +1,18 @@
 import random
 import pygame
+
 from pathlib import Path
 
 from config import GameConfig as gc
 from core.game_state import GameState
 from core.game_engine import GameEngine
-from world.clock import TurnManager
-from ui.camera import Camera, world_to_screen
+from ui.camera import Camera
 from ui.renderer import RenderPipeline
 from ui.ui_manager import UIManager
 from ui.ui_utils import get_hovered_tile, compute_tile_size
 from world.unit import Unit, UnitType
-from world.biome import Biome
 from world.selector import UnitSelector
-from core.systems.movement import Movement
+
 
 pygame.init()
 
@@ -51,7 +50,6 @@ def main():
     selected_enn_unit_water_affinity = False
 
     running = True
-    turn_manager = TurnManager()
     game_map = gs.map
 
     fps_smooth = 60.0
@@ -211,8 +209,6 @@ def main():
         # RENDER
         screen.fill((6, 8, 14))
         renderer.render(screen, gs, camera, tile_size, hovered_tile, dt)
-
-        ui_manager.draw(screen, selected_unit_type)
 
         # Afficher les zones de mouvement et de combat pour l'unité sélectionnée
         if unit_selector.is_unit_selected():

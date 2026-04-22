@@ -15,7 +15,7 @@ class City:
         owner (int): ID du joueur propriétaire de la ville.
         tile_ids (Set[int]): Ensemble des IDs des tuiles contrôlées par la ville.
         center_tile_id (int): ID de la tuile centrale où se trouve la ville.
-        production (Dict[str, float]): Production de ressources par tour.
+        production (Dict[str, float]): Production de ressources au tour courant.
     """
 
     _next_id = 0

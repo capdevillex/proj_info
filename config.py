@@ -13,6 +13,15 @@ class GameConfig:
     SCREEN_HEIGHT = HEIGHT * TILE_SIZE
 
     LOG_MAP_GENERATION = True
+    BORDER_STRENGTH = 2.75
+    DESERT_HEAT_THRESHOLD = 0.15
+    # Taille minimale d'un cluster d'eau (en nombre de tuiles) pour être conservé. Les groupes connexes
+    # de tuiles d'eau dont la taille est <= à cette valeur seront convertis en biome terrestre.
+    MIN_WATER_CLUSTER_SIZE = 2
+    # Taille minimale d'une masse d'eau pour tenter de la relier à une voisine.
+    WATER_CONNECT_MIN_SIZE = 8
+    # Distance maximale (en sauts de tuile) entre deux masses d'eau pour les relier.
+    WATER_BRIDGE_MAX_HOPS = 3
 
     BIOME_COLORS = {
         Biome.BLANK: (0, 0, 0),

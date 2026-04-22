@@ -179,13 +179,17 @@ class UIManager:
         # Fin du tour, bas droite
         self.next_turn_button.set_position(
             sw - self.next_turn_button.rect.width - 16,
-            sh - self.next_turn_button.rect.height - 16,
+            sh - self.next_turn_button.rect.height - 16 - gc.STATUS_H,
         )
 
         # Quitter, bas droite, au-dessus
         self.quit_button.set_position(
             sw - self.quit_button.rect.width - 16,
-            sh - self.next_turn_button.rect.height - self.quit_button.rect.height - 24,
+            sh
+            - self.next_turn_button.rect.height
+            - self.quit_button.rect.height
+            - 24
+            - gc.STATUS_H,
         )
 
     def _sidebar_action_y(self, index):
@@ -405,7 +409,7 @@ class UIManager:
 
         player_colors = [(80, 130, 210), (210, 80, 70), (70, 190, 100)]
         pc_text = _lerp_color(C_TEXT_DIM, player_colors[player % 3], 1.0)
-        t2 = self._fnt_tiny.render(f"Joueur {player + 1}", True, pc_text)
+        t2 = self._fnt_small.render(f"Joueur {player + 1}", True, pc_text)
         screen.blit(t2, (panel_x + 12, panel_y + 26))
 
     # Gestion des clics

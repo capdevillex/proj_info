@@ -71,6 +71,7 @@ from collections import defaultdict, Counter, deque
 from scipy.spatial import KDTree
 
 
+from config import GameConfig as gc
 from world.tile import Tile
 from world.resources import Resource
 from world.biome import Biome
@@ -78,15 +79,6 @@ from utils.noise import perlin_noise
 
 VORONOI_AREA_CORRECTION = 1.556  # facteur de correction empirique
 
-# Taille minimale d'un cluster d'eau (en nombre de tuiles) pour être conservé. Les groupes connexes
-# de tuiles d'eau dont la taille est <= à cette valeur seront convertis en biome terrestre.
-MIN_WATER_CLUSTER_SIZE = 2
-
-# Taille minimale d'une masse d'eau pour tenter de la relier à une voisine.
-WATER_CONNECT_MIN_SIZE = 8
-
-# Distance maximale (en sauts de tuile) entre deux masses d'eau pour les relier.
-WATER_BRIDGE_MAX_HOPS = 3
 
 BIOME_RESOURCE_MAP = {
     Biome.WATER: [],  # 100% NONE implicite
@@ -392,7 +384,7 @@ class Map:
 
         # Seuil au-dessus duquel une cellule de plaine devient désert.
         # ~0.15 donne environ 9% de déserts, ce qui est rare mais visible.
-        DESERT_HEAT_THRESHOLD = 0.15
+        DESERT_HEAT_THRESHOLD = gc.DESERT_HEAT_THRESHOLD  # 0.15 dans config.py
 
         # stats pour les biomes
         water_ct = 0
@@ -410,7 +402,7 @@ class Map:
                 # ajout d'un gradient négatif qui part des bords de la carte et vers le centre
                 nx = 1 - (2 * x / self.width - 1 + 10**-5) ** 2
                 ny = 1 - (2 * y / self.height - 1 + 10**-5) ** 2
-                deniv = min(math.log(2.25 * min(nx, ny)), 0.1)
+                deniv = min(math.log(gc.BORDER_STRENGTH * min(nx, ny)), 0.1)
                 n += 0.7 * deniv
 
                 if n < -0.225:
@@ -616,7 +608,7 @@ class Map:
         small_ids: set = set()
         large_components: List[List[int]] = []
         for comp in components:
-            if len(comp) <= MIN_WATER_CLUSTER_SIZE:
+            if len(comp) <= gc.MIN_WATER_CLUSTER_SIZE:
                 small_ids.update(comp)
                 # self._log(f"[water] micro-cluster supprimé ({len(comp)} tuile(s))")
             else:
@@ -627,7 +619,7 @@ class Map:
 
         # Passe 2 : relier les masses d'eau significatives proches
         # On ne tente de relier que les composantes >= WATER_CONNECT_MIN_SIZE.
-        significant = [c for c in large_components if len(c) >= WATER_CONNECT_MIN_SIZE]
+        significant = [c for c in large_components if len(c) >= gc.WATER_CONNECT_MIN_SIZE]
 
         if len(significant) < 2:
             self._log(
@@ -658,7 +650,7 @@ class Map:
                 while frontier and found is None:
                     cur = frontier.popleft()
                     cur_hops = land_hops[cur]
-                    if cur_hops > WATER_BRIDGE_MAX_HOPS:
+                    if cur_hops > gc.WATER_BRIDGE_MAX_HOPS:
                         continue
                     for nb in tile_adjacency[cur]:
                         if nb in prev:

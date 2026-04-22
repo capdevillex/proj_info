@@ -4,6 +4,7 @@ Phase 0 :
     Ajouter FOW (après déplacement unit) (V: in progress)
     Développer système de combat
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
+    Fix génération : carte "moche" (eau et mini-lacs) pour la seed 872, 165 (BORDER_STRENGTH = 2.25)
 
 =======
     Combat basique (sans edge-case terrain)
@@ -60,3 +61,5 @@ V : Colonisation (colon)
 X : Combat basique (sans edge-case terrain)
 V : Amélioration du rendu des ressources
 V : Optimisation FPS
+V : Nettoyage du code
+V : Optimisation rendu à l'aide de caches dans Renderer

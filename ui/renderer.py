@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 import pygame
+from pygame import base
 
 from ui.camera import world_to_screen
 from world.resources import Resource
@@ -13,13 +14,19 @@ from config import GameConfig as gc
 img_path = Path(".") / "img"
 
 resource_scaling = {
-    "gold": 1,
-    "iron": 1,
-    "stone": 1.75,
-    "wood": 1.3,
+    "gold": 1.7,
+    "iron": 1.7,
+    "stone": 2.3,
+    "wood": 2.2,
     "food": 2,
     "default": 1.0,
 }
+
+
+def crop_alpha(surface):
+    """Recadre une surface SRCALPHA à son contenu non-transparent."""
+    rect = surface.get_bounding_rect()
+    return surface.subsurface(rect).copy()
 
 
 class RenderPipeline:
@@ -50,13 +57,16 @@ class RenderPipeline:
             UnitType.BABY: pygame.image.load(img_path / "baby.png").convert_alpha(),
         }
         self.default_image = pygame.image.load(img_path / "soldat.png").convert_alpha()
+        self.unit_cache = {}
 
         # dico avec les images des ressources
         self.rsrc_img = {
-            r: pygame.image.load(img_path / (r.value + ".png")).convert_alpha()
+            r: crop_alpha(pygame.image.load(img_path / (r.value + ".png")).convert_alpha())
             for r in Resource
             if r != Resource.NONE
         }
+
+        self._scaled_cache = {}
 
         # Couleurs pour les différents propriétaires de villes
         self.owner_colors = [
@@ -71,6 +81,7 @@ class RenderPipeline:
     def clear_cache(self):
         """Vide les surfaces mises en cache pour forcer un recalcul total."""
         self.tile_highlights = {}
+        self._scaled_cache = {}
         self.map_dirty = True
         self.border_dirty = True
         self.city_dirty = True
@@ -84,6 +95,15 @@ class RenderPipeline:
     def get_owner_color(self, owner_id):
         """Retourne la couleur associée à un propriétaire."""
         return self.owner_colors[owner_id % len(self.owner_colors)]
+
+    def get_unit_image(self, unit, size):
+        """Retourne l'image redimensionnée pour une unité donnée."""
+        key = (unit.unit_type, size)
+        if key not in self.unit_cache:
+            base_image = self.unit_images.get(unit.unit_type, self.default_image)
+            scaled_img = pygame.transform.scale(base_image, (size, size))
+            self.unit_cache[key] = scaled_img
+        return self.unit_cache[key]
 
     def build_map_sf(self, game_map, tile_size):
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre la carte"""
@@ -114,16 +134,24 @@ class RenderPipeline:
                 scale_factor = resource_scaling.get(
                     tile.resource.value[:-1], resource_scaling["default"]
                 )
-                target_size = int(tile_size * scale_factor * 3 * scale)
+                target_size = int(
+                    tile_size * scale_factor * scale * int(tile.resource.value[-1]) ** 0.5
+                )
                 base_img = self.rsrc_img[tile.resource]
-                img = pygame.transform.scale(base_img, (target_size, target_size))
+                img = pygame.transform.scale(
+                    base_img,
+                    (target_size, target_size * base_img.get_height() // base_img.get_width()),
+                )
                 world_x = tile.center[0] * tile_size * scale
                 world_y = tile.center[1] * tile_size * scale
                 surface.blit(
                     img,
                     (
                         int(world_x - target_size // 2),
-                        int(world_y - target_size // 2),
+                        int(
+                            world_y
+                            - target_size * base_img.get_height() // base_img.get_width() // 2
+                        ),
                     ),
                 )
             except Exception as e:
@@ -327,8 +355,8 @@ class RenderPipeline:
             screen_x, screen_y = world_to_screen(world_x, world_y, cam.x, cam.y, cam.zoom)
 
             # Arrondir pour mieux centrer
-            screen_x = round(screen_x)
-            screen_y = round(screen_y)
+            screen_x = int(screen_x)
+            screen_y = int(screen_y)
 
             # Dessiner chaque unité
             for unit in tile.units:
@@ -337,10 +365,12 @@ class RenderPipeline:
 
                 # 2. Calculer la taille souhaitée
                 base_diameter = unit.get_size() * 2
-                scaled_size = max(1, int(base_diameter * cam.zoom))
+                # quantization pour améliorer les performances du cache et éviter les tailles d'image trop petites
+                scaled_size = (base_diameter * cam.zoom // 4) * 4
+                scaled_size = max(1, scaled_size)
 
                 # 3. Redimensionner LA bonne image
-                scaled_img = pygame.transform.scale(base_image, (scaled_size, scaled_size))
+                scaled_img = self.get_unit_image(unit, scaled_size)
 
                 # 4. Centrer et afficher
                 img_rect = scaled_img.get_rect(center=(screen_x, screen_y))
@@ -368,8 +398,8 @@ class RenderPipeline:
 
             # Convertir en coordonnées écran
             screen_x, screen_y = world_to_screen(world_x, world_y, cam.x, cam.y, cam.zoom)
-            screen_x = round(screen_x)
-            screen_y = round(screen_y)
+            screen_x = int(screen_x)
+            screen_y = int(screen_y)
 
             # Afficher le nom de la ville si le zoom est suffisant
             if cam.zoom > 0.6:
@@ -381,9 +411,6 @@ class RenderPipeline:
                 bg_sf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
                 bg_sf.fill((0, 0, 0, 200))
                 screen.blit(bg_sf, bg_rect)
-
-                screen.blit(city_name_sf, name_rect)
-
                 screen.blit(city_name_sf, name_rect)
 
     def render(self, screen, game_state, cam, tile_size, hovered_tile, dt):
@@ -431,13 +458,11 @@ class RenderPipeline:
         offset_y = (clipped.y - view_rect.y) * cam.zoom
 
         sub = self.map_sf.subsurface(clipped)
-        scaled = pygame.transform.scale(
-            sub,
-            (
-                int(clipped.width * cam.zoom),
-                int(clipped.height * cam.zoom),
-            ),
-        )
+        cache_key = (round(cam.zoom, 3), clipped.topleft, clipped.size)
+        target_size = (int(clipped.width * cam.zoom), int(clipped.height * cam.zoom))
+        if cache_key not in self._scaled_cache:
+            self._scaled_cache[cache_key] = pygame.transform.scale(sub, target_size)
+        scaled = self._scaled_cache[cache_key]
         screen.blit(scaled, (offset_x, offset_y))
 
         # Rendu des ressources (pré-render)
@@ -536,7 +561,9 @@ class RenderPipeline:
         offset_x, offset_y = self.last_offset
 
         # Créer UNE surface overlay
-        overlay_sf = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        if self._overlay_sf is None or self._overlay_sf.get_size() != screen.get_size():
+            self._overlay_sf = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        self._overlay_sf.fill((0, 0, 0, 0))
 
         for tile_id in reachable_tile_ids:
             tile = game_map.tiles[tile_id]
@@ -559,13 +586,13 @@ class RenderPipeline:
 
                 # Dessiner LE RECTANGLE BLEU directement
                 pygame.draw.rect(
-                    overlay_sf,
+                    self._overlay_sf,
                     (100, 150, 255, 80),
                     (int(screen_x), int(screen_y), rect_width, rect_height),
                 )
 
         # Blitter l'overlay sur l'écran UNE SEULE FOIS
-        screen.blit(overlay_sf, (0, 0))
+        screen.blit(self._overlay_sf, (0, 0))
 
     def render_attackable_tiles(self, screen, game_map, cam, tile_size, attackable_tile_ids):
         """Affiche un overlay rouge transparent sur les tuiles attaquables (combat avec unités ennemies)."""
