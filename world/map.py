@@ -68,7 +68,13 @@ import random, math, time
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
 
+import matplotlib
+from matplotlib import pyplot as plt
+import numpy as np
 from scipy.spatial import KDTree
+from shapely.geometry import Point, LineString, Polygon
+from shapely.ops import polygonize
+from scipy.spatial import distance_matrix
 
 
 from config import GameConfig as gc
@@ -151,14 +157,27 @@ class Map:
         biomes (List[List[Biome]]): Grille 2D des types de terrain.
     """
 
-    def __init__(self, width, height, seed, avg_cells_per_tile=35, log=False):
+    def __init__(
+        self,
+        width,
+        height,
+        seed,
+        avg_cells_per_tile=35,
+        nb_continents: Optional[int] = None,
+        log=False,
+    ):
         self.width = width
         self.height = height
+        self.seed = seed
+        random.seed(self.seed)
         self.avg_cells_per_tile = avg_cells_per_tile
         _corrected_avg_cells_per_tile = avg_cells_per_tile / VORONOI_AREA_CORRECTION
         self.n_points = int(width * height / _corrected_avg_cells_per_tile)
-        self.seed = seed
-        random.seed(self.seed)
+        self.nb_continents = (
+            nb_continents
+            if nb_continents
+            else random.randint(4, (self.width * self.height) / avg_cells_per_tile // 550)
+        )
         self.log = log
 
         self.grid: List[List[Optional[int]]] = [[None] * width for _ in range(height)]
@@ -268,7 +287,7 @@ class Map:
 
         return points
 
-    def _ebeida_poisson_phase1(self, n_points: int):
+    def _ebeida_poisson_phase1(self, n_points: int, retry_limit=3) -> List[Tuple[float, float]]:
         """
         Implémentation de la Phase I de l'algorithme d'Ebeida et al. (2011) (https://dl.acm.org/doi/10.1145/1964921.1964944).
 
@@ -323,10 +342,13 @@ class Map:
                 grid[gy][gx] = len(points)
                 points.append((px, py))
 
-        if len(points) < width * height / self.avg_cells_per_tile * 0.7:
-            raise RuntimeError(
-                f"Poisson sampling failed to generate enough points: {len(points)} / {n_points}"
+        if len(points) < n_points * 0.65 and retry_limit > 0:
+            return self._ebeida_poisson_phase1(n_points, retry_limit - 1)
+        elif len(points) < n_points * 0.65 and retry_limit == 0:
+            self._log(
+                f"    [Warning] Seuls {len(points)} points générés (objectif : {n_points}), la carte risque d'être moins détaillée que prévu."
             )
+
         return points
 
     def _lloyd_relaxation(self, iterations=2):
@@ -375,12 +397,14 @@ class Map:
         Args:
             octaves (int): Niveau de détail du bruit (persistance des fréquences).
         """
-        scale = self.avg_cells_per_tile * 1.15
+        biome_scale = self.avg_cells_per_tile * 1.15
         # Échelle plus large pour le bruit de chaleur : les zones désertiques sont plus étendues et moins fragmentées que la topographie de base.
         heat_scale = self.avg_cells_per_tile * 3
         heat_seed = (
             self.seed + 7919
         ) % 255  # Décalage de seed pour que la heat map soit indépendante du bruit de terrain.
+        # Échelle pour le bruit de océanique
+        ocean_scale = self.avg_cells_per_tile * 10
 
         # Seuil au-dessus duquel une cellule de plaine devient désert.
         # ~0.15 donne environ 9% de déserts, ce qui est rare mais visible.
@@ -393,45 +417,108 @@ class Map:
         mountain_ct = 0
         desert_ct = 0
 
-        for y in range(self.height):
-            for x in range(self.width):
-                n = perlin_noise(
-                    x / scale, y / scale, octaves=octaves, lacunarity=1.75, base=self.seed % 255
-                )
+        pts_ocean = self._ebeida_poisson_phase1(self.nb_continents)
+        kdtree_ocean = KDTree(pts_ocean)
+        coords = [(x, y) for y in range(self.height) for x in range(self.width)]
+        dists, indices = kdtree_ocean.query(coords, k=2)
+        d1 = dists[:, 0]
+        d2 = dists[:, 1]
+        normalized_dists_ocean = d1 / (d2 + 1e-10)
 
-                # ajout d'un gradient négatif qui part des bords de la carte et vers le centre
-                nx = 1 - (2 * x / self.width - 1 + 10**-5) ** 2
-                ny = 1 - (2 * y / self.height - 1 + 10**-5) ** 2
-                deniv = min(math.log(gc.BORDER_STRENGTH * min(nx, ny)), 0.1)
-                n += 0.7 * deniv
+        elevation = [[None] * self.height for _ in range(self.width)]
 
-                if n < -0.225:
-                    self.biomes[y][x] = Biome.WATER
-                    water_ct += 1
-                elif n < 0.325:
-                    heat = perlin_noise(
-                        x / heat_scale, y / heat_scale, octaves=2, lacunarity=2.0, base=heat_seed
-                    )
-                    if n < 0.14:
-                        # Zone de plaine : on applique la heat map pour détecter le désert.
-                        if heat > DESERT_HEAT_THRESHOLD:
-                            self.biomes[y][x] = Biome.DESERT
-                            desert_ct += 1
-                        else:
-                            self.biomes[y][x] = Biome.PLAIN
-                            plain_ct += 1
-                    else:
-                        self.biomes[y][x] = (
-                            Biome.FOREST if heat < DESERT_HEAT_THRESHOLD else Biome.PLAIN
+        # génération du bruit de base et classification en biomes
+        for i, (x, y) in enumerate(coords):
+            n = perlin_noise(
+                x / biome_scale,
+                y / biome_scale,
+                octaves=octaves,
+                lacunarity=1.75,
+                base=self.seed % 255,
+            )
+
+            # ajout d'un gradient négatif qui part des bords de la carte et vers le centre
+            nx = 1 - (2 * x / self.width - 1 + 10**-5) ** 2
+            ny = 1 - (2 * y / self.height - 1 + 10**-5) ** 2
+            # dénivelé des bords de carte
+            deniv = min(math.log(gc.BORDER_STRENGTH * min(nx, ny)), 0.1)
+            n += 0.7 * deniv
+
+            # ajout d'un découpage océanique basé sur la distance aux points d'océan (plus on est proche d'un point d'océan, plus on a de chance d'être sous le seuil d'eau) + bruit de Perlin océanique pour éviter des côtes trop lisses
+            ocean = (
+                max(
+                    0,
+                    gc.OCEANIC_COEFF
+                    * math.tanh(
+                        3
+                        * (
+                            1
+                            - normalized_dists_ocean[i]
+                            + (
+                                perlin_noise(
+                                    x / biome_scale,
+                                    y / biome_scale,
+                                    octaves=2,
+                                    base=self.seed % 253,
+                                )
+                                - 1
+                            )
+                            / 14
                         )
-                        forest_ct += 1
+                        - gc.OCEANIC_OFFSET
+                    ),
+                )
+                - 1
+            )
+
+            n += min(
+                ocean, 0
+            )  # l'influence de l'océan ne peut que diminuer l'élévation, jamais l'augmenter
+
+            elevation[x][y] = ocean
+
+            if n < -0.225:
+                self.biomes[y][x] = Biome.WATER
+                water_ct += 1
+            elif n < 0.325:
+                heat = perlin_noise(
+                    x / heat_scale, y / heat_scale, octaves=2, lacunarity=2.0, base=heat_seed
+                )
+                if n < 0.14:
+                    # Zone de plaine : on applique la heat map pour détecter le désert.
+                    if heat > DESERT_HEAT_THRESHOLD:
+                        self.biomes[y][x] = Biome.DESERT
+                        desert_ct += 1
+                    else:
+                        self.biomes[y][x] = Biome.PLAIN
+                        plain_ct += 1
                 else:
-                    self.biomes[y][x] = Biome.MOUNTAIN
-                    mountain_ct += 1
+                    self.biomes[y][x] = (
+                        Biome.FOREST if heat < DESERT_HEAT_THRESHOLD else Biome.PLAIN
+                    )
+                    forest_ct += 1
+            else:
+                self.biomes[y][x] = Biome.MOUNTAIN
+                mountain_ct += 1
+
         total = self.width * self.height
         self._log(
             f"    Biome distribution: WATER={water_ct/total:.2%}, PLAIN={plain_ct/total:.2%}, DESERT={desert_ct/total:.2%}, FOREST={forest_ct/total:.2%}, MOUNTAIN={mountain_ct/total:.2%}"
         )
+        # affichage de l'élevation par cell pour debug ainsi que l'élévation moyenne par biome
+        biome_elev = defaultdict(list)
+        for y in range(self.height):
+            for x in range(self.width):
+                biome_elev[self.biomes[y][x]].append(elevation[x][y])
+        # affichage matplotlib de l'élevation
+        plt.imshow(elevation, cmap="terrain")
+        # limite l'affichage de l'élévation entre -1.2 et 1.2 pour mieux voir les détails
+        # plt.clim(-1.2, 1.2)
+        plt.colorbar(label="Elevation")
+        plt.title("Carte d'élévation générée par Perlin Noise")
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.show()
 
     def _assign_cells(self):
         """
@@ -854,7 +941,7 @@ class Map:
             tile = Tile(tid, cells, biome, self._random_resource_for_biome(biome))
             self.tiles[tid] = tile
 
-    def _merge_water_tiles(self, target_size: int = 12):
+    def _merge_water_tiles(self):
         """
         Fusionne les tuiles d'eau proches en super-tuiles plus grandes pour améliorer la jouabilité.
 
@@ -880,7 +967,9 @@ class Map:
         distance_map = self._compute_distance_transform(water_cells_set, land_cells)
 
         self._log("[Fusion B] Poisson Disk Sampling adaptatif")
-        seeds = self._adaptive_poisson_sampling(water_cells_set, distance_map, target_size)
+        seeds = self._adaptive_poisson_sampling(
+            water_cells_set, distance_map, gc.WATER_TILE_SIZE_COEFF
+        )
         self._log(f"[Fusion B] {len(seeds)} points d'attraction générés")
 
         self._log("[Fusion C] Relaxation de Lloyd avec répulsion côtière")
@@ -891,7 +980,7 @@ class Map:
 
         self._log("[Fusion E] Nettoyage et réassignation des tuiles problématiques")
         water_groups = self._cleanup_and_reassign_problematic_tiles(
-            grid_assignment, seeds, water_cells_set, target_size
+            grid_assignment, seeds, water_cells_set, gc.WATER_TILE_SIZE_COEFF
         )
 
         self._log("[Fusion F] Reconstruction des tuiles")

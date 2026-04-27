@@ -3,7 +3,6 @@
 Phase 0 :
     Développer système de combat
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
-    Fix génération : carte "moche" (eau et mini-lacs) pour la seed 872, 165 (BORDER_STRENGTH = 2.25)
 
 =======
     Combat basique (sans edge-case terrain)
@@ -64,4 +63,4 @@ V : Optimisation FPS
 V : Nettoyage du code
 V : Optimisation rendu à l'aide de caches dans Renderer
 V : Optimisation du rendu des barres d'informations (~x3 FPS)
- (~x3 FPS)
+V : Fix génération carte "moche", ajout d'une logique de création de continents

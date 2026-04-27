@@ -14,6 +14,8 @@ class GameConfig:
 
     LOG_MAP_GENERATION = True
     BORDER_STRENGTH = 2.75
+    OCEANIC_COEFF = 1.5  # /!\ ++ = - d'eau
+    OCEANIC_OFFSET = 0.1
     DESERT_HEAT_THRESHOLD = 0.15
     # Taille minimale d'un cluster d'eau (en nombre de tuiles) pour être conservé. Les groupes connexes
     # de tuiles d'eau dont la taille est <= à cette valeur seront convertis en biome terrestre.
@@ -22,6 +24,8 @@ class GameConfig:
     WATER_CONNECT_MIN_SIZE = 8
     # Distance maximale (en sauts de tuile) entre deux masses d'eau pour les relier.
     WATER_BRIDGE_MAX_HOPS = 3
+    # Coefficient de fusion des tuiles d'eau proches en super-tuiles plus grandes pour améliorer la jouabilité.
+    WATER_TILE_SIZE_COEFF = 8
 
     BIOME_COLORS = {
         Biome.BLANK: (0, 0, 0),
