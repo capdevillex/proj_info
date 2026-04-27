@@ -1,7 +1,6 @@
 -----------A FAIRE-------------
 
 Phase 0 :
-    Ajouter FOW (après déplacement unit) (V: in progress)
     Développer système de combat
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
     Fix génération : carte "moche" (eau et mini-lacs) pour la seed 872, 165 (BORDER_STRENGTH = 2.25)
@@ -16,6 +15,7 @@ Phase 1 :
     Expansion des villes
     Construction basique (ferme, scierie, mine, etc.)
     Ajouter routes (bonus déplacement)
+    Ajouter FOW (après déplacement unit) (V: in progress)
     système de sauvegarde de partie
 
 Phase 2 :
@@ -63,3 +63,5 @@ V : Amélioration du rendu des ressources
 V : Optimisation FPS
 V : Nettoyage du code
 V : Optimisation rendu à l'aide de caches dans Renderer
+V : Optimisation du rendu des barres d'informations (~x3 FPS)
+ (~x3 FPS)

@@ -56,13 +56,10 @@ def _lerp_color(a, b, t):
 
 
 def _draw_panel(surface, rect, bg=C_PANEL_BG, border=C_BORDER, alpha=None):
-    """Dessine un panneau rectangulaire avec fond et bordure."""
-    if alpha is not None:
-        s = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-        s.fill((*bg, alpha))
-        surface.blit(s, rect.topleft)
-    else:
-        pygame.draw.rect(surface, bg, rect)
+    """Dessine un panneau rectangulaire avec fond et bordure.
+    Le paramètre alpha est conservé pour compatibilité mais ignoré :
+    les panels UI sont tous opaques, pas de SRCALPHA."""
+    pygame.draw.rect(surface, bg, rect)
     pygame.draw.rect(surface, border, rect, 1)
 
 
@@ -152,6 +149,14 @@ class UIManager:
         self.hovered_unit = None
         self.fps_value = 60.0
 
+        # --- Surface de fond de la sidebar (statique entre fin de tour et resize) ---
+        # Les boutons et éléments dynamiques (hover, pulse) sont dessinés
+        # directement sur l'écran par-dessus cette surface.
+        self._sidebar_bg_sf: pygame.Surface | None = None
+        self._sidebar_dirty = True
+        # Dimensions ayant servi au dernier build (pour détecter un resize)
+        self._sidebar_built_size: tuple[int, int] = (0, 0)
+
     def load_resource_images(self):
         """Charge les images depuis le dossier img/ basé sur les noms des ressources."""
         img_path = Path(".") / "img"
@@ -161,6 +166,11 @@ class UIManager:
                 self.resource_images[res_name] = pygame.transform.scale(img, (20, 20))
             except:
                 self.resource_images[res_name] = None
+
+    def mark_dirty(self):
+        """Invalide la surface cachée de la sidebar. À appeler après un changement
+        d'état (fin de tour, resize fenêtre) pour forcer un rebuild au prochain draw."""
+        self._sidebar_dirty = True
 
     # Mise à jour
 
@@ -179,17 +189,13 @@ class UIManager:
         # Fin du tour, bas droite
         self.next_turn_button.set_position(
             sw - self.next_turn_button.rect.width - 16,
-            sh - self.next_turn_button.rect.height - 16 - gc.STATUS_H,
+            sh - self.next_turn_button.rect.height - 16,
         )
 
         # Quitter, bas droite, au-dessus
         self.quit_button.set_position(
             sw - self.quit_button.rect.width - 16,
-            sh
-            - self.next_turn_button.rect.height
-            - self.quit_button.rect.height
-            - 24
-            - gc.STATUS_H,
+            sh - self.next_turn_button.rect.height - self.quit_button.rect.height - 24,
         )
 
     def _sidebar_action_y(self, index):
@@ -232,24 +238,36 @@ class UIManager:
         cw = int(self._sidebar_cur_w)
         sw, sh = self.screen_width, self.screen_height
 
-        #  Sidebar
-        self._draw_sidebar(screen, cw, sh)
+        # --- Sidebar : rebuild uniquement si dirty ou resize ---
+        if self._sidebar_dirty or self._sidebar_built_size != (cw, sh):
+            self._rebuild_sidebar_bg(cw, sh)
+        screen.blit(self._sidebar_bg_sf, (0, 0))
 
-        #  Barre de statut bas
+        # --- Status bar : toujours redessinée (contient fps, tuile survolée) ---
+        # Aucune allocation SRCALPHA dedans, le coût est négligeable.
         self._draw_status_bar(screen, cw, sw, sh, selected_unit_type)
 
-        #  Panneau infos tuile (bas gauche après sidebar)
-        if self.hovered_tile:
-            self._draw_tile_info(screen, cw, sh)
-
-        #  Indicateur tour (haut droite)
+        # --- Éléments dynamiques dessinés par-dessus ---
+        # Indicateur de tour (pulse animé)
         self._draw_turn_indicator(screen, sw)
 
-        #  Boutons principaux
+        # Boutons : hover + active state changent à chaque frame
+        self.placement_button.draw(screen)
+        self.placement_button_enn.draw(screen)
         self.next_turn_button.draw(screen)
         self.quit_button.draw(screen)
 
-    #  Sidebar
+    # --- Builders de surfaces cachées ---
+
+    def _rebuild_sidebar_bg(self, cw: int, sh: int):
+        """Reconstruit la surface de fond de la sidebar (sans les boutons)."""
+        sf = pygame.Surface((cw, sh))
+        self._draw_sidebar(sf, cw, sh)
+        self._sidebar_bg_sf = sf
+        self._sidebar_dirty = False
+        self._sidebar_built_size = (cw, sh)
+
+    #  Sidebar (dessine sur la surface passée en argument — écran ou cache)
     def _draw_sidebar(self, screen, cw, sh):
         # Fond principal
         sidebar_rect = pygame.Rect(0, 0, cw, sh)
@@ -266,16 +284,15 @@ class UIManager:
         #  Section ressources
         self._draw_resource_section(screen, cw, alpha_content)
 
-        #  Boutons d'action
-        self.placement_button.draw(screen)
-        self.placement_button_enn.draw(screen)
+        # Note : les boutons (placement_button, placement_button_enn) sont dessinés
+        # directement sur l'écran dans draw() — pas dans le cache.
 
     def _draw_player_header(self, screen, cw, alpha):
         state = self.game_engine.state
         player = state.current_player
         turn = state.turn
 
-        # Bande colorée joueur
+        # Bande colorée joueur — opaque, pas besoin de SRCALPHA
         player_colors = [
             (60, 110, 190),
             (190, 70, 60),
@@ -284,12 +301,8 @@ class UIManager:
             (150, 60, 180),
         ]
         pc = player_colors[player % len(player_colors)]
-        band = pygame.Surface((4, 44), pygame.SRCALPHA)
-        band.fill((*pc, alpha))
-        screen.blit(band, (0, 8))
-        title = self._fnt_title.render(
-            f"JOUEUR  {player + 1}", True, (*C_TEXT_BRIGHT, alpha) if False else C_TEXT_BRIGHT
-        )
+        pygame.draw.rect(screen, pc, (0, 8, 4, 44))
+        title = self._fnt_title.render(f"JOUEUR  {player + 1}", True, C_TEXT_BRIGHT)
         screen.blit(title, (14, 12))
         sub = self._fnt_tiny.render(f"Tour {turn}", True, C_TEXT_DIM)
         screen.blit(sub, (14, 36))
@@ -313,11 +326,9 @@ class UIManager:
         icon = RESOURCE_ICONS.get(name, "-")
         color = RESOURCE_COLORS.get(name, C_TEXT)
 
-        # Fond de la rangée
+        # Fond de la rangée : opaque, pas besoin de SRCALPHA
         row_rect = pygame.Rect(4, y, panel_w - 8, 30)
-        bg_surf = pygame.Surface((row_rect.width, row_rect.height), pygame.SRCALPHA)
-        bg_surf.fill((*C_PANEL_BG2, 180))
-        screen.blit(bg_surf, row_rect.topleft)
+        pygame.draw.rect(screen, C_PANEL_BG2, row_rect)
         pygame.draw.rect(screen, C_BORDER, row_rect, 1)
 
         # Icône
@@ -336,20 +347,23 @@ class UIManager:
 
     #  Barre de statut
     def _draw_status_bar(self, screen, cw, sw, sh, selected_unit_type):
-        bar_rect = pygame.Rect(0, sh - gc.STATUS_H, sw, gc.STATUS_H)
+        """Dessine la barre de statut directement sur l'écran (coordonnées absolues)."""
+        y_offset = sh - gc.STATUS_H
+        bar_rect = pygame.Rect(0, y_offset, sw, gc.STATUS_H)
         _draw_panel(screen, bar_rect, bg=C_PANEL_BG, border=C_BORDER)
-        pygame.draw.line(screen, C_BORDER_LIT, (0, sh - gc.STATUS_H), (sw, sh - gc.STATUS_H), 1)
+        pygame.draw.line(screen, C_BORDER_LIT, (0, y_offset), (sw, y_offset), 1)
 
         x_cur = cw + 12
+        text_y = y_offset + 6
 
         # FPS
         fps_s = self._fnt_tiny.render(f"FPS {self.fps_value:.0f}", True, C_TEXT_DIM)
-        screen.blit(fps_s, (x_cur, sh - gc.STATUS_H + 6))
+        screen.blit(fps_s, (x_cur, text_y))
         x_cur += fps_s.get_width() + 20
 
         # Seed
         seed_s = self._fnt_tiny.render(f"seed {self.game_engine.state.map.seed}", True, C_TEXT_DIM)
-        screen.blit(seed_s, (x_cur, sh - gc.STATUS_H + 6))
+        screen.blit(seed_s, (x_cur, text_y))
         x_cur += seed_s.get_width() + 24
 
         # Infos tuile survolée
@@ -363,16 +377,15 @@ class UIManager:
             ]
             for text, color in parts:
                 s = self._fnt_small.render(text, True, color)
-                screen.blit(s, (x_cur, sh - gc.STATUS_H + 16))
+                screen.blit(s, (x_cur, y_offset + 16))
                 x_cur += s.get_width()
 
-            # Unités sur la tuile
             if tile.has_units():
                 u = tile.units[0]
                 u_s = self._fnt_small.render(
                     f"  ◆ {u.unit_type.name} (j{u.owner+1})", True, C_GREEN
                 )
-                screen.blit(u_s, (x_cur, sh - gc.STATUS_H + 16))
+                screen.blit(u_s, (x_cur, y_offset + 16))
 
         # Raccourcis clavier (droite)
         hint = self._fnt_tiny.render(
@@ -380,7 +393,7 @@ class UIManager:
             True,
             C_TEXT_DIM,
         )
-        screen.blit(hint, (sw - hint.get_width() - 16, sh - gc.STATUS_H + 34))
+        screen.blit(hint, (sw - hint.get_width() - 16, y_offset + 34))
 
     #  Panneau infos tuile
     def _draw_tile_info(self, screen, cw, sh):
@@ -409,7 +422,7 @@ class UIManager:
 
         player_colors = [(80, 130, 210), (210, 80, 70), (70, 190, 100)]
         pc_text = _lerp_color(C_TEXT_DIM, player_colors[player % 3], 1.0)
-        t2 = self._fnt_small.render(f"Joueur {player + 1}", True, pc_text)
+        t2 = self._fnt_tiny.render(f"Joueur {player + 1}", True, pc_text)
         screen.blit(t2, (panel_x + 12, panel_y + 26))
 
     # Gestion des clics

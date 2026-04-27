@@ -82,6 +82,7 @@ def main():
                     game_map = gs.map
                     game_engine = GameEngine(gs)
                     ui_manager.game_engine = game_engine
+                    ui_manager.mark_dirty()
                     renderer.clear_cache()
 
                 if event.key == pygame.K_c:
@@ -121,6 +122,7 @@ def main():
                         if action == "next_turn":
                             game_engine.end_turn()
                             unit_selector.deselect_unit()
+                            ui_manager.mark_dirty()
                         elif action == "quit":
                             running = False
                         # On arrête le traitement ici pour ne pas cliquer "à travers" le bouton
@@ -197,6 +199,10 @@ def main():
         camera.update(dt, gs.map, tile_size, window_w, window_h)
         hovered_tile = get_hovered_tile(gs.map, camera, tile_size)
         ui_manager.update_positions(window_w, window_h)
+        # Invalider la sidebar si la fenêtre a été redimensionnée
+        if (window_w, window_h) != getattr(ui_manager, "_last_window_size", None):
+            ui_manager.mark_dirty()
+            ui_manager._last_window_size = (window_w, window_h)
 
         mouse_pos = pygame.mouse.get_pos()
         ui_manager.update(mouse_pos, dt)
@@ -209,6 +215,8 @@ def main():
         # RENDER
         screen.fill((6, 8, 14))
         renderer.render(screen, gs, camera, tile_size, hovered_tile, dt)
+
+        ui_manager.draw(screen, selected_unit_type)
 
         # Afficher les zones de mouvement et de combat pour l'unité sélectionnée
         if unit_selector.is_unit_selected():
