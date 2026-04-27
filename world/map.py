@@ -425,8 +425,6 @@ class Map:
         d2 = dists[:, 1]
         normalized_dists_ocean = d1 / (d2 + 1e-10)
 
-        elevation = [[None] * self.height for _ in range(self.width)]
-
         # génération du bruit de base et classification en biomes
         for i, (x, y) in enumerate(coords):
             n = perlin_noise(
@@ -475,8 +473,6 @@ class Map:
                 ocean, 0
             )  # l'influence de l'océan ne peut que diminuer l'élévation, jamais l'augmenter
 
-            elevation[x][y] = ocean
-
             if n < -0.225:
                 self.biomes[y][x] = Biome.WATER
                 water_ct += 1
@@ -505,20 +501,6 @@ class Map:
         self._log(
             f"    Biome distribution: WATER={water_ct/total:.2%}, PLAIN={plain_ct/total:.2%}, DESERT={desert_ct/total:.2%}, FOREST={forest_ct/total:.2%}, MOUNTAIN={mountain_ct/total:.2%}"
         )
-        # affichage de l'élevation par cell pour debug ainsi que l'élévation moyenne par biome
-        biome_elev = defaultdict(list)
-        for y in range(self.height):
-            for x in range(self.width):
-                biome_elev[self.biomes[y][x]].append(elevation[x][y])
-        # affichage matplotlib de l'élevation
-        plt.imshow(elevation, cmap="terrain")
-        # limite l'affichage de l'élévation entre -1.2 et 1.2 pour mieux voir les détails
-        # plt.clim(-1.2, 1.2)
-        plt.colorbar(label="Elevation")
-        plt.title("Carte d'élévation générée par Perlin Noise")
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.show()
 
     def _assign_cells(self):
         """
