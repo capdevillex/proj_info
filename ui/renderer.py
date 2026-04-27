@@ -33,6 +33,7 @@ class RenderPipeline:
     def __init__(self, font, biome_colors):
         self.show_centers = False
 
+        self._overlay_sf = None
         self.map_sf = None
         self.border_sf = None
         self.resource_sf = None
