@@ -17,6 +17,7 @@ import pygame
 from ui.button import Button
 from config import GameConfig as gc
 from core.game_engine import GameEngine
+from ui.camera import Camera
 
 
 #  Palette UI
@@ -74,12 +75,13 @@ class UIManager:
     Permet de gérer facilement plusieurs boutons sans dupliquer du code.
     """
 
-    def __init__(self, game_engine: GameEngine, font):
+    def __init__(self, game_engine: GameEngine, font, camera: Camera):
         """Crée tous les boutons UI"""
         self.game_engine = game_engine
         self.font = font
         self.screen_width = gc.SCREEN_WIDTH
         self.screen_height = gc.SCREEN_HEIGHT
+        self.camera = camera
 
         self.resource_images = {}
 
@@ -189,13 +191,17 @@ class UIManager:
         # Fin du tour, bas droite
         self.next_turn_button.set_position(
             sw - self.next_turn_button.rect.width - 16,
-            sh - self.next_turn_button.rect.height - 16,
+            sh - self.next_turn_button.rect.height - 16 - gc.STATUS_H,
         )
 
         # Quitter, bas droite, au-dessus
         self.quit_button.set_position(
             sw - self.quit_button.rect.width - 16,
-            sh - self.next_turn_button.rect.height - self.quit_button.rect.height - 24,
+            sh
+            - self.next_turn_button.rect.height
+            - self.quit_button.rect.height
+            - 24
+            - gc.STATUS_H,
         )
 
     def _sidebar_action_y(self, index):
@@ -357,7 +363,12 @@ class UIManager:
         text_y = y_offset + 6
 
         # FPS
-        fps_s = self._fnt_tiny.render(f"FPS {self.fps_value:.0f}", True, C_TEXT_DIM)
+        fps_s = self._fnt_tiny.render(f"FPS {self.fps_value:.1f}", True, C_TEXT_DIM)
+        screen.blit(fps_s, (x_cur, text_y))
+        x_cur += fps_s.get_width() + 20
+
+        # Zoom
+        fps_s = self._fnt_tiny.render(f"Zoom {self.camera.zoom:.5f}", True, C_TEXT_DIM)
         screen.blit(fps_s, (x_cur, text_y))
         x_cur += fps_s.get_width() + 20
 

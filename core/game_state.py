@@ -7,7 +7,7 @@ from world.city import City
 
 class GameState:
     def __init__(self, width, height, seed, tile_area, log):
-        self.map = Map(width, height, seed, tile_area, log)
+        self.map = Map(width, height, seed, avg_cells_per_tile=tile_area, log=log)
         self.units: List[Unit] = []
         self.cities: List[City] = []
 

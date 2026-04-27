@@ -40,7 +40,7 @@ def main():
     game_engine = GameEngine(gs)
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
-    ui_manager = UIManager(game_engine, button_font)
+    ui_manager = UIManager(game_engine, button_font, camera)
     unit_selector = UnitSelector()
 
     # Type d'unité à placer par défaut
@@ -199,9 +199,12 @@ def main():
         camera.update(dt, gs.map, tile_size, window_w, window_h)
         hovered_tile = get_hovered_tile(gs.map, camera, tile_size)
         ui_manager.update_positions(window_w, window_h)
-        # Invalider la sidebar si la fenêtre a été redimensionnée
+        # Invalider le rendu si la fenêtre a été redimensionnée
         if (window_w, window_h) != getattr(ui_manager, "_last_window_size", None):
+            renderer.map_dirty = True
+            renderer.border_dirty = True
             ui_manager.mark_dirty()
+            renderer.clear_cache()
             ui_manager._last_window_size = (window_w, window_h)
 
         mouse_pos = pygame.mouse.get_pos()
