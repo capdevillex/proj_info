@@ -4,10 +4,12 @@
 Ce document détaille les spécifications techniques et de gameplay pour notre 4X au tour par tour.
 
 ## 1. Identité et Univers
-### Propositions de noms
-* **Imperium Novum**
-* **Krata**
-* **Arkhon**
+### Propositions de nom
+**Imperium Novum**
+
+### Lore
+Vous êtes le suzerain exilé d'un royaume lointain. Vous arrivez dans un monde barbares, en des terres jusque là jamais explorées avancée. Votre objectif est de reconstruire votre empire à travers l'exploration, la conquête, la diplomatie et la science. Chaque décision façonne le destin de votre peuple et l'équilibre du pouvoir mondial.
+
 
 ---
 
