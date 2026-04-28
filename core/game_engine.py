@@ -7,6 +7,7 @@ from world.city import City
 from world.map import Map
 from world.biome import Biome
 from core.systems.movement import Movement  # Importer le système centralisé
+from config import GameConfig as gc
 
 
 class GameEngine:
@@ -27,6 +28,9 @@ class GameEngine:
         self.visibility = Visibility(
             self.state
         )  # Redondant avec les calculs fait dans GameState, à peut-être dégager
+
+        # flag pour forcer une mise à jour UI après certaines actions
+        self.needs_ui_update = False
 
     # ========== GESTION DES UNITÉS ==========
 
@@ -161,6 +165,16 @@ class GameEngine:
 
         # Incrémenter le tour
         self.state.turn += 1
+
+        # update des villes
+        for city in self.state.cities:
+            city.age += 1
+            if city.age in gc.CITY_MIN_TURN_EXTENTION_AVAILABLE:
+                print(
+                    f"📢 La ville '{city.name}' peut maintenant être étendue (âge {city.age} tours)"
+                )
+                city.expend_territory(self.state)
+                self.needs_ui_update = True
 
         # Mettre à jour la visibilité
         self.visibility.update(self.state)

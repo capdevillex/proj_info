@@ -98,6 +98,11 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     unit_selector.deselect_unit()
 
+                if event.key == pygame.K_SPACE:
+                    game_engine.end_turn()
+                    unit_selector.deselect_unit()
+                    ui_manager.mark_dirty()
+
             if event.type == pygame.MOUSEWHEEL:
                 camera.apply_zoom(pygame.mouse.get_pos(), event.y)
 
@@ -107,9 +112,7 @@ def main():
                     mouse_pos = event.pos
 
                     # 1. Vérifier si on touche l'un des boutons de l'UI
-                    action = ui_manager.handle_click(
-                        mouse_pos, gs.map, selected_unit_type
-                    )
+                    action = ui_manager.handle_click(mouse_pos, gs.map, selected_unit_type)
 
                     clic_sur_ui = action is not None or ui_manager.is_mouse_over_ui(mouse_pos)
 
@@ -196,12 +199,16 @@ def main():
         hovered_tile = get_hovered_tile(gs.map, camera, tile_size)
         ui_manager.update_positions(window_w, window_h)
         # Invalider le rendu si la fenêtre a été redimensionnée
-        if (window_w, window_h) != getattr(ui_manager, "_last_window_size", None):
+        if (window_w, window_h) != getattr(
+            ui_manager, "_last_window_size", None
+        ) or game_engine.needs_ui_update:
             renderer.map_dirty = True
             renderer.border_dirty = True
+            renderer.city_dirty = True
             ui_manager.mark_dirty()
             renderer.clear_cache()
             ui_manager._last_window_size = (window_w, window_h)
+            game_engine.needs_ui_update = False  # reset du flag
 
         mouse_pos = pygame.mouse.get_pos()
         ui_manager.update(mouse_pos, dt)

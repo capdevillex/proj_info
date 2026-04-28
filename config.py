@@ -48,3 +48,9 @@ class GameConfig:
     STATUS_H = 52  # hauteur barre de statut bas
 
     RESOURCE_BASE_SCALE = 3
+
+    CITY_MIN_TURN_EXTENTION_AVAILABLE = [3, 5, 8, 13, 21, 34, 53, 89]
+    CITY_EXTENSION_RADIUS = 3  # max de distance entre la province fondatrice et la nouvelle province pour pouvoir l'étendre
+    CITY_EXTENSION_FOOD_POP_MIN_RATION = (
+        1.25  # ration minimum de nourriture par habitant pour pouvoir étendre une ville
+    )

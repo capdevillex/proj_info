@@ -1,5 +1,16 @@
-from typing import Set, Dict
+import random
+from typing import Optional, Set, Dict
+
+from click import Option
+from cv2 import add
+from regex import T
+from torch import ne
+
+from world.biome import Biome
+from world.map import Map
 from world.resources import Resource
+from config import GameConfig as gc
+from world.tile import Tile
 
 
 class City:
@@ -28,6 +39,11 @@ class City:
         self.owner = owner
         self.center_tile_id = center_tile_id
         self.tile_ids: Set[int] = {center_tile_id}
+        self.population = 1  # population initiale de la ville
+        self.constructions = (
+            set()
+        )  # constructions présentes dans la ville (ex: "farm", "mine", etc.)
+        self.age = 0  # nombre de tours depuis la fondation de la ville
 
         # Production de ressources par tour
         self.production: Dict[str, int] = {
@@ -38,7 +54,7 @@ class City:
             "gold": 1,
         }
 
-    def add_tile(self, tile_id: int):
+    def _add_tile(self, tile_id: int):
         """
         Ajoute une tuile au territoire de la ville.
 
@@ -46,6 +62,52 @@ class City:
             tile_id (int): ID de la tuile à ajouter
         """
         self.tile_ids.add(tile_id)
+
+    def expend_territory(self, game_state) -> Optional[int]:
+        """
+        Étend le territoire de la ville en ajoutant une tuile voisine au hasard.
+
+        Args:
+            game_map (Map): La carte du jeu pour accéder aux tuiles
+        """
+        # les tuiles candidates sont les tuiles voisines des tuiles déjà contrôlées
+        candidate_tiles = set()
+        # bfs depuis la tuile centrale en stockant les disances pour ne pas dépasser le rayon d'extension
+        visited = set()
+        queue = [(self.center_tile_id, 0)]
+        while queue:
+            current_tile_id, distance = queue.pop(0)
+            if distance > gc.CITY_EXTENSION_RADIUS:
+                continue
+            visited.add(current_tile_id)
+            current_tile = game_state.map.tiles[current_tile_id]
+            for neighbor_id in current_tile.neighbors:
+                if (
+                    (neighbor_id not in visited)
+                    and (current_tile_id in self.tile_ids)
+                    and (game_state.map.tiles[neighbor_id].biome != Biome.WATER)
+                ):
+                    print("tuile candidate", neighbor_id)
+                    queue.append((neighbor_id, distance + 1))
+                    if neighbor_id not in self.tile_ids:
+                        candidate_tiles.add((neighbor_id, distance + 1))
+        print(
+            f"Ville '{self.name}' - tuiles candidates pour extension : {[t[0] for t in candidate_tiles]}"
+        )
+        # les tuiles ont une probabilité d'être choisies en fonction de leur éloignement à la tuile centrale (plus c'est proche, plus c'est probable)
+        if not candidate_tiles:
+            return  # pas de tuiles candidates, on ne peut pas étendre
+        # on choisit une tuile aléatoire parmi les tuiles selon une loi de probabilité décroissante avec la distance
+        total_weight = sum(1 / (distance + 1) for _, distance in candidate_tiles)
+        pick = random.uniform(0, total_weight)
+        current = 0
+        for tile_id, distance in candidate_tiles:
+            weight = 1 / (distance + 1)
+            current += weight
+            if current > pick:
+                self._add_tile(tile_id)
+                print("extension réussie : ajout de la tuile", tile_id)
+                return tile_id
 
     def remove_tile(self, tile_id: int) -> bool:
         """
