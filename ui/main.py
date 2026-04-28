@@ -38,6 +38,7 @@ def main():
     gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
 
     game_engine = GameEngine(gs)
+    game_engine.setup_start_units()
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
     ui_manager = UIManager(game_engine, renderer, button_font, camera)
@@ -78,6 +79,7 @@ def main():
                     )
                     game_map = gs.map
                     game_engine = GameEngine(gs)
+                    game_engine.setup_start_units()
                     ui_manager.game_engine = game_engine
                     ui_manager.mark_dirty()
                     renderer.clear_cache()

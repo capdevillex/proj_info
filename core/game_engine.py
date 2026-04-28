@@ -183,7 +183,7 @@ class GameEngine:
             True si la ville a été fondée, False sinon
         """
         # Vérifier que c'est bien un colon
-        if not isinstance(colon_unit, Colon):
+        if colon_unit.unit_type != UnitType.COLON:
             print(f"❌ Seul un colon peut fonder une ville")
             return False
 
@@ -281,3 +281,24 @@ class GameEngine:
             counter += 1
 
         return f"{base_name} {counter}"
+
+    def get_corner_tile(self, corner: str):
+        """Retourne la tuile non-occupée la plus proche d'un coin."""
+        tiles = self.state.map.tiles.values()
+
+        if corner == "top_left":
+            candidates = sorted(tiles, key=lambda t: t.center[0] + t.center[1])
+        else:
+            candidates = sorted(tiles, key=lambda t: t.center[0] + t.center[1], reverse=True)
+
+        for tile in candidates:
+            if not tile.has_units():
+                return tile.id
+
+        return None
+
+    def setup_start_units(self):
+        """Fait spawner les unités de départ dans les coins."""
+        top_left = self.get_corner_tile("top_left")
+        if top_left is not None:
+            self.spawn_unit(UnitType.COLON, top_left, owner=0)
