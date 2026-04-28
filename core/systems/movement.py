@@ -244,53 +244,38 @@ class Movement:
             return distances[target_tile_id]
         return -1
 
+   
     @staticmethod
     def get_attackable_tiles(map_: Map, unit: Unit) -> set:
-        """
-        Récupère toutes les tuiles contenant des unités ennemies que l'unité donnée peut attaquer.
-
-        Basé sur la portée d'attaque de l'unité (attack_range).
-
-        Args:
-            map_: L'objet Map
-            unit: L'unité attaquante
-
-        Returns:
-            set: IDs des tuiles contenant des unités ennemies attaquables
-        """
         if unit.attack_range == 0:
-            # Cette unité ne peut pas attaquer
             return set()
 
         attackable = set()
 
-        # Utiliser Dijkstra pour trouver toutes les tuiles à portée
-        distances = Movement.dijkstra_reachable(
-            map_,
-            unit.tile_id,
-            unit.attack_range,  # Portée d'attaque au lieu de portée de mouvement
-            unit.unit_type,
-        )
+        # BFS par nombre de cases (hops), pas par coût de terrain
+        visited = {unit.tile_id}
+        frontier = {unit.tile_id}
 
-        # Récupérer toutes les tuiles ennemies à portée
-        for tile_id, distance in distances.items():
-            # On exclut la tuile de l'attaquant
-            if distance == 0:
+        for _ in range(unit.attack_range):
+            next_frontier = set()
+            for tile_id in frontier:
+                tile = map_.tiles[tile_id]
+                for neighbor_id in tile.neighbors:
+                    if neighbor_id not in visited:
+                        visited.add(neighbor_id)
+                        next_frontier.add(neighbor_id)
+            frontier = next_frontier
+
+        # Parmi toutes les cases à portée, garder celles avec une unité ennemie
+        for tile_id in visited:
+            if tile_id == unit.tile_id:
                 continue
-
-            # On ne dépasse pas la portée d'attaque
-            if distance > unit.attack_range:
-                continue
-
             tile = map_.tiles[tile_id]
-
-            # Vérifier s'il y a une unité ennemie sur cette tuile
             if tile.has_units():
-                for enemy_unit in tile.units:
-                    # Vérifier que c'est une unité ennemie
-                    if enemy_unit.owner != unit.owner:
+                for enemy in tile.units:
+                    if enemy.owner != unit.owner:
                         attackable.add(tile_id)
-                        break  # On ajoute la tuile, pas besoin de vérifier d'autres unités
+                        break
 
         return attackable
 
