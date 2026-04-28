@@ -11,9 +11,9 @@ Phase 0 :
 
 Phase 1 :
     Villes simples (V: in progress)
-    Expansion des villes
-    Construction basique (ferme, scierie, mine, etc.)
-    Ajouter routes (bonus déplacement)
+    Expansion des villes (achat tuiles)
+    Construction basique (menu de constrution sur clic droit : ferme, scierie, mine, etc.)
+    Ajouter routes (dans le menu de construction, bonus déplacement)
     Peaufiner rendu TI (V : in progress)
     système de sauvegarde de partie
     Faire dessins de même taille
@@ -71,3 +71,4 @@ V : Ajout TI minimale
 X : Correction iconographie
 X : Correction taille des unités incorrectes.
 X : Système de combat
+V : Expansion automatique des villes
