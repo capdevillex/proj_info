@@ -151,7 +151,7 @@ class Colonie(Unit):
     BASE_DEFENSE = 0
     BASE_HP      = 0
     SIZE         = 15
-
+    UPKEEP_COST  = 10 
 
 class Baby(Unit):
     UNIT_TYPE      = UnitType.BABY
