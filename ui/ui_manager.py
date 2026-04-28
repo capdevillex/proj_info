@@ -463,7 +463,7 @@ class UIManager:
         screen.blit(t2, (panel_x + 12, panel_y + 26))
 
     # Gestion des clics
-    def handle_click(self, mouse_pos, game_map, selected_unit_type, selected_unit_water_affinity):
+    def handle_click(self, mouse_pos, game_map, selected_unit_type):
         # Languette toggle sidebar
         cw = int(self._sidebar_cur_w)
         sh = self.screen_height

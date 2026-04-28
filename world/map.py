@@ -169,7 +169,7 @@ class Map:
         self.nb_continents = (
             nb_continents
             if nb_continents
-            else random.randint(4, (self.width * self.height) / avg_cells_per_tile // 550)
+            else random.randint(4, max(4, int((self.width * self.height / avg_cells_per_tile) // 550)))
         )
         self.log = log
 

@@ -2,7 +2,7 @@ from typing import List, Dict, Optional, Any
 
 from core.game_state import GameState
 from core.systems import Movement, Combat, Economy, Visibility
-from world.unit import Unit, UnitType
+from world.unit import Unit, UnitType, UNIT_CLASS_MAP
 from world.city import City
 from world.map import Map
 from world.biome import Biome
@@ -30,9 +30,7 @@ class GameEngine:
 
     # ========== GESTION DES UNITÉS ==========
 
-    def spawn_unit(
-        self, unit_type: UnitType, tile_id: int, owner: int = 0, water_affinity: bool = False
-    ) -> Optional[Unit]:
+    def spawn_unit(self, unit_type: UnitType, tile_id: int, owner: int = 0) -> Optional[Unit]:
         """
         Place une nouvelle unité du type spécifié sur la tuile donnée.
 
@@ -40,7 +38,6 @@ class GameEngine:
             unit_type: Type d'unité à créer
             tile_id: ID de la tuile où placer l'unité
             owner: Propriétaire de l'unité (joueur)
-            water_affinity: Si l'unité peut se déplacer sur l'eau
 
         Returns:
             L'unité créée, ou None si le placement est impossible
@@ -51,30 +48,29 @@ class GameEngine:
             print(f"❌ Tuile {tile_id} inexistante")
             return None
 
-        # Vérifier si la tuile est occupée
         if tile.has_units():
             print(f"❌ La tuile {tile_id} a déjà une unité")
             return None
 
-        # Vérifier si l'unité peut être placée sur l'eau
-        if tile.biome == Biome.WATER and not water_affinity:
+        unit_class = UNIT_CLASS_MAP.get(unit_type)
+        if not unit_class:
+            print(f"❌ Type d'unité inconnu : {unit_type}")
+            return None
+
+        if tile.biome == Biome.WATER and not unit_class.WATER_AFFINITY:
             print(f"❌ Impossible de placer une unité terrestre sur l'eau (tuile {tile_id})")
             return None
 
-        # Créer l'unité
-        new_unit = Unit(
-            tile_id=tile_id, unit_type=unit_type, owner=owner, water_affinity=water_affinity
-        )
+        new_unit = unit_class(tile_id=tile_id, owner=owner)
 
-        # Ajouter l'unité à la tuile et à l'état du jeu
         tile.add_unit(new_unit)
         self.state.units.append(new_unit)
 
-        # Mettre à jour la visibilité
         self.visibility.update(self.state)
         self.state.update_fow()
 
         print(f"✅ Unité {unit_type.name} numéro {new_unit.id} créée sur tuile {tile_id}")
+
         return new_unit
 
     def move_unit(self, unit: Unit, target_tile_id: int) -> bool:
@@ -127,77 +123,18 @@ class GameEngine:
 
     # ========== GESTION DU COMBAT ==========
 
-    def attack(self, attacker: Unit, defender: Unit) -> bool:
-        """
-        Résout un combat entre deux unités.
-
-        Détruit le défenseur si ses dégâts dépassent un certain seuil.
-
-        Args:
-            attacker: L'unité attaquante
-            defender: L'unité défenseur
-
-        Returns:
-            True si le défenseur est détruit, False sinon
-        """
-        # Vérifier que l'attaque est possible
-        if not self.combat.can_attack(self.state, attacker, defender):
-            print(f"❌ L'attaque n'est pas possible")
-            return False
-
-        result = self.combat.resolve(self.state, attacker, defender)
-        damage = result.get("damage", 0)
-
-        # Logique simple : si les dégâts dépassent un seuil, le défenseur meurt
-        # On peut améliorer cela avec un système de HP réel
-        DAMAGE_THRESHOLD_FOR_DEATH = 15  # À ajuster selon le game balance
-
-        if damage >= DAMAGE_THRESHOLD_FOR_DEATH:
-            print(f"💀 L'unité ennemie {defender.unit_type.name} est détruite !")
-            self.remove_unit(defender)
-            return True
-        else:
-            print(f"⚔️ L'unité ennemie {defender.unit_type.name} résiste à l'attaque !")
-            return False
-
     def attack_unit(self, attacker: Unit, target_tile_id: int) -> bool:
         """
-        Attaque une unité ennemie sur une tuile cible.
-
-        À utiliser quand on clique sur une tuile rouge (attaquable).
-
-        Args:
-            attacker: L'unité attaquante
-            target_tile_id: ID de la tuile contenant l'ennemie à attaquer
-
-        Returns:
-            True si l'attaque a réussi et l'ennemi est détruit, False sinon
+        Attaque une unité sur une tuile cible.
+        Délègue toute la logique à Combat, ne gère que les effets de bord.
         """
-        # Vérifier que la tuile cible existe et a des unités
-        target_tile = self.state.map.tiles.get(target_tile_id)
-        if not target_tile or not target_tile.has_units():
-            print(f"❌ Aucune unité sur la tuile {target_tile_id}")
-            return False
+        result = self.combat.execute_attack(self.state, attacker, target_tile_id)
 
-        # Récupérer l'unité ennemie
-        defender = target_tile.units[0]  # On attaque la première unité
+        if result["defender_killed"]:
+            self.remove_unit(result["defender"])  # Effet de bord : retirer l'unité du jeu
+            # (remove_unit met déjà à jour la visibilité)
 
-        # Vérifier que c'est une unité ennemie
-        if defender.owner == attacker.owner:
-            print(f"❌ Impossible d'attaquer une unité alliée")
-            return False
-
-        # Vérifier que l'unité attaquante peut attaquer (portée correcte)
-        from core.systems.movement import Movement
-
-        attackable_tiles = Movement.get_attackable_tiles(self.state.map, attacker)
-        if target_tile_id not in attackable_tiles:
-            print(f"❌ La cible n'est pas à portée d'attaque")
-            return False
-
-        # Effectuer l'attaque
-        return self.attack(attacker, defender)
-
+        return result["defender_killed"]
     # ========== GESTION DES TOURS ==========
 
     def end_turn(self):
@@ -246,7 +183,7 @@ class GameEngine:
             True si la ville a été fondée, False sinon
         """
         # Vérifier que c'est bien un colon
-        if colon_unit.unit_type != UnitType.COLON:
+        if not isinstance(colon_unit, Colon):
             print(f"❌ Seul un colon peut fonder une ville")
             return False
 

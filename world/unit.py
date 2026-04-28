@@ -19,102 +19,57 @@ button_font = pygame.font.SysFont(None, 18)
 
 class UnitType(Enum):
     """Types d'unités disponibles"""
-
     SOLDIER = 1
     CAVALRY = 2
-    ARCHER = 3
-    COLON = 4
+    ARCHER  = 3
+    COLON   = 4
     COLONIE = 5
-    BABY = 6
-
-
-# Portée d'attaque pour chaque type d'unité
-# 0 = ne peut pas attaquer
-# 1 = corps à corps (attaque adjacente uniquement)
-# 2+ = attaque à distance (portée de N tuiles)
-ATTACK_RANGE = {
-    UnitType.SOLDIER: 1,      # Corps à corps
-    UnitType.CAVALRY: 1,      # Corps à corps
-    UnitType.ARCHER: 2,       # Attaque à distance (2 tuiles)
-    UnitType.COLON: 0,        # Ne peut pas attaquer
-    UnitType.COLONIE: 0,      # Ne peut pas attaquer
-    UnitType.BABY: 1,         # Corps à corps
-}
+    BABY    = 6
 
 
 class Unit:
-    """
-    Représente une unité sur la carte.
+    """Classe de base — ne pas instancier directement."""
 
-    Une unité est placée sur une tuile spécifique et a une position
-    relative au centre de la tuile.
-    """
+    #Attention à bein le redéfinir dans chaque type d'unités
+    UNIT_TYPE:     UnitType
+    MAX_DISTANCE:   int
+    ATTACK_RANGE:   int
+    BASE_ATTACK:    int
+    BASE_DEFENSE:   int
+    BASE_HP:        int
+    WATER_AFFINITY: bool = False
+    SIZE:           int
+    UPKEEP_COST:    int
+    DASH:           bool = False
 
-    # Compteur global pour générer des IDs uniques
     _unit_counter = 0
 
-    # Distance maximale pour chaque type d'unité
-    MAX_DISTANCE = {
-        UnitType.SOLDIER: 3,
-        UnitType.CAVALRY: 5,
-        UnitType.ARCHER: 2,
-        UnitType.COLON: 1,  
-        UnitType.COLONIE: 0,
-        UnitType.BABY: 3
-    }
-
-    def __init__(self, tile_id, water_affinity, unit_type=UnitType.SOLDIER, owner=0, x=0.0, y=0.0):
-        """Crée une nouvelle unité."""
+    def __init__(self, tile_id, owner=0, x=0.0, y=0.0):
         Unit._unit_counter += 1
-        self.id = Unit._unit_counter
-        self.tile_id = tile_id
-        self.water_affinity = water_affinity
-        self.unit_type = unit_type
-        self.owner = owner
-        self.x = x
-        self.y = y
-        self.max_distance = self.MAX_DISTANCE[unit_type]
-        self.has_moved = False
-        self.upkeep_cost = 0
-        self.can_dash = False
-        
-        # Propriétés de combat
-        self.attack_range = ATTACK_RANGE[unit_type]  # Portée d'attaque
-        self.is_melee = self.attack_range == 1  # True si corps à corps
+        self.id            = Unit._unit_counter
+        self.tile_id       = tile_id
+        self.owner         = owner
+        self.x             = x
+        self.y             = y
+        self.unit_type     = self.UNIT_TYPE
+        self.has_moved     = False
+        self.unit_type      = self.UNIT_TYPE
+        self.max_distance   = self.MAX_DISTANCE
+        self.attack_range   = self.ATTACK_RANGE
+        self.water_affinity = self.WATER_AFFINITY
+        self.upkeep_cost    = self.UPKEEP_COST
+        self.can_dash       = self.DASH
+            
 
     def __repr__(self):
-        """Représentation textuelle de l'unité"""
-        return f"Unit(id={self.id}, tile_id={self.tile_id}, type={self.unit_type.name}, owner={self.owner})"
-
-    """
-    def get_color(self):
-        #Retourne la couleur pour dessiner l'unité.
-        colors = {
-            UnitType.SOLDIER: (255, 100, 100),  # Rouge
-            UnitType.CAVALRY: (100, 200, 255),  # Bleu
-            UnitType.ARCHER: (255, 200, 100),  # Orange
-            UnitType.COLON: (255, 255, 100),  # Jaune
-        }
-        return colors.get(self.unit_type, (200, 200, 200))
-    """
+        return f"{self.__class__.__name__}(id={self.id}, tile={self.tile_id}, owner={self.owner})"
 
     def get_size(self):
-        """Retourne la taille (rayon) pour dessiner l'unité."""
-        sizes = {
-            UnitType.SOLDIER: 1,
-            UnitType.CAVALRY: 2,
-            UnitType.ARCHER: 3,
-            UnitType.COLON: 4,
-        }
-        return sizes.get(self.unit_type, 2)
+        """Retourne la taille pour dessiner l'unité."""
+        return self.SIZE
 
     def get_opacity(self):
-        """
-        Retourne l'opacité de l'unité.
-
-        Returns:
-            float: 1.0 si n'a pas bougé, 0.5 si a bougé
-        """
+        """Retourne l'opacité : 0.5 si a bougé, 1.0 sinon."""
         return 0.5 if self.has_moved else 1.0
 
     def can_move(self):
@@ -122,13 +77,8 @@ class Unit:
         return not self.has_moved and self.max_distance > 0
 
     def move_to_tile(self, new_tile_id):
-        """
-        Déplace l'unité vers une nouvelle tuile.
-
-        Args:
-            new_tile_id (int): ID de la nouvelle tuile
-        """
-        self.tile_id = new_tile_id
+        """Déplace l'unité vers une nouvelle tuile."""
+        self.tile_id   = new_tile_id
         self.has_moved = True
 
     def reset_movement(self):
@@ -145,3 +95,82 @@ class Unit:
         for tile_id in visible_tiles:
             mask |= 1 << tile_id
         return mask
+
+    
+
+# ── Sous-classes ────────────────────────────────────────────────
+
+class Soldier(Unit):
+    UNIT_TYPE    = UnitType.SOLDIER
+    MAX_DISTANCE = 3
+    ATTACK_RANGE = 1
+    BASE_ATTACK  = 10
+    BASE_DEFENSE = 8
+    BASE_HP      = 100
+    SIZE         = 4
+    UPKEEP_COST  = 10 
+
+class Cavalry(Unit):
+    UNIT_TYPE    = UnitType.CAVALRY
+    MAX_DISTANCE = 5
+    ATTACK_RANGE = 1
+    BASE_ATTACK  = 12
+    BASE_DEFENSE = 6
+    BASE_HP      = 90
+    SIZE         = 4
+    UPKEEP_COST  = 10 
+
+
+class Archer(Unit):
+    UNIT_TYPE    = UnitType.ARCHER
+    MAX_DISTANCE = 2
+    ATTACK_RANGE = 2
+    BASE_ATTACK  = 8
+    BASE_DEFENSE = 5
+    BASE_HP      = 70
+    SIZE         = 4
+    UPKEEP_COST  = 10 
+
+class Colon(Unit):
+    UNIT_TYPE      = UnitType.COLON
+    MAX_DISTANCE   = 1
+    ATTACK_RANGE   = 0
+    BASE_ATTACK    = 2
+    BASE_DEFENSE   = 3
+    BASE_HP        = 50
+    WATER_AFFINITY = True
+    SIZE = 4
+    UPKEEP_COST  = 10 
+
+
+class Colonie(Unit):
+    UNIT_TYPE    = UnitType.COLONIE
+    MAX_DISTANCE = 0
+    ATTACK_RANGE = 0
+    BASE_ATTACK  = 0
+    BASE_DEFENSE = 0
+    BASE_HP      = 0
+    SIZE         = 15
+
+
+class Baby(Unit):
+    UNIT_TYPE      = UnitType.BABY
+    MAX_DISTANCE   = 3
+    ATTACK_RANGE   = 1
+    BASE_ATTACK    = 5
+    BASE_DEFENSE   = 3
+    BASE_HP        = 50
+    SIZE           = 4
+    UPKEEP_COST  = 10 
+
+
+# ── Factory ─────────────────────────────────────────────────────
+
+UNIT_CLASS_MAP = {
+    UnitType.SOLDIER: Soldier,
+    UnitType.CAVALRY: Cavalry,
+    UnitType.ARCHER:  Archer,
+    UnitType.COLON:   Colon,
+    UnitType.COLONIE: Colonie,
+    UnitType.BABY:    Baby,
+}

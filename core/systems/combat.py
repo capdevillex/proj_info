@@ -85,8 +85,8 @@ class Combat:
         )
 
         base_damage = 20  # Dégâts de base
-        attack = attacker_stats["attack"]
-        defense = defender_stats["defense"]
+        attack = attacker.BASE_ATTACK
+        defense = defender.BASE_DEFENSE
 
         # Modificateur de type (triangle d'acier)
         type_modifier = self.EFFECTIVENESS.get(attacker.unit_type, {}).get(defender.unit_type, 1.0)
@@ -140,3 +140,57 @@ class Combat:
             return False
 
         return True
+
+
+    DAMAGE_THRESHOLD_FOR_DEATH = 15  # Constante à mettre ici, pas dans game_engine
+    #mzethode de merde pour la vie du truc
+
+    def execute_attack(self, state, attacker, target_tile_id):
+        """
+        Point d'entrée principal du combat.
+        Trouve la cible, vérifie les conditions, calcule les dégâts, 
+        détermine si le défenseur est tué.
+
+        Returns:
+            dict avec :
+                - "success": bool (l'attaque a eu lieu)
+                - "defender": Unit | None
+                - "defender_killed": bool
+                - "damage": float
+        """
+        # Trouver le défenseur sur la tuile
+        target_tile = state.map.tiles.get(target_tile_id)
+        if not target_tile or not target_tile.has_units():
+            print(f"❌ Aucune unité sur la tuile {target_tile_id}")
+            return {"success": False, "defender": None, "defender_killed": False, "damage": 0}
+
+        defender = target_tile.units[0]
+
+        # Vérifier la portée via Movement (import local pour éviter le circulaire)
+        from core.systems.movement import Movement
+        attackable_tiles = Movement.get_attackable_tiles(state.map, attacker)
+        if target_tile_id not in attackable_tiles:
+            print(f"❌ La cible n'est pas à portée d'attaque")
+            return {"success": False, "defender": None, "defender_killed": False, "damage": 0}
+
+        # Vérifier les conditions d'attaque
+        if not self.can_attack(state, attacker, defender):
+            return {"success": False, "defender": None, "defender_killed": False, "damage": 0}
+
+        # Résoudre le combat
+        result = self.resolve(state, attacker, defender)
+        damage = result.get("damage", 0)
+
+        # Décider du sort du défenseur
+        defender_killed = damage >= self.DAMAGE_THRESHOLD_FOR_DEATH
+        if defender_killed:
+            print(f"💀 L'unité ennemie {defender.unit_type.name} est détruite !")
+        else:
+            print(f"⚔️ L'unité ennemie {defender.unit_type.name} résiste à l'attaque !")
+
+        return {
+            "success": True,
+            "defender": defender,
+            "defender_killed": defender_killed,
+            "damage": damage,
+        }

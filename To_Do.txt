@@ -16,6 +16,7 @@ Phase 1 :
     Ajouter routes (bonus déplacement)
     Peaufiner rendu TI (V : in progress)
     système de sauvegarde de partie
+    Faire dessins de même taille
 
 Phase 2 :
     Tech tree
@@ -66,3 +67,6 @@ V : Optimisation du rendu des barres d'informations (~x3 FPS)
 V : Fix génération carte "moche", ajout d'une logique de création de continents
 V : Ajouter FOW (après déplacement unit)
 V : Ajout TI minimale
+X : Correction iconographie
+X : Correction taille des unités incorrectes. 
+X : Système de combat

@@ -375,7 +375,7 @@ class RenderPipeline:
                 base_image = self.unit_images.get(unit.unit_type, self.default_image)
 
                 # 2. Calculer la taille souhaitée
-                base_diameter = unit.get_size() * 2
+                base_diameter = unit.SIZE * 2
                 # quantization pour améliorer les performances du cache et éviter les tailles d'image trop petites
                 scaled_size = (base_diameter * cam.zoom // 4) * 4
                 scaled_size = max(1, scaled_size)

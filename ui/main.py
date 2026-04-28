@@ -10,7 +10,7 @@ from ui.camera import Camera
 from ui.renderer import RenderPipeline
 from ui.ui_manager import UIManager
 from ui.ui_utils import get_hovered_tile, compute_tile_size
-from world.unit import Unit, UnitType
+from world.unit import Unit, UnitType, UNIT_CLASS_MAP
 from world.selector import UnitSelector
 
 
@@ -45,10 +45,7 @@ def main():
 
     # Type d'unité à placer par défaut
     selected_unit_type = UnitType.SOLDIER
-    selected_unit_water_affinity = False
     selected_enn_unit_type = UnitType.BABY
-    selected_enn_unit_water_affinity = False
-
     running = True
     game_map = gs.map
 
@@ -90,16 +87,12 @@ def main():
 
                 if event.key in (pygame.K_1, pygame.K_KP1):
                     selected_unit_type = UnitType.SOLDIER
-                    selected_unit_water_affinity = False
                 if event.key in (pygame.K_2, pygame.K_KP2):
                     selected_unit_type = UnitType.CAVALRY
-                    selected_unit_water_affinity = False
                 if event.key in (pygame.K_3, pygame.K_KP3):
                     selected_unit_type = UnitType.ARCHER
-                    selected_unit_water_affinity = False
                 if event.key in (pygame.K_4, pygame.K_KP4):
                     selected_unit_type = UnitType.COLON
-                    selected_unit_water_affinity = True
                 if event.key == pygame.K_ESCAPE:
                     unit_selector.deselect_unit()
 
@@ -113,7 +106,7 @@ def main():
 
                     # 1. Vérifier si on touche l'un des boutons de l'UI
                     action = ui_manager.handle_click(
-                        mouse_pos, gs.map, selected_unit_type, selected_unit_water_affinity
+                        mouse_pos, gs.map, selected_unit_type
                     )
 
                     clic_sur_ui = action is not None or ui_manager.is_mouse_over_ui(mouse_pos)
@@ -137,14 +130,12 @@ def main():
                                 unit_type=selected_unit_type,
                                 tile_id=hovered_tile.id,
                                 owner=gs.current_player,
-                                water_affinity=selected_unit_water_affinity,
                             )
                         elif ui_manager.placement_button_enn.is_active:
                             game_engine.spawn_unit(
                                 unit_type=selected_enn_unit_type,
                                 tile_id=hovered_tile.id,
                                 owner=1,
-                                water_affinity=selected_enn_unit_water_affinity,
                             )
 
                         # Priorité B : Sélection d'unité
