@@ -135,6 +135,7 @@ class GameEngine:
             # (remove_unit met déjà à jour la visibilité)
 
         return result["defender_killed"]
+
     # ========== GESTION DES TOURS ==========
 
     def end_turn(self):
@@ -301,4 +302,10 @@ class GameEngine:
         """Fait spawner les unités de départ dans les coins."""
         top_left = self.get_corner_tile("top_left")
         if top_left is not None:
-            self.spawn_unit(UnitType.COLON, top_left, owner=0)
+            unit = self.spawn_unit(UnitType.COLON, top_left, owner=0)
+            if unit:
+                unit.upkeep_cost = 0  # Le colon de départ n'a pas de coût d'entretien
+            else:
+                print(
+                    "⚠️ Impossible de faire spawn le colon de départ dans le coin supérieur gauche"
+                )
