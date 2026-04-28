@@ -68,14 +68,7 @@ import random, math, time
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict, Counter, deque
 
-import matplotlib
-from matplotlib import pyplot as plt
-import numpy as np
 from scipy.spatial import KDTree
-from shapely.geometry import Point, LineString, Polygon
-from shapely.ops import polygonize
-from scipy.spatial import distance_matrix
-
 
 from config import GameConfig as gc
 from world.tile import Tile
