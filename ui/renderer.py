@@ -4,7 +4,9 @@ from typing import Optional
 import pygame
 from pygame import base
 
+from core.game_state import GameState
 from ui.camera import world_to_screen
+from world.map import Map
 from world.resources import Resource
 from world.tile import Tile
 from world.unit import UnitType
@@ -106,7 +108,7 @@ class RenderPipeline:
             self.unit_cache[key] = scaled_img
         return self.unit_cache[key]
 
-    def build_map_sf(self, game_map, tile_size):
+    def build_map_sf(self, game_state: GameState, game_map: Map, tile_size):
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre la carte"""
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
@@ -114,6 +116,12 @@ class RenderPipeline:
 
         for tile in game_map.tiles.values():
             color = self.biome_colors[tile.biome]
+            if game_state.use_fow and not (game_state.visibility & (1 << tile.id)):
+                # assombrir les tuiles non visibles
+                color = tuple(c // 2 for c in color)
+            if game_state.use_ti and not (game_state.discovered & (1 << tile.id)):
+                # rendre les tuiles non découvertes en gris foncé
+                color = (30, 30, 30)
             for x, y in tile.cells:
                 surface.fill(
                     color,
@@ -121,7 +129,7 @@ class RenderPipeline:
                 )
         return surface
 
-    def build_resource_sf(self, game_map, tile_size):
+    def build_resource_sf(self, game_state, game_map, tile_size):
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre les ressources des provinces"""
         scale = gc.RESOURCE_BASE_SCALE
         width_px = game_map.width * tile_size * scale
@@ -131,6 +139,8 @@ class RenderPipeline:
         for tile in game_map.tiles.values():
             if not tile.resource or tile.resource == Resource.NONE:
                 continue
+            if game_state.use_ti and not (game_state.discovered & (1 << tile.id)):
+                continue  # Ne pas afficher les ressources des tuiles non découvertes
             try:
                 scale_factor = resource_scaling.get(
                     tile.resource.value[:-1], resource_scaling["default"]
@@ -423,11 +433,11 @@ class RenderPipeline:
 
     def render_world(self, screen, game_map, game_state, cam, tile_size):
         if self.map_sf is None or self.map_dirty:
-            self.map_sf = self.build_map_sf(game_map, tile_size)
+            self.map_sf = self.build_map_sf(game_state, game_map, tile_size)
             self.map_dirty = False
 
         if self.resource_sf is None or self.resource_dirty:
-            self.resource_sf = self.build_resource_sf(game_map, tile_size)
+            self.resource_sf = self.build_resource_sf(game_state, game_map, tile_size)
             self.resource_dirty = False
 
         if self.border_sf is None or self.border_dirty:

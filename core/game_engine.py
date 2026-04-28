@@ -24,7 +24,9 @@ class GameEngine:
         self.movement = Movement  # Utiliser le système centralisé
         self.combat = Combat()
         self.economy = Economy()
-        self.visibility = Visibility()
+        self.visibility = Visibility(
+            self.state
+        )  # Redondant avec les calculs fait dans GameState, à peut-être dégager
 
     # ========== GESTION DES UNITÉS ==========
 
@@ -70,6 +72,7 @@ class GameEngine:
 
         # Mettre à jour la visibilité
         self.visibility.update(self.state)
+        self.state.update_fow()
 
         print(f"✅ Unité {unit_type.name} numéro {new_unit.id} créée sur tuile {tile_id}")
         return new_unit
@@ -93,6 +96,7 @@ class GameEngine:
         if success:
             # Mettre à jour la visibilité après le mouvement
             self.visibility.update(self.state)
+            self.state.update_fow()
 
         return success
 
@@ -115,6 +119,7 @@ class GameEngine:
         if unit in self.state.units:
             self.state.units.remove(unit)
             self.visibility.update(self.state)
+            self.state.update_fow()
             print(f"✅ Unité {unit.id} retirée du jeu")
             return True
 
@@ -221,6 +226,7 @@ class GameEngine:
 
         # Mettre à jour la visibilité
         self.visibility.update(self.state)
+        self.state.update_fow()
 
         print(f"\n{'='*50}")
         print(f"Début du tour {self.state.turn}")

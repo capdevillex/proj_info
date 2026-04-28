@@ -20,6 +20,8 @@ class GameState:
         # Bitmasks pour la gestion de visibilité des tuiles
         self.discovered = 0  # Terra Incognita
         self.visibility = 0  # Fog of war
+        self.use_ti = False
+        self.use_fow = False
 
         # sélection actuelle
         self.selected_unit_id = None
@@ -36,6 +38,12 @@ class GameState:
         for city in self.cities:
             if city.owner == self.current_player:
                 self.visibility |= city.get_visibility_mask(self.map)
+
+        self.update_discovered()
+
+    def update_discovered(self):
+        """Met à jour le bitmask de découverte en ajoutant les tuiles actuellement visibles."""
+        self.discovered |= self.visibility
 
     def add_city(self, city: City):
         """

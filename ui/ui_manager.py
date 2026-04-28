@@ -18,6 +18,7 @@ from ui.button import Button
 from config import GameConfig as gc
 from core.game_engine import GameEngine
 from ui.camera import Camera
+from ui.renderer import RenderPipeline
 
 
 #  Palette UI
@@ -75,9 +76,10 @@ class UIManager:
     Permet de gérer facilement plusieurs boutons sans dupliquer du code.
     """
 
-    def __init__(self, game_engine: GameEngine, font, camera: Camera):
+    def __init__(self, game_engine: GameEngine, renderer: RenderPipeline, font, camera: Camera):
         """Crée tous les boutons UI"""
         self.game_engine = game_engine
+        self.renderer = renderer
         self.font = font
         self.screen_width = gc.SCREEN_WIDTH
         self.screen_height = gc.SCREEN_HEIGHT
@@ -104,7 +106,7 @@ class UIManager:
             y=0,
             width=btn_w,
             height=btn_h,
-            text="▸ Placer unité (allié)",
+            text="Placer unité (allié)",
             font=self._fnt_small,
             is_toggleable=True,
         )
@@ -113,7 +115,25 @@ class UIManager:
             y=0,
             width=btn_w,
             height=btn_h,
-            text="▸ Placer unité (ennemi)",
+            text="Placer unité (ennemi)",
+            font=self._fnt_small,
+            is_toggleable=True,
+        )
+        self.toogle_fow_button = Button(
+            x=0,
+            y=0,
+            width=btn_w,
+            height=btn_h,
+            text="Use FoW",
+            font=self._fnt_small,
+            is_toggleable=True,
+        )
+        self.toogle_TI_button = Button(
+            x=0,
+            y=0,
+            width=btn_w,
+            height=btn_h,
+            text="Use TI",
             font=self._fnt_small,
             is_toggleable=True,
         )
@@ -187,6 +207,8 @@ class UIManager:
         btn_x = 20
         self.placement_button.set_position(btn_x, self._sidebar_action_y(0))
         self.placement_button_enn.set_position(btn_x, self._sidebar_action_y(1))
+        self.toogle_fow_button.set_position(btn_x, self._sidebar_action_y(2))
+        self.toogle_TI_button.set_position(btn_x, self._sidebar_action_y(3))
 
         # Fin du tour, bas droite
         self.next_turn_button.set_position(
@@ -227,6 +249,8 @@ class UIManager:
         # Mettre à jour les boutons
         self.placement_button.update(mouse_pos, dt)
         self.placement_button_enn.update(mouse_pos, dt)
+        self.toogle_fow_button.update(mouse_pos, dt)
+        self.toogle_TI_button.update(mouse_pos, dt)
         self.next_turn_button.update(mouse_pos, dt)
         self.quit_button.update(mouse_pos, dt)
 
@@ -260,6 +284,8 @@ class UIManager:
         # Boutons : hover + active state changent à chaque frame
         self.placement_button.draw(screen)
         self.placement_button_enn.draw(screen)
+        self.toogle_fow_button.draw(screen)
+        self.toogle_TI_button.draw(screen)
         self.next_turn_button.draw(screen)
         self.quit_button.draw(screen)
 
@@ -454,6 +480,21 @@ class UIManager:
             self.placement_button_enn.toggle()
             if self.placement_button_enn.is_active:
                 self.placement_button.set_active(False)
+            return None
+
+        # Bouton toggle FoW
+        if self.toogle_fow_button.is_clicked(mouse_pos):
+            self.toogle_fow_button.toggle()
+            self.game_engine.state.use_fow = self.toogle_fow_button.is_active
+            self.renderer.clear_cache()
+            self.game_engine.state.update_fow()
+            return None
+
+        # Bouton toggle TI
+        if self.toogle_TI_button.is_clicked(mouse_pos):
+            self.toogle_TI_button.toggle()
+            self.game_engine.state.use_ti = self.toogle_TI_button.is_active
+            self.renderer.clear_cache()
             return None
 
         # Fin du tour

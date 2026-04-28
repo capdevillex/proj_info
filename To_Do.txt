@@ -14,7 +14,7 @@ Phase 1 :
     Expansion des villes
     Construction basique (ferme, scierie, mine, etc.)
     Ajouter routes (bonus déplacement)
-    Ajouter FOW (après déplacement unit) (V: in progress)
+    Peaufiner rendu TI (V : in progress)
     système de sauvegarde de partie
 
 Phase 2 :
@@ -64,3 +64,5 @@ V : Nettoyage du code
 V : Optimisation rendu à l'aide de caches dans Renderer
 V : Optimisation du rendu des barres d'informations (~x3 FPS)
 V : Fix génération carte "moche", ajout d'une logique de création de continents
+V : Ajouter FOW (après déplacement unit)
+V : Ajout TI minimale

@@ -2,6 +2,9 @@ from core.game_state import GameState
 
 
 class Visibility:
+    def __init__(self, state: GameState) -> None:
+        self.state = state
+
     def update(self, state: GameState):
         """Met à jour les cellules visibles pour le joueur actuel en fonction de ses unités."""
         state.update_fow()

@@ -40,7 +40,7 @@ def main():
     game_engine = GameEngine(gs)
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
-    ui_manager = UIManager(game_engine, button_font, camera)
+    ui_manager = UIManager(game_engine, renderer, button_font, camera)
     unit_selector = UnitSelector()
 
     # Type d'unité à placer par défaut
@@ -131,6 +131,7 @@ def main():
                     hovered_tile = get_hovered_tile(game_map, camera, tile_size)
 
                     if hovered_tile:
+
                         if ui_manager.placement_button.is_active:
                             game_engine.spawn_unit(
                                 unit_type=selected_unit_type,
@@ -174,6 +175,8 @@ def main():
                                     unit_selector.selected_unit, hovered_tile.id
                                 ):
                                     unit_selector.deselect_unit()
+
+                        renderer.clear_cache()  # Clear cache to update FoW/TI changes
 
                 elif event.button == 3:  # Clic droit
                     mouse_pos = event.pos
