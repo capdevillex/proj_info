@@ -31,8 +31,6 @@ class Tile:
         self.neighbors = set()
         self.biome = biome
         self.resource = resource
-
-        # NOUVEAU : initialiser la liste d'unités vide
         self.units: List[Unit] = []
 
     def _compute_center(self):
