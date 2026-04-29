@@ -42,11 +42,17 @@ class Mine(Construction):
         if resource and resource.name.startswith("IRON"):
             level = int(resource.name[-1])
             self.boost["iron"] = level
+            self.boost["stone"] = 1
         elif resource and resource.name.startswith("GOLD"):
             level = int(resource.name[-1])
             self.boost["gold"] = level
+            self.boost["stone"] = 1
+        elif resource and resource.name.startswith("STONE"):
+            level = int(resource.name[-1])
+            self.boost["stone"] = level
         else:
             self.boost["iron"] = 1  # boost de base si pas de ressource minière spécifique
+            self.boost["stone"] = 1  # boost de base si pas de ressource minière spécifique
             self.boost["gold"] = 0
 
 

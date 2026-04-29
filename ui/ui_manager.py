@@ -22,6 +22,7 @@ from ui.renderer import RenderPipeline
 from ui.ui_utils import compute_tile_size
 from world.biome import Biome
 from world.construction import Farm, Mine, Road, Scierie
+from world.resources import Resource
 from world.tile import Tile
 
 #  Palette UI
@@ -337,7 +338,19 @@ class UIManager:
                     options.append(("Ferme", Farm.COST))
                 if tile.biome == Biome.FOREST:
                     options.append(("Scierie", Scierie.COST))
-                if tile.biome in [Biome.MOUNTAIN]:
+                if tile.biome == Biome.MOUNTAIN:
+                    options.append(("Mine", Mine.COST))
+                if tile.resource in [
+                    Resource.STONE1,
+                    Resource.STONE2,
+                    Resource.STONE3,
+                    Resource.IRON1,
+                    Resource.IRON2,
+                    Resource.IRON3,
+                    Resource.GOLD1,
+                    Resource.GOLD2,
+                    Resource.GOLD3,
+                ]:
                     options.append(("Mine", Mine.COST))
 
         self._construction_menu_options = options

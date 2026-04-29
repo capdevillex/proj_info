@@ -6,6 +6,7 @@ from pygame import base
 
 from core.game_state import GameState
 from ui.camera import world_to_screen
+from world.construction import Farm, Mine, Road, Scierie
 from world.map import Map
 from world.resources import Resource
 from world.tile import Tile
@@ -71,6 +72,15 @@ class RenderPipeline:
 
         self._scaled_cache = {}
 
+        # images des bâtiments (hors routes)
+        self.building_img = {
+            Farm: crop_alpha(pygame.image.load(img_path / "buildings" / "farm.png").convert_alpha()),
+            Mine: crop_alpha(pygame.image.load(img_path / "buildings" / "mine.png").convert_alpha()),
+            Scierie: crop_alpha(pygame.image.load(img_path / "buildings" / "scierie.png").convert_alpha()),
+        }
+        self.building_sf = None
+        self.building_dirty = True
+
         # Couleurs pour les différents propriétaires de villes
         self.owner_colors = [
             (100, 150, 255),  # Bleu pour joueur 0
@@ -89,11 +99,13 @@ class RenderPipeline:
         self.border_dirty = True
         self.city_dirty = True
         self.resource_dirty = True
+        self.building_dirty = True
         self.map_sf = None
         self.resource_sf = None
         self.border_sf = None
         self.city_overlay_sf = None
         self.city_border_sf = None
+        self.building_sf = None
 
     def get_owner_color(self, owner_id):
         """Retourne la couleur associée à un propriétaire."""
@@ -140,7 +152,9 @@ class RenderPipeline:
             if not tile.resource or tile.resource == Resource.NONE:
                 continue
             if game_state.use_ti and not (game_state.discovered & (1 << tile.id)):
-                continue  # Ne pas afficher les ressources des tuiles non découvertes
+                continue
+            if any(not isinstance(c, Road) for c in tile.constructions):
+                continue  # masquer la ressource si un bâtiment occupe la tuile
             try:
                 scale_factor = resource_scaling.get(
                     tile.resource.value[:-1], resource_scaling["default"]
@@ -167,6 +181,32 @@ class RenderPipeline:
                 )
             except Exception as e:
                 print(f"Erreur ressource {tile.resource.value}: {e}")
+        return surface
+
+    def build_building_sf(self, game_state, game_map, tile_size):
+        """Pré-render des bâtiments (hors routes) centrés sur leur tuile."""
+        scale = gc.RESOURCE_BASE_SCALE
+        surface = pygame.Surface(
+            (game_map.width * tile_size * scale, game_map.height * tile_size * scale),
+            pygame.SRCALPHA,
+        )
+
+        for tile in game_map.tiles.values():
+            building = next((c for c in tile.constructions if not isinstance(c, Road)), None)
+            if building is None:
+                continue
+            if game_state.use_ti and not (game_state.discovered & (1 << tile.id)):
+                continue
+            img = self.building_img.get(type(building))
+            if img is None:
+                continue
+            target_w = int(tile_size * 0.8 * scale)
+            target_h = target_w * img.get_height() // img.get_width()
+            scaled_img = pygame.transform.scale(img, (target_w, target_h))
+            wx = int(tile.center[0] * tile_size * scale - target_w // 2)
+            wy = int(tile.center[1] * tile_size * scale - target_h // 2)
+            surface.blit(scaled_img, (wx, wy))
+
         return surface
 
     def build_city_overlay_sf(self, game_map, game_state, tile_size):
@@ -450,6 +490,10 @@ class RenderPipeline:
             self.city_border_sf = self.build_city_border_sf(game_map, game_state, tile_size)
             self.city_dirty = False
 
+        if self.building_sf is None or self.building_dirty:
+            self.building_sf = self.build_building_sf(game_state, game_map, tile_size)
+            self.building_dirty = False
+
         window_w, window_h = pygame.display.get_window_size()
         view_w = window_w - gc.SIDEBAR_WIDTH
         view_h = window_h - gc.STATUS_H
@@ -495,6 +539,21 @@ class RenderPipeline:
             ),
         )
         screen.blit(scaled_res, (offset_x, offset_y))
+
+        # Rendu des bâtiments (hors routes)
+        if self.building_sf:
+            clipped_bld = pygame.Rect(
+                clipped.x * scale,
+                clipped.y * scale,
+                clipped.width * scale,
+                clipped.height * scale,
+            )
+            sub_bld = self.building_sf.subsurface(clipped_bld)
+            scaled_bld = pygame.transform.scale(
+                sub_bld,
+                (int(clipped.width * cam.zoom), int(clipped.height * cam.zoom)),
+            )
+            screen.blit(scaled_bld, (offset_x, offset_y))
 
         # Dessiner la teinte des villes
         if self.city_overlay_sf:
