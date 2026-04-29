@@ -129,6 +129,26 @@ def main():
                             if game_engine.build_construction(tile, name, gs.current_player):
                                 renderer.clear_cache()
                                 ui_manager.mark_dirty()
+                        elif isinstance(action, tuple) and action[0] == "buy_unit":
+                            _, unit_type, tile, cost = action
+                            if tile is not None:
+                                player = gs.current_player
+                                res = game_engine.state.player_resources.get(player, {})
+                                if all(res.get(r, 0) >= a for r, a in cost.items()):
+                                    for r, a in cost.items():
+                                        res[r] -= a
+                                    game_engine.spawn_unit(unit_type, tile.id, player)
+                                    renderer.clear_cache()
+                        elif isinstance(action, tuple) and action[0] == "buy_tile":
+                            _, tile_id, city, cost = action
+                            player = gs.current_player
+                            res = game_engine.state.player_resources.get(player, {})
+                            if all(res.get(r, 0) >= a for r, a in cost.items()):
+                                for r, a in cost.items():
+                                    res[r] -= a
+                                city.tile_ids.add(tile_id)
+                                renderer.clear_cache()
+                                ui_manager.mark_dirty()
                         # On arrête le traitement ici pour ne pas cliquer "à travers" le bouton
                         continue
 

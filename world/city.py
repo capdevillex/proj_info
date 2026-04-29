@@ -169,7 +169,7 @@ class City:
                 for cstrt in tile.constructions:
                     for rss, boost in cstrt.boost.items():
                         if rss == "movement":
-                            pass
+                            continue
                         self.production[rss] += boost
 
     def get_visibility_mask(self, game_map) -> int:

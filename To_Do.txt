@@ -10,10 +10,6 @@ Phase 0 :
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
 
 Phase 1 :
-    Villes simples (V: in progress)
-    Expansion des villes (achat tuiles)
-    Construction basique (menu de constrution sur clic droit : ferme, scierie, mine, etc.)
-    Ajouter routes (dans le menu de construction, bonus déplacement)
     Peaufiner rendu TI (V : in progress)
     système de sauvegarde de partie
     Faire dessins de même taille
@@ -22,11 +18,11 @@ Phase 2 :
     Tech tree
         - système de recherche
         - arbre simple
-    IA basique, citées états
-    Système de population des villes
     Combat avancé (modificateur de terrain, spécialisation des units)
     Attrition logistique (distance à route ou ville)
+    Système de population des villes
     Types d’unités avancés
+    IA basique, citées états
 
 Phase 3:
     IA plus complète
@@ -72,3 +68,7 @@ X : Correction iconographie
 X : Correction taille des unités incorrectes.
 X : Système de combat
 V : Expansion automatique des villes
+V : Construction basique (menu de constrution sur clic droit : ferme, scierie, mine, etc.)
+V : Ajouter routes (dans le menu de construction, bonus déplacement)
+V : Expansion des villes (achat tuiles)
+V : Villes simples (V: in progress)

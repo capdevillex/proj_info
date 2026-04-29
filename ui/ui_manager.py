@@ -24,6 +24,7 @@ from world.biome import Biome
 from world.construction import Farm, Mine, Road, Scierie
 from world.resources import Resource
 from world.tile import Tile
+from world.unit import UnitType
 
 #  Palette UI
 C_PANEL_BG = (12, 16, 24)  # fond principal
@@ -54,6 +55,28 @@ RESOURCE_COLORS = {
     "iron": (180, 180, 200),
     "gold": (210, 175, 90),
 }
+
+
+# --- Context menu ---
+_CTX_HEADER_H = 20  # hauteur du bandeau de catégorie
+_CTX_ITEM_H = 40  # hauteur d'un item (bouton)
+_CTX_ITEM_GAP = 4  # espace entre items d'une même catégorie
+_CTX_CAT_GAP = 8  # espace de chaque côté du séparateur inter-catégorie
+_CTX_OUTER_PAD = 8  # padding haut/bas du menu
+_CTX_WIDTH = 210  # largeur du menu
+_CTX_INNER_PAD = 8  # padding gauche/droite intérieur
+
+_CAT_BUILD_COLOR = (70, 130, 180)  # bleu acier : construction
+_CAT_UNITS_COLOR = (180, 35, 45)  # vert      : unités
+_CAT_TERRITORY_COLOR = (200, 160, 70)  # or        : territoire
+
+_UNIT_BUY_OPTIONS = [
+    (UnitType.SOLDIER, "Soldat", {"gold": 2}),
+    (UnitType.CAVALRY, "Cavalerie", {"gold": 3}),
+    (UnitType.ARCHER, "Archer", {"gold": 3}),
+    (UnitType.COLON, "Colon", {"gold": 10}),
+]
+_TILE_BUY_COST = {"gold": 10}
 
 
 def _lerp_color(a, b, t):
@@ -183,14 +206,15 @@ class UIManager:
         # Dimensions ayant servi au dernier build (pour détecter un resize)
         self._sidebar_built_size: tuple[int, int] = (0, 0)
 
-        # Surface pour le menu de construction
-        self._construction_sf: pygame.Surface | None = None
-        self._construction_menu_options = []
-        self._construction_menu_visible = False
-        self._construction_menu_pos = (0, 0)
-        self._construction_menu_tile = None
-        self._construction_buttons = []
-        self._construction_anchor_world: tuple[float, float] | None = None
+        # Menu contextuel (clic droit sur tuile)
+        self._context_menu_visible = False
+        self._context_menu_tile: Tile | None = None
+        self._context_menu_pos = (0, 0)
+        self._context_menu_anchor_world: tuple[float, float] | None = None
+        # [(cat_name, cat_color, header_y, [(btn, action_type, payload, cost)])]
+        self._context_categories: list = []
+        # Liste plate pour update/hit-test : (btn, action_type, payload, cost)
+        self._context_all_btns: list = []
 
     def load_resource_images(self):
         """Charge les images depuis le dossier img/ basé sur les noms des ressources."""
@@ -266,11 +290,11 @@ class UIManager:
         self.next_turn_button.update(mouse_pos, dt)
         self.quit_button.update(mouse_pos, dt)
 
-        # Mettre à jour les boutons du menu de construction
-        if self._construction_menu_visible:
-            if self._construction_anchor_world is not None:
-                self._update_construction_buttons_pos()
-            for btn, _, _ in self._construction_buttons:
+        # Mettre à jour les boutons du menu contextuel
+        if self._context_menu_visible:
+            if self._context_menu_anchor_world is not None:
+                self._update_context_buttons_pos()
+            for btn, _, _, _ in self._context_all_btns:
                 btn.update(mouse_pos, dt)
 
         # Lissage des ressources (animation de compteur)
@@ -300,8 +324,8 @@ class UIManager:
         # Indicateur de tour (pulse animé)
         self._draw_turn_indicator(screen, sw)
 
-        # --- Menus de construction ---
-        self._draw_construction_menu(screen)
+        # --- Menu contextuel ---
+        self._draw_context_menu(screen)
 
         # Boutons : hover + active state changent à chaque frame
         self.placement_button.draw(screen)
@@ -321,98 +345,164 @@ class UIManager:
         self._sidebar_dirty = False
         self._sidebar_built_size = (cw, sh)
 
-    def _rebuild_construction_menu(self, tile: Tile, pos: tuple):
-        """Construit le menu de construction pour une tuile donnée."""
+    # ── Context menu builders ──────────────────────────────────────────────
 
-        # Déterminer les options disponibles selon le biome
-        options = []
-        if tile and tile.biome != Biome.WATER:
-            has_road = any(c.name == "Route" for c in tile.constructions)
-            has_building = any(c.name != "Route" for c in tile.constructions)
+    def _build_context_menu(self, tile: Tile, pos: tuple) -> None:
+        """Construit le menu contextuel (toutes catégories) pour une tuile."""
+        state = self.game_engine.state
+        player = state.current_player
+        owning_city = self._get_city_owning_tile(tile.id)
+        owned_by_player = owning_city is not None and owning_city.owner == player
+        owned_by_nobody = owning_city is None
 
-            if not has_road:
-                options.append(("Route", Road.COST))
+        raw_cats = []  # [(name, color, [(action, payload, cost, label)])]
+        if tile.biome != Biome.WATER and (owned_by_player or owned_by_nobody):
+            opts = self._construction_options(tile)
+            if opts:
+                raw_cats.append(("Construction", _CAT_BUILD_COLOR, opts))
+        if owned_by_player:
+            opts = self._buy_unit_options()
+            if opts:
+                raw_cats.append(("Unités", _CAT_UNITS_COLOR, opts))
+        if owned_by_nobody:
+            adj_city = self._get_adjacent_player_city(tile.id)
+            if adj_city is not None and tile.biome != Biome.WATER:
+                opts = self._buy_tile_option(tile, adj_city)
+                if opts:
+                    raw_cats.append(("Territoire", _CAT_TERRITORY_COLOR, opts))
 
-            if not has_building:
-                if tile.biome in [Biome.PLAIN, Biome.FOREST]:
-                    options.append(("Ferme", Farm.COST))
-                if tile.biome == Biome.FOREST:
-                    options.append(("Scierie", Scierie.COST))
-                if tile.biome == Biome.MOUNTAIN:
-                    options.append(("Mine", Mine.COST))
-                if tile.resource in [
-                    Resource.STONE1,
-                    Resource.STONE2,
-                    Resource.STONE3,
-                    Resource.IRON1,
-                    Resource.IRON2,
-                    Resource.IRON3,
-                    Resource.GOLD1,
-                    Resource.GOLD2,
-                    Resource.GOLD3,
-                ]:
-                    options.append(("Mine", Mine.COST))
+        self._context_menu_tile = tile
+        self._context_menu_pos = pos
+        self._context_categories = []
+        self._context_all_btns = []
+        if not raw_cats:
+            return
 
-        self._construction_menu_options = options
-        self._construction_menu_tile = tile
-        self._construction_menu_pos = pos
+        y = pos[1] + _CTX_OUTER_PAD
+        x0 = pos[0] + _CTX_INNER_PAD
+        btn_w = _CTX_WIDTH - 2 * _CTX_INNER_PAD
 
-        # Créer les boutons pour chaque option
-        self._construction_buttons = []
-        y_offset = gc.CONSTRUCTION_MENU_PADDING
+        for i, (cat_name, cat_color, items_data) in enumerate(raw_cats):
+            if i > 0:
+                y += _CTX_CAT_GAP * 2 + 1
+            header_y = y
+            y += _CTX_HEADER_H + _CTX_ITEM_GAP
+            btns = []
+            for action_type, payload, cost, label in items_data:
+                btn = Button(
+                    x=x0,
+                    y=y,
+                    width=btn_w,
+                    height=_CTX_ITEM_H,
+                    text=label,
+                    font=self._fnt_normal,
+                    is_toggleable=False,
+                )
+                entry = (btn, action_type, payload, cost)
+                btns.append(entry)
+                self._context_all_btns.append(entry)
+                y += _CTX_ITEM_H + _CTX_ITEM_GAP
+            self._context_categories.append([cat_name, cat_color, header_y, btns])
 
-        for i, (name, cost) in enumerate(options):
-            btn = Button(
-                x=pos[0] + gc.CONSTRUCTION_MENU_PADDING,
-                y=pos[1] + y_offset,
-                width=gc.CONSTRUCTION_MENU_WIDTH - 2 * gc.CONSTRUCTION_MENU_PADDING,
-                height=gc.CONSTRUCTION_MENU_ITEM_H,
-                text=name,
-                font=self._fnt_normal,
-                is_toggleable=False,
-            )
-            self._construction_buttons.append((btn, name, cost))
-            y_offset += gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING
+    def _get_city_owning_tile(self, tile_id: int):
+        """Retourne la ville dont tile_id fait partie du territoire, ou None."""
+        for city in self.game_engine.state.cities:
+            if tile_id in city.tile_ids:
+                return city
+        return None
 
-    def _get_construction_menu_rect(self):
-        if not self._construction_menu_options:
+    def _get_adjacent_player_city(self, tile_id: int):
+        """Retourne la ville du joueur courant adjacente à tile_id, ou None."""
+        player = self.game_engine.state.current_player
+        tile = self.game_engine.state.map.tiles.get(tile_id)
+        if tile is None:
             return None
-        pos = self._construction_menu_pos
-        menu_height = (
-            len(self._construction_menu_options)
-            * (gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING)
-            + gc.CONSTRUCTION_MENU_PADDING
+        for city in self.game_engine.state.get_cities_by_owner(player):
+            if tile.neighbors & city.tile_ids:
+                return city
+        return None
+
+    def _construction_options(self, tile: Tile) -> list:
+        owning_city = self._get_city_owning_tile(tile.id)
+        has_road = any(c.name == "Route" for c in tile.constructions)
+        has_building = any(c.name != "Route" for c in tile.constructions)
+        items = []
+        if not has_road:
+            items.append(("build", "Route", Road.COST, "Route"))
+        if not has_building and owning_city is not None:
+            if tile.biome in (Biome.PLAIN, Biome.FOREST):
+                items.append(("build", "Ferme", Farm.COST, "Ferme"))
+            if tile.biome == Biome.FOREST:
+                items.append(("build", "Scierie", Scierie.COST, "Scierie"))
+            if tile.biome == Biome.MOUNTAIN or tile.resource in (
+                Resource.STONE1,
+                Resource.STONE2,
+                Resource.STONE3,
+                Resource.IRON1,
+                Resource.IRON2,
+                Resource.IRON3,
+                Resource.GOLD1,
+                Resource.GOLD2,
+                Resource.GOLD3,
+            ):
+                items.append(("build", "Mine", Mine.COST, "Mine"))
+        return items
+
+    def _buy_unit_options(self) -> list:
+        return [
+            ("buy_unit", unit_type, cost, label) for unit_type, label, cost in _UNIT_BUY_OPTIONS
+        ]
+
+    def _buy_tile_option(self, tile: Tile, city) -> list:
+        return [("buy_tile", (tile.id, city), _TILE_BUY_COST, "Annexer cette tuile")]
+
+    def _context_total_height(self) -> int:
+        if not self._context_categories:
+            return 0
+        h = _CTX_OUTER_PAD
+        for i, cat in enumerate(self._context_categories):
+            if i > 0:
+                h += _CTX_CAT_GAP * 2 + 1
+            h += _CTX_HEADER_H + _CTX_ITEM_GAP + len(cat[3]) * (_CTX_ITEM_H + _CTX_ITEM_GAP)
+        h += _CTX_OUTER_PAD
+        return h
+
+    def _get_context_menu_rect(self) -> pygame.Rect | None:
+        if not self._context_categories:
+            return None
+        return pygame.Rect(
+            self._context_menu_pos[0],
+            self._context_menu_pos[1],
+            _CTX_WIDTH,
+            self._context_total_height(),
         )
-        return pygame.Rect(pos[0], pos[1], gc.CONSTRUCTION_MENU_WIDTH, menu_height)
 
     def _compute_menu_screen_pos(self) -> tuple[int, int]:
-        """Convertit l'ancre monde (centre tuile) en position écran, avec clamping."""
-        assert self._construction_anchor_world is not None
-        wx, wy = self._construction_anchor_world
+        assert self._context_menu_anchor_world is not None
+        wx, wy = self._context_menu_anchor_world
         sx, sy = world_to_screen(wx, wy, self.camera.x, self.camera.y, self.camera.zoom)
         sx += 12
         sy += 12
-        menu_height = (
-            len(self._construction_menu_options)
-            * (gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING)
-            + gc.CONSTRUCTION_MENU_PADDING
-        )
-        sx = max(gc.SIDEBAR_WIDTH + 4, min(sx, self.screen_width - gc.CONSTRUCTION_MENU_WIDTH - 4))
-        sy = max(4, min(sy, self.screen_height - gc.STATUS_H - menu_height - 4))
+        h = self._context_total_height()
+        sx = max(gc.SIDEBAR_WIDTH + 4, min(sx, self.screen_width - _CTX_WIDTH - 4))
+        sy = max(4, min(sy, self.screen_height - gc.STATUS_H - h - 4))
         return (sx, sy)
 
-    def _update_construction_buttons_pos(self) -> None:
-        """Repositionne les boutons du menu d'après la position écran courante."""
-        pos = self._compute_menu_screen_pos()
-        self._construction_menu_pos = pos
-        y_offset = gc.CONSTRUCTION_MENU_PADDING
-        for btn, _, _ in self._construction_buttons:
-            btn.set_position(pos[0] + gc.CONSTRUCTION_MENU_PADDING, pos[1] + y_offset)
-            y_offset += gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING
+    def _update_context_buttons_pos(self) -> None:
+        new_pos = self._compute_menu_screen_pos()
+        if new_pos == self._context_menu_pos:
+            return
+        dx = new_pos[0] - self._context_menu_pos[0]
+        dy = new_pos[1] - self._context_menu_pos[1]
+        self._context_menu_pos = new_pos
+        for cat in self._context_categories:
+            cat[2] += dy
+            for entry in cat[3]:
+                entry[0].set_position(entry[0].rect.x + dx, entry[0].rect.y + dy)
 
     def close_construction_menu(self):
-        self._construction_menu_visible = False
-        self._construction_anchor_world = None
+        self._context_menu_visible = False
+        self._context_menu_anchor_world = None
 
     #  Sidebar (dessine sur la surface passée en argument — écran ou cache)
     def _draw_sidebar(self, screen, cw, sh):
@@ -434,30 +524,38 @@ class UIManager:
         # Note : les boutons (placement_button, placement_button_enn) sont dessinés
         # directement sur l'écran dans draw() — pas dans le cache.
 
-    def _draw_construction_menu(self, screen):
-        """Dessine le menu de construction à l'écran."""
-        if not self._construction_menu_visible or not self._construction_menu_options:
+    def _draw_context_menu(self, screen) -> None:
+        """Dessine le menu contextuel multi-catégories."""
+        if not self._context_menu_visible or not self._context_categories:
             return
 
-        pos = self._construction_menu_pos
-        menu_height = (
-            len(self._construction_menu_options)
-            * (gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING)
-            + gc.CONSTRUCTION_MENU_PADDING
-        )
+        pos = self._context_menu_pos
+        bg_rect = pygame.Rect(pos[0], pos[1], _CTX_WIDTH, self._context_total_height())
+        _draw_panel(screen, bg_rect, bg=C_PANEL_BG2, border=C_BORDER_LIT)
 
-        # Fond du menu
-        menu_rect = pygame.Rect(pos[0], pos[1], gc.CONSTRUCTION_MENU_WIDTH, menu_height)
-        _draw_panel(screen, menu_rect, bg=C_PANEL_BG2, border=C_BORDER_LIT)
+        for i, cat in enumerate(self._context_categories):
+            cat_name, cat_color, header_y, btns = cat[0], cat[1], cat[2], cat[3]
 
-        # Dessiner chaque bouton avec son coût
-        for btn, name, cost in self._construction_buttons:
-            btn.draw(screen)
+            # Séparateur inter-catégorie
+            if i > 0:
+                sep_y = header_y - _CTX_CAT_GAP - 1
+                pygame.draw.line(
+                    screen, C_BORDER, (pos[0] + 6, sep_y), (pos[0] + _CTX_WIDTH - 6, sep_y), 1
+                )
 
-            # Afficher le coût à côté du nom
-            cost_text = ", ".join([f"{amount} {res}" for res, amount in cost.items()])
-            cost_surf = self._fnt_tiny.render(cost_text, True, C_TEXT_DIM)
-            screen.blit(cost_surf, (btn.rect.x + 10, btn.rect.y + btn.rect.height - 16))
+            # Bandeau coloré de catégorie
+            hdr_rect = pygame.Rect(pos[0] + 2, header_y, _CTX_WIDTH - 4, _CTX_HEADER_H)
+            pygame.draw.rect(screen, cat_color, hdr_rect, border_radius=2)
+            lbl = self._fnt_tiny.render(cat_name.upper(), True, C_TEXT_BRIGHT)
+            screen.blit(lbl, (hdr_rect.x + 6, hdr_rect.y + (_CTX_HEADER_H - lbl.get_height()) // 2))
+
+            # Items
+            for btn, _, _, cost in btns:
+                btn.draw(screen)
+                if cost:
+                    ct = "  ".join(f"{a} {r}" for r, a in cost.items())
+                    cs = self._fnt_tiny.render(ct, True, C_TEXT_DIM)
+                    screen.blit(cs, (btn.rect.x + 6, btn.rect.bottom - cs.get_height() - 4))
 
     def _draw_player_header(self, screen, cw, alpha):
         state = self.game_engine.state
@@ -648,17 +746,23 @@ class UIManager:
         if self.quit_button.is_clicked(mouse_pos):
             return "quit"
 
-        # Menu de construction
-        if self._construction_menu_visible:
-            menu_rect = self._get_construction_menu_rect()
+        # Menu contextuel
+        if self._context_menu_visible:
+            menu_rect = self._get_context_menu_rect()
             if menu_rect and menu_rect.collidepoint(mouse_pos):
-                for btn, name, _ in self._construction_buttons:
+                for btn, action_type, payload, cost in self._context_all_btns:
                     if btn.is_clicked(mouse_pos):
-                        self._construction_menu_visible = False
-                        return ("build", name, self._construction_menu_tile)
-                return None  # clic sur le fond du menu, consommer sans action
+                        self._context_menu_visible = False
+                        if action_type == "build":
+                            return ("build", payload, self._context_menu_tile)
+                        elif action_type == "buy_unit":
+                            return ("buy_unit", payload, self._context_menu_tile, cost)
+                        elif action_type == "buy_tile":
+                            tile_id, city = payload
+                            return ("buy_tile", tile_id, city, cost)
+                return None  # clic sur le fond du menu : consommer sans action
             else:
-                self._construction_menu_visible = False
+                self._context_menu_visible = False
 
         return None
 
@@ -686,26 +790,30 @@ class UIManager:
         if self.quit_button.rect.collidepoint(mouse_pos):
             return True
 
+        # Menu contextuel
+        if self._context_menu_visible:
+            r = self._get_context_menu_rect()
+            if r and r.collidepoint(mouse_pos):
+                return True
+
         return False
 
     def open_construction_menu(self, hovered_tile: Tile):
-        """Ouvre le menu de construction ancré sur le centre de la tuile."""
+        """Ouvre le menu contextuel ancré sur le centre de la tuile."""
         ts = compute_tile_size(self.screen_width, self.screen_height)
-        self._construction_anchor_world = (
+        self._context_menu_anchor_world = (
             hovered_tile.center[0] * ts,
             hovered_tile.center[1] * ts,
         )
+        self._build_context_menu(hovered_tile, (0, 0))
 
-        # Construit les options/boutons (pos provisoire, corrigée juste après)
-        self._rebuild_construction_menu(hovered_tile, (0, 0))
-
-        if not self._construction_menu_options:
-            self._construction_menu_visible = False
-            self._construction_anchor_world = None
+        if not self._context_categories:
+            self._context_menu_visible = False
+            self._context_menu_anchor_world = None
             return
 
-        self._update_construction_buttons_pos()
-        self._construction_menu_visible = True
+        self._update_context_buttons_pos()
+        self._context_menu_visible = True
 
     # Compat legacy (main.py utilise ces attributs directement)
 
