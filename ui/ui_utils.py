@@ -1,8 +1,10 @@
+from typing import Optional
+
 import pygame
 
 from config import GameConfig as gc
-from ui.camera import screen_to_world
-
+from ui.camera import screen_to_world, world_to_screen
+from world.tile import Tile
 
 
 def lighten(color, amount=40):
@@ -13,7 +15,7 @@ def compute_tile_size(window_w, window_h):
     return min(window_w // gc.WIDTH, window_h // gc.HEIGHT)
 
 
-def draw_centers(screen, game_map, tile_size, cam):
+def draw_centers(screen, game_map, tile_size, cam, font):
     for tile in game_map.tiles.values():
         x, y = tile.center
         wx = x * tile_size
@@ -26,7 +28,7 @@ def draw_centers(screen, game_map, tile_size, cam):
         screen.blit(text, (sx - 10, sy - 15))
 
 
-def get_hovered_tile(game_map, cam, tile_size):
+def get_hovered_tile(game_map, cam, tile_size) -> Optional[Tile]:
     mouse_x, mouse_y = pygame.mouse.get_pos()
 
     world_x, world_y = screen_to_world(mouse_x, mouse_y, cam.x, cam.y, cam.zoom)

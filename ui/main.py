@@ -97,6 +97,7 @@ def main():
                     selected_unit_type = UnitType.COLON
                 if event.key == pygame.K_ESCAPE:
                     unit_selector.deselect_unit()
+                    ui_manager.close_construction_menu()
 
                 if event.key == pygame.K_SPACE:
                     game_engine.end_turn()
@@ -123,6 +124,11 @@ def main():
                             ui_manager.mark_dirty()
                         elif action == "quit":
                             running = False
+                        elif isinstance(action, tuple) and action[0] == "build":
+                            _, name, tile = action
+                            if game_engine.build_construction(tile, name, gs.current_player):
+                                renderer.clear_cache()
+                                ui_manager.mark_dirty()
                         # On arrête le traitement ici pour ne pas cliquer "à travers" le bouton
                         continue
 
@@ -176,8 +182,10 @@ def main():
 
                 elif event.button == 3:  # Clic droit
                     mouse_pos = event.pos
+                    ui_manager.close_construction_menu()
                     hovered_tile = get_hovered_tile(game_map, camera, tile_size)
 
+                    # clic droit sur une tuile ayant une unité
                     if hovered_tile and hovered_tile.has_units():
                         # Récupérer l'unité sur la tuile
                         unit = hovered_tile.units[0]
@@ -193,6 +201,9 @@ def main():
                                     unit_selector.deselect_unit()
                                 # Marquer le rendu comme sale pour rafraîchir l'affichage
                                 renderer.city_dirty = True
+                    # si n'a pas d'unité sur la case, ouverture du menu de construction
+                    elif hovered_tile:
+                        ui_manager.open_construction_menu(hovered_tile)
 
         # -------- UPDATE --------
         camera.update(dt, gs.map, tile_size, window_w, window_h)
@@ -222,7 +233,7 @@ def main():
         screen.fill((6, 8, 14))
         renderer.render(screen, gs, camera, tile_size, hovered_tile, dt)
 
-        ui_manager.draw(screen, selected_unit_type)
+        ui_manager.draw(screen, selected_unit_type, mouse_pos)
 
         # Afficher les zones de mouvement et de combat pour l'unité sélectionnée
         if unit_selector.is_unit_selected():
@@ -235,7 +246,7 @@ def main():
             # Afficher les tuiles accessibles en BLEU
             renderer.render_reachable_tiles(screen, game_map, camera, tile_size, reachable)
 
-        ui_manager.draw(screen, selected_unit_type)
+        ui_manager.draw(screen, selected_unit_type, mouse_pos)
 
         pygame.display.flip()
 

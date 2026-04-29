@@ -32,6 +32,7 @@ class Tile:
         self.biome = biome
         self.resource = resource
         self.units: List[Unit] = []
+        self.constructions: list = []  # liste de Construction (au plus une route + un bâtiment)
 
     def _compute_center(self):
         """

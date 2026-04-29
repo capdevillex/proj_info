@@ -17,9 +17,12 @@ import pygame
 from ui.button import Button
 from config import GameConfig as gc
 from core.game_engine import GameEngine
-from ui.camera import Camera
+from ui.camera import Camera, world_to_screen
 from ui.renderer import RenderPipeline
-
+from ui.ui_utils import compute_tile_size
+from world.biome import Biome
+from world.construction import Farm, Mine, Road, Scierie
+from world.tile import Tile
 
 #  Palette UI
 C_PANEL_BG = (12, 16, 24)  # fond principal
@@ -179,6 +182,15 @@ class UIManager:
         # Dimensions ayant servi au dernier build (pour détecter un resize)
         self._sidebar_built_size: tuple[int, int] = (0, 0)
 
+        # Surface pour le menu de construction
+        self._construction_sf: pygame.Surface | None = None
+        self._construction_menu_options = []
+        self._construction_menu_visible = False
+        self._construction_menu_pos = (0, 0)
+        self._construction_menu_tile = None
+        self._construction_buttons = []
+        self._construction_anchor_world: tuple[float, float] | None = None
+
     def load_resource_images(self):
         """Charge les images depuis le dossier img/ basé sur les noms des ressources."""
         img_path = Path(".") / "img"
@@ -195,7 +207,6 @@ class UIManager:
         self._sidebar_dirty = True
 
     # Mise à jour
-
     def update_positions(self, screen_width, screen_height):
         """Met à jour les positions des boutons en fonction de la taille de l'écran"""
         self.screen_width = screen_width
@@ -254,6 +265,13 @@ class UIManager:
         self.next_turn_button.update(mouse_pos, dt)
         self.quit_button.update(mouse_pos, dt)
 
+        # Mettre à jour les boutons du menu de construction
+        if self._construction_menu_visible:
+            if self._construction_anchor_world is not None:
+                self._update_construction_buttons_pos()
+            for btn, _, _ in self._construction_buttons:
+                btn.update(mouse_pos, dt)
+
         # Lissage des ressources (animation de compteur)
         resources = self._get_resources()
         for name, val in resources.items():
@@ -264,7 +282,7 @@ class UIManager:
         self._pulse_t += dt * 2.0
 
     # Dessin
-    def draw(self, screen, selected_unit_type):
+    def draw(self, screen, selected_unit_type, mouse_pos):
         cw = int(self._sidebar_cur_w)
         sw, sh = self.screen_width, self.screen_height
 
@@ -280,6 +298,9 @@ class UIManager:
         # --- Éléments dynamiques dessinés par-dessus ---
         # Indicateur de tour (pulse animé)
         self._draw_turn_indicator(screen, sw)
+
+        # --- Menus de construction ---
+        self._draw_construction_menu(screen)
 
         # Boutons : hover + active state changent à chaque frame
         self.placement_button.draw(screen)
@@ -298,6 +319,87 @@ class UIManager:
         self._sidebar_bg_sf = sf
         self._sidebar_dirty = False
         self._sidebar_built_size = (cw, sh)
+
+    def _rebuild_construction_menu(self, tile: Tile, pos: tuple):
+        """Construit le menu de construction pour une tuile donnée."""
+
+        # Déterminer les options disponibles selon le biome
+        options = []
+        if tile and tile.biome != Biome.WATER:
+            has_road = any(c.name == "Route" for c in tile.constructions)
+            has_building = any(c.name != "Route" for c in tile.constructions)
+
+            if not has_road:
+                options.append(("Route", Road.COST))
+
+            if not has_building:
+                if tile.biome in [Biome.PLAIN, Biome.FOREST]:
+                    options.append(("Ferme", Farm.COST))
+                if tile.biome == Biome.FOREST:
+                    options.append(("Scierie", Scierie.COST))
+                if tile.biome in [Biome.MOUNTAIN]:
+                    options.append(("Mine", Mine.COST))
+
+        self._construction_menu_options = options
+        self._construction_menu_tile = tile
+        self._construction_menu_pos = pos
+
+        # Créer les boutons pour chaque option
+        self._construction_buttons = []
+        y_offset = gc.CONSTRUCTION_MENU_PADDING
+
+        for i, (name, cost) in enumerate(options):
+            btn = Button(
+                x=pos[0] + gc.CONSTRUCTION_MENU_PADDING,
+                y=pos[1] + y_offset,
+                width=gc.CONSTRUCTION_MENU_WIDTH - 2 * gc.CONSTRUCTION_MENU_PADDING,
+                height=gc.CONSTRUCTION_MENU_ITEM_H,
+                text=name,
+                font=self._fnt_normal,
+                is_toggleable=False,
+            )
+            self._construction_buttons.append((btn, name, cost))
+            y_offset += gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING
+
+    def _get_construction_menu_rect(self):
+        if not self._construction_menu_options:
+            return None
+        pos = self._construction_menu_pos
+        menu_height = (
+            len(self._construction_menu_options)
+            * (gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING)
+            + gc.CONSTRUCTION_MENU_PADDING
+        )
+        return pygame.Rect(pos[0], pos[1], gc.CONSTRUCTION_MENU_WIDTH, menu_height)
+
+    def _compute_menu_screen_pos(self) -> tuple[int, int]:
+        """Convertit l'ancre monde (centre tuile) en position écran, avec clamping."""
+        assert self._construction_anchor_world is not None
+        wx, wy = self._construction_anchor_world
+        sx, sy = world_to_screen(wx, wy, self.camera.x, self.camera.y, self.camera.zoom)
+        sx += 12
+        sy += 12
+        menu_height = (
+            len(self._construction_menu_options)
+            * (gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING)
+            + gc.CONSTRUCTION_MENU_PADDING
+        )
+        sx = max(gc.SIDEBAR_WIDTH + 4, min(sx, self.screen_width - gc.CONSTRUCTION_MENU_WIDTH - 4))
+        sy = max(4, min(sy, self.screen_height - gc.STATUS_H - menu_height - 4))
+        return (sx, sy)
+
+    def _update_construction_buttons_pos(self) -> None:
+        """Repositionne les boutons du menu d'après la position écran courante."""
+        pos = self._compute_menu_screen_pos()
+        self._construction_menu_pos = pos
+        y_offset = gc.CONSTRUCTION_MENU_PADDING
+        for btn, _, _ in self._construction_buttons:
+            btn.set_position(pos[0] + gc.CONSTRUCTION_MENU_PADDING, pos[1] + y_offset)
+            y_offset += gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING
+
+    def close_construction_menu(self):
+        self._construction_menu_visible = False
+        self._construction_anchor_world = None
 
     #  Sidebar (dessine sur la surface passée en argument — écran ou cache)
     def _draw_sidebar(self, screen, cw, sh):
@@ -318,6 +420,31 @@ class UIManager:
 
         # Note : les boutons (placement_button, placement_button_enn) sont dessinés
         # directement sur l'écran dans draw() — pas dans le cache.
+
+    def _draw_construction_menu(self, screen):
+        """Dessine le menu de construction à l'écran."""
+        if not self._construction_menu_visible or not self._construction_menu_options:
+            return
+
+        pos = self._construction_menu_pos
+        menu_height = (
+            len(self._construction_menu_options)
+            * (gc.CONSTRUCTION_MENU_ITEM_H + gc.CONSTRUCTION_MENU_PADDING)
+            + gc.CONSTRUCTION_MENU_PADDING
+        )
+
+        # Fond du menu
+        menu_rect = pygame.Rect(pos[0], pos[1], gc.CONSTRUCTION_MENU_WIDTH, menu_height)
+        _draw_panel(screen, menu_rect, bg=C_PANEL_BG2, border=C_BORDER_LIT)
+
+        # Dessiner chaque bouton avec son coût
+        for btn, name, cost in self._construction_buttons:
+            btn.draw(screen)
+
+            # Afficher le coût à côté du nom
+            cost_text = ", ".join([f"{amount} {res}" for res, amount in cost.items()])
+            cost_surf = self._fnt_tiny.render(cost_text, True, C_TEXT_DIM)
+            screen.blit(cost_surf, (btn.rect.x + 10, btn.rect.y + btn.rect.height - 16))
 
     def _draw_player_header(self, screen, cw, alpha):
         state = self.game_engine.state
@@ -405,13 +532,16 @@ class UIManager:
 
         # Infos tuile survolée
         if self.hovered_tile:
-            tile = self.hovered_tile
+            tile: Tile = self.hovered_tile
             parts = [
                 (f"Tile #{tile.id}", C_TEXT),
                 (f"  {tile.biome.name}", C_BLUE_ACC),
                 (f"  {tile.resource.name}", C_GOLD if tile.resource.name != "NONE" else C_TEXT_DIM),
                 (f"  aire {tile.area}", C_TEXT_DIM),
             ]
+            if tile.constructions:
+                names = ", ".join(c.name for c in tile.constructions)
+                parts.append((f"  [{names}]", C_GOLD))
             for text, color in parts:
                 s = self._fnt_small.render(text, True, color)
                 screen.blit(s, (x_cur, y_offset + 16))
@@ -505,6 +635,18 @@ class UIManager:
         if self.quit_button.is_clicked(mouse_pos):
             return "quit"
 
+        # Menu de construction
+        if self._construction_menu_visible:
+            menu_rect = self._get_construction_menu_rect()
+            if menu_rect and menu_rect.collidepoint(mouse_pos):
+                for btn, name, _ in self._construction_buttons:
+                    if btn.is_clicked(mouse_pos):
+                        self._construction_menu_visible = False
+                        return ("build", name, self._construction_menu_tile)
+                return None  # clic sur le fond du menu, consommer sans action
+            else:
+                self._construction_menu_visible = False
+
         return None
 
     def is_mouse_over_ui(self, mouse_pos):
@@ -532,6 +674,25 @@ class UIManager:
             return True
 
         return False
+
+    def open_construction_menu(self, hovered_tile: Tile):
+        """Ouvre le menu de construction ancré sur le centre de la tuile."""
+        ts = compute_tile_size(self.screen_width, self.screen_height)
+        self._construction_anchor_world = (
+            hovered_tile.center[0] * ts,
+            hovered_tile.center[1] * ts,
+        )
+
+        # Construit les options/boutons (pos provisoire, corrigée juste après)
+        self._rebuild_construction_menu(hovered_tile, (0, 0))
+
+        if not self._construction_menu_options:
+            self._construction_menu_visible = False
+            self._construction_anchor_world = None
+            return
+
+        self._update_construction_buttons_pos()
+        self._construction_menu_visible = True
 
     # Compat legacy (main.py utilise ces attributs directement)
 

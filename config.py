@@ -46,6 +46,9 @@ class GameConfig:
 
     SIDEBAR_WIDTH = 210  # largeur de la barre latérale gauche
     STATUS_H = 52  # hauteur barre de statut bas
+    CONSTRUCTION_MENU_WIDTH = 200
+    CONSTRUCTION_MENU_ITEM_H = 40
+    CONSTRUCTION_MENU_PADDING = 10
 
     RESOURCE_BASE_SCALE = 3
 

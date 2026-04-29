@@ -3,6 +3,7 @@ from typing import List, Dict, Optional, Any
 from core.game_state import GameState
 from core.systems import Movement, Combat, Economy, Visibility
 from world.unit import Unit, UnitType, UNIT_CLASS_MAP
+from world.construction import Farm, Mine, Road, Scierie
 from world.city import City
 from world.map import Map
 from world.biome import Biome
@@ -311,6 +312,37 @@ class GameEngine:
                 return tile.id
 
         return None
+
+    def build_construction(self, tile, construction_name: str, player: int) -> bool:
+        """Construit un bâtiment sur la tuile si le joueur a les ressources nécessaires.
+
+        Règles : une route peut coexister avec un bâtiment (Ferme/Mine),
+        mais on ne peut pas construire deux routes ni deux bâtiments non-route.
+        """
+        construction_map = {"Ferme": Farm, "Mine": Mine, "Route": Road, "Scierie": Scierie}
+        cls = construction_map.get(construction_name)
+        if cls is None:
+            return False
+
+        is_road = construction_name == "Route"
+        if is_road:
+            if any(c.name == "Route" for c in tile.constructions):
+                return False
+        else:
+            if any(c.name != "Route" for c in tile.constructions):
+                return False
+
+        resources = self.state.player_resources.get(player, {})
+        for res, amount in cls.COST.items():
+            if resources.get(res, 0) < amount:
+                return False
+
+        for res, amount in cls.COST.items():
+            resources[res] -= amount
+
+        tile.constructions.append(cls(tile))
+        print(f"Construction '{construction_name}' bâtie sur tuile {tile.id} par joueur {player}")
+        return True
 
     def setup_start_units(self):
         """Fait spawner les unités de départ dans les coins."""

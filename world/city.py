@@ -1,10 +1,6 @@
 import random
 from typing import Optional, Set, Dict
 
-from click import Option
-from cv2 import add
-from regex import T
-from torch import ne
 
 from world.biome import Biome
 from world.map import Map
@@ -147,7 +143,7 @@ class City:
             if tile_id not in game_map.tiles:
                 continue
 
-            tile = game_map.tiles[tile_id]
+            tile: Tile = game_map.tiles[tile_id]
             resource = tile.resource
 
             # Mapping des ressources vers les catégories de production
@@ -168,6 +164,13 @@ class City:
             elif resource.name.startswith("GOLD"):
                 level = int(resource.name[-1])
                 self.production["gold"] += level
+
+            if tile.constructions:
+                for cstrt in tile.constructions:
+                    for rss, boost in cstrt.boost.items():
+                        if rss == "movement":
+                            pass
+                        self.production[rss] += boost
 
     def get_visibility_mask(self, game_map) -> int:
         """
