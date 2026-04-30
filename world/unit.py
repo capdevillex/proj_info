@@ -46,20 +46,21 @@ class Unit:
 
     def __init__(self, tile_id, owner=0, x=0.0, y=0.0):
         Unit._unit_counter += 1
-        self.id            = Unit._unit_counter
-        self.tile_id       = tile_id
-        self.owner         = owner
-        self.x             = x
-        self.y             = y
-        self.unit_type     = self.UNIT_TYPE
-        self.has_moved     = False
+        self.id             = Unit._unit_counter
+        self.tile_id        = tile_id
+        self.owner          = owner
+        self.x              = x
+        self.y              = y
+        self.hp             = self.BASE_HP
+        self.unit_type      = self.UNIT_TYPE
+        self.has_moved      = False
         self.unit_type      = self.UNIT_TYPE
         self.max_distance   = self.MAX_DISTANCE
         self.attack_range   = self.ATTACK_RANGE
         self.water_affinity = self.WATER_AFFINITY
         self.upkeep_cost    = self.UPKEEP_COST
         self.can_dash       = self.DASH
-            
+
 
     def __repr__(self):
         return f"{self.__class__.__name__}(id={self.id}, tile={self.tile_id}, owner={self.owner})"
@@ -96,7 +97,7 @@ class Unit:
             mask |= 1 << tile_id
         return mask
 
-    
+
 
 # ── Sous-classes ────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ class Soldier(Unit):
     BASE_DEFENSE = 8
     BASE_HP      = 100
     SIZE         = 4
-    UPKEEP_COST  = 10 
+    UPKEEP_COST  = 10
 
 class Cavalry(Unit):
     UNIT_TYPE    = UnitType.CAVALRY
@@ -118,7 +119,7 @@ class Cavalry(Unit):
     BASE_DEFENSE = 6
     BASE_HP      = 90
     SIZE         = 4
-    UPKEEP_COST  = 10 
+    UPKEEP_COST  = 10
 
 
 class Archer(Unit):
@@ -129,7 +130,7 @@ class Archer(Unit):
     BASE_DEFENSE = 5
     BASE_HP      = 70
     SIZE         = 4
-    UPKEEP_COST  = 10 
+    UPKEEP_COST  = 10
 
 class Colon(Unit):
     UNIT_TYPE      = UnitType.COLON
@@ -140,7 +141,7 @@ class Colon(Unit):
     BASE_HP        = 50
     WATER_AFFINITY = True
     SIZE = 4
-    UPKEEP_COST  = 10 
+    UPKEEP_COST  = 10
 
 
 class Colonie(Unit):
@@ -151,7 +152,7 @@ class Colonie(Unit):
     BASE_DEFENSE = 0
     BASE_HP      = 0
     SIZE         = 15
-    UPKEEP_COST  = 10 
+    UPKEEP_COST  = 10
 
 class Baby(Unit):
     UNIT_TYPE      = UnitType.BABY
@@ -161,7 +162,7 @@ class Baby(Unit):
     BASE_DEFENSE   = 3
     BASE_HP        = 50
     SIZE           = 4
-    UPKEEP_COST  = 10 
+    UPKEEP_COST  = 10
 
 
 # ── Factory ─────────────────────────────────────────────────────

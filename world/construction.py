@@ -60,7 +60,7 @@ class Scierie(Construction):
     COST = {"wood": 5}
 
     def __init__(self, tile: Tile):
-        super().__init__("Scierie", Farm.COST, tile)
+        super().__init__("Scierie", Scierie.COST, tile)
         self._calculate_boost()
 
     def _calculate_boost(self):

@@ -198,6 +198,33 @@ class Map:
             "log": self.log,
         }
 
+    def dist(self, tile_a_id, tile_b_id):
+        """Calcule la distance entre deux tuiles en nombre de tuiles à traverser (distance de
+        Manhattan sur le graphe de tuiles).
+
+        Args:
+            tile_a_id (int): ID de la première tuile
+            tile_b_id (int): ID de la seconde tuile
+
+        Returns:
+            int: Distance en nombre de tuiles à traverser, ou math.inf si les tuiles ne sont pas connectées"""
+        if tile_a_id not in self.tiles or tile_b_id not in self.tiles:
+            return math.inf
+        visited = set()
+        queue = deque([(tile_a_id, 0)])
+        while queue:
+            current_id, dist = queue.popleft()
+            if current_id == tile_b_id:
+                return dist
+            if current_id in visited:
+                continue
+            visited.add(current_id)
+            for neighbor_id in self.tiles[current_id].neighbors:
+                if neighbor_id not in visited:
+                    queue.append((neighbor_id, dist + 1))
+        return math.inf
+
+
     # PIPELINE GLOBAL
     def _generate(self):
         """ "

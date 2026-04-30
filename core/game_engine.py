@@ -7,7 +7,6 @@ from world.construction import Farm, Mine, Road, Scierie
 from world.city import City
 from world.map import Map
 from world.biome import Biome
-from core.systems.movement import Movement  # Importer le système centralisé
 from config import GameConfig as gc
 
 
@@ -224,7 +223,7 @@ class GameEngine:
             city_name = self._generate_city_name(colon_unit.owner)
 
         # Créer la ville
-        new_city = City(name=city_name, owner=colon_unit.owner, center_tile_id=colon_unit.tile_id)
+        new_city = City(name=city_name, owner=colon_unit.owner, center_tile_id=colon_unit.tile_id, state=self.state)
 
         # Ajouter la ville à l'état du jeu
         self.state.add_city(new_city)

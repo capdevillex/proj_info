@@ -49,16 +49,15 @@ class Combat:
         damage = self.compute_damage(state, attacker, defender)
 
         # Appliquer les dégâts (TODO: ajouter HP aux unités)
-        # defender.hp -= damage
+        defender.hp -= damage
 
         print(f"⚔️ Combat : {attacker.unit_type.name} attaque {defender.unit_type.name}")
         print(f"   Dégâts infligés : {damage:.1f}")
 
-        result = {"damage": damage, "defender_killed": False}  # TODO: vérifier si defender.hp <= 0
+        result = {"damage": damage, "defender_killed": defender.hp <= 0}  # TODO: vérifier si defender.hp <= 0
 
-        # if defender.hp <= 0:
-        #     result["defender_killed"] = True
-        #     print(f"   💀 {defender.unit_type.name} est détruit !")
+        if defender.hp <= 0:
+            print(f"   💀 {defender.unit_type.name} est détruit !")
 
         return result
 
@@ -99,7 +98,7 @@ class Combat:
 
         # Modificateur de santé (TODO: implémenter HP sur les unités)
         # Pour l'instant, on suppose que les unités sont à pleine santé
-        hp_ratio = 1.0  # attacker.hp / attacker_stats["hp"]
+        hp_ratio = attacker.hp / attacker.BASE_HP
 
         # Formule finale
         damage = (
@@ -148,7 +147,7 @@ class Combat:
     def execute_attack(self, state, attacker, target_tile_id):
         """
         Point d'entrée principal du combat.
-        Trouve la cible, vérifie les conditions, calcule les dégâts, 
+        Trouve la cible, vérifie les conditions, calcule les dégâts,
         détermine si le défenseur est tué.
 
         Returns:

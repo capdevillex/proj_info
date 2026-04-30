@@ -366,7 +366,10 @@ class UIManager:
                 raw_cats.append(("Unités", _CAT_UNITS_COLOR, opts))
         if owned_by_nobody:
             adj_city = self._get_adjacent_player_city(tile.id)
-            if adj_city is not None and tile.biome != Biome.WATER:
+            if adj_city is not None \
+                and tile.biome != Biome.WATER \
+                and self.game_engine.state.map.dist(adj_city.center_tile_id, tile.id) \
+                    <= gc.CITY_EXTENSION_RADIUS:
                 opts = self._buy_tile_option(tile, adj_city)
                 if opts:
                     raw_cats.append(("Territoire", _CAT_TERRITORY_COLOR, opts))

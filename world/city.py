@@ -1,5 +1,5 @@
 import random
-from typing import Optional, Set, Dict
+from typing import TYPE_CHECKING, Optional, Set, Dict
 
 
 from world.biome import Biome
@@ -7,6 +7,9 @@ from world.map import Map
 from world.resources import Resource
 from config import GameConfig as gc
 from world.tile import Tile
+
+if TYPE_CHECKING:
+    from core.game_state import GameState
 
 
 class City:
@@ -27,7 +30,7 @@ class City:
 
     _next_id = 0
 
-    def __init__(self, name: str, owner: int, center_tile_id: int):
+    def __init__(self, name: str, owner: int, center_tile_id: int, state: "GameState"):
         self.id = City._next_id
         City._next_id += 1
 
@@ -35,6 +38,7 @@ class City:
         self.owner = owner
         self.center_tile_id = center_tile_id
         self.tile_ids: Set[int] = {center_tile_id}
+        self.state = state
         self.population = 1  # population initiale de la ville
         self.constructions = (
             set()
@@ -59,7 +63,7 @@ class City:
         """
         self.tile_ids.add(tile_id)
 
-    def expend_territory(self, game_state) -> Optional[int]:
+    def expend_territory(self, game_state: "GameState") -> Optional[int]:
         """
         Étend le territoire de la ville en ajoutant une tuile voisine au hasard.
 
@@ -73,24 +77,25 @@ class City:
         queue = [(self.center_tile_id, 0)]
         while queue:
             current_tile_id, distance = queue.pop(0)
-            if distance > gc.CITY_EXTENSION_RADIUS:
+            if distance >= gc.CITY_EXTENSION_RADIUS:
                 continue
             visited.add(current_tile_id)
             current_tile = game_state.map.tiles[current_tile_id]
             for neighbor_id in current_tile.neighbors:
+                # vérifier que la tuile voisine n'appartient pas à une autre ville
+                # vérifier que la tuile voisine n'est pas de l'eau et n'appartient pas déjà à la ville
                 if (
                     (neighbor_id not in visited)
                     and (current_tile_id in self.tile_ids)
                     and (game_state.map.tiles[neighbor_id].biome != Biome.WATER)
                 ):
-                    print("tuile candidate", neighbor_id)
                     queue.append((neighbor_id, distance + 1))
+                    if self._get_city_owning_tile(neighbor_id) is not None:
+                        continue
                     if neighbor_id not in self.tile_ids:
                         candidate_tiles.add((neighbor_id, distance + 1))
-        print(
-            f"Ville '{self.name}' - tuiles candidates pour extension : {[t[0] for t in candidate_tiles]}"
-        )
         # les tuiles ont une probabilité d'être choisies en fonction de leur éloignement à la tuile centrale (plus c'est proche, plus c'est probable)
+        print(f"City {self.name} candidates for expansion: {candidate_tiles}")
         if not candidate_tiles:
             return  # pas de tuiles candidates, on ne peut pas étendre
         # on choisit une tuile aléatoire parmi les tuiles selon une loi de probabilité décroissante avec la distance
@@ -102,7 +107,6 @@ class City:
             current += weight
             if current > pick:
                 self._add_tile(tile_id)
-                print("extension réussie : ajout de la tuile", tile_id)
                 return tile_id
 
     def remove_tile(self, tile_id: int) -> bool:
@@ -203,3 +207,10 @@ class City:
     def __repr__(self):
         """Représentation textuelle de la ville"""
         return f"City(id={self.id}, name='{self.name}', owner={self.owner}, tiles={len(self.tile_ids)}, production={self.production})"
+
+    def _get_city_owning_tile(self, tile_id: int):
+        """Retourne la ville dont tile_id fait partie du territoire, ou None."""
+        for city in self.state.cities:
+            if tile_id in city.tile_ids:
+                return city
+        return None
