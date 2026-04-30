@@ -14,6 +14,7 @@ from world.unit import Unit, UnitType, UNIT_CLASS_MAP
 from world.selector import UnitSelector
 
 
+
 pygame.init()
 
 font = pygame.font.SysFont("consolas,monospace", 15)
@@ -95,6 +96,8 @@ def main():
                     selected_unit_type = UnitType.ARCHER
                 if event.key in (pygame.K_4, pygame.K_KP4):
                     selected_unit_type = UnitType.COLON
+                if event.key in (pygame.K_5, pygame.K_KP5):
+                    selected_unit_type = UnitType.PLANE
                 if event.key == pygame.K_ESCAPE:
                     unit_selector.deselect_unit()
                     ui_manager.close_construction_menu()

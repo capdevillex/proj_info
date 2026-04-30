@@ -23,7 +23,8 @@ class UnitType(Enum):
     CAVALRY = 2
     ARCHER  = 3
     COLON   = 4
-    BABY    = 6
+    BABY    = 5
+    PLANE   = 6
 
 
 class Unit:
@@ -41,6 +42,7 @@ class Unit:
     BASE_COST :     int
     UPKEEP_COST:    int
     DASH:           bool = False
+    FLY :           bool = False
     #HP
 
 
@@ -78,7 +80,7 @@ class Unit:
 
     def can_move(self):
         """Vérifie si l'unité peut encore se déplacer ce tour."""
-        return not self.has_moved and self.max_distance > 0
+        return not self.has_moved
 
     def move_to_tile(self, new_tile_id):
         """Déplace l'unité vers une nouvelle tuile."""
@@ -113,7 +115,7 @@ class Soldier(Unit):
     BASE_HP      = 100
     SIZE         = 4
     BASE_COST    = 10000
-    UPKEEP_COST  = 10
+    UPKEEP_COST  = 1
 
 class Cavalry(Unit):
     UNIT_TYPE    = UnitType.CAVALRY
@@ -123,7 +125,7 @@ class Cavalry(Unit):
     BASE_DEFENSE = 6
     BASE_HP      = 90
     SIZE         = 4
-    UPKEEP_COST  = 10
+    UPKEEP_COST  = 1
     BASE_COST    = 150
 
 class Archer(Unit):
@@ -134,7 +136,7 @@ class Archer(Unit):
     BASE_DEFENSE = 5
     BASE_HP      = 70
     SIZE         = 4
-    UPKEEP_COST  = 10
+    UPKEEP_COST  = 1
     BASE_COST    = 10
 
 class Colon(Unit):
@@ -146,8 +148,21 @@ class Colon(Unit):
     BASE_HP        = 50
     WATER_AFFINITY = True
     SIZE           = 4
-    BASE_COST      = 10
+    BASE_COST      = 15
     UPKEEP_COST    = 10
+
+class Plane(Unit):
+    UNIT_TYPE      = UnitType.PLANE
+    MAX_DISTANCE   = 10
+    ATTACK_RANGE   = 3
+    BASE_ATTACK    = 20
+    BASE_DEFENSE   = 5
+    BASE_HP        = 50
+    WATER_AFFINITY = True
+    SIZE           = 4
+    BASE_COST      = 15
+    UPKEEP_COST    = 10
+    FLY            = True
 
 
 class Baby(Unit):
@@ -158,7 +173,7 @@ class Baby(Unit):
     BASE_DEFENSE   = 3
     BASE_HP        = 50
     SIZE           = 4
-    UPKEEP_COST    = 10
+    UPKEEP_COST    = 1
     BASE_COST      = 50
 
 
@@ -170,4 +185,5 @@ UNIT_CLASS_MAP = {
     UnitType.ARCHER:  Archer,
     UnitType.COLON:   Colon,
     UnitType.BABY:    Baby,
+    UnitType.PLANE:   Plane,
 }

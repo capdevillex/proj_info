@@ -54,7 +54,13 @@ class Movement:
             Biome.WATER: 1,
             Biome.DESERT: 1,
         },
-        UnitType.BABY: {Biome.WATER: 2},  # Pareil que soldat
+        UnitType.BABY: {Biome.WATER: 2
+        },  # Pareil que soldat
+        UnitType.PLANE: {
+            Biome.MOUNTAIN: 1,
+            Biome.FOREST: 1,
+            Biome.WATER: 1,
+            Biome.DESERT: 1,}
     }
 
     @staticmethod
@@ -138,6 +144,39 @@ class Movement:
 
         return distances
 
+    
+    @staticmethod
+    def get_reachable_tiles_fly(game_state: GameState, unit: Unit) -> set:
+        """
+        Récupère les tuiles accessibles pour une unité volante.
+        Utilise la distance de Manhattan — ignore le terrain et les obstacles.
+        """
+        map_ = game_state.map
+        origin_tile = map_.tiles[unit.tile_id]
+        ox, oy = origin_tile.center
+
+        reachable = set()
+
+        for tile_id, tile in map_.tiles.items():
+            if tile_id == unit.tile_id:
+                continue
+
+            # Distance de Manhattan basée sur les coordonnées du centre des tuiles
+            dx = abs(tile.center[0] - ox)
+            dy = abs(tile.center[1] - oy)
+            manhattan = (dx + dy)/6
+
+            if manhattan > unit.MAX_DISTANCE:
+                continue
+
+            # Pas d'atterrissage sur une tuile occupée
+            if tile.has_units():
+                continue
+
+            reachable.add(tile_id)
+
+        return reachable
+
     @staticmethod
     def get_reachable_tiles(game_state: GameState, unit: Unit) -> set:
         """
@@ -157,37 +196,43 @@ class Movement:
             return set()
 
         # Utiliser Dijkstra au lieu du BFS simple
-        distances = Movement.dijkstra_reachable(
-            map_, unit.tile_id, unit.max_distance, unit.unit_type
-        )
+        if unit.FLY :
+            print("Bisous je m'envol")
+            return Movement.get_reachable_tiles_fly(game_state,unit)
+        else:
 
-        # Retourner toutes les tuiles accessibles
-        reachable = set()
-        for tile_id, movement_cost in distances.items():
-            # On exclut la tuile de départ (distance > 0)
-            if movement_cost == 0:
-                continue
+            distances = Movement.dijkstra_reachable(
+                map_, unit.tile_id, unit.max_distance, unit.unit_type
+            )
 
-            if game_state.use_ti and not (game_state.discovered & (1 << tile_id)):
+            # Retourner toutes les tuiles accessibles
+            reachable = set()
+            for tile_id, movement_cost in distances.items():
+                # On exclut la tuile de départ (distance > 0)
+                if movement_cost == 0:
                     continue
 
-            # On ne dépasse pas le mouvement max
-            if movement_cost > unit.max_distance:
-                continue
+                if game_state.use_ti and not (game_state.discovered & (1 << tile_id)):
+                        continue
 
-            tile = map_.tiles[tile_id]
+                # On ne dépasse pas le mouvement max
+                if movement_cost > unit.max_distance:
+                    continue
 
-            # On ne peut pas aller sur une tuile avec une unité
-            if tile.has_units():
-                continue
+                tile = map_.tiles[tile_id]
 
-            # On respecte l'affinité avec l'eau
-            if not unit.water_affinity and tile.is_water():
-                continue
+                # On ne peut pas aller sur une tuile avec une unité
+                if tile.has_units():
+                    continue
 
-            reachable.add(tile_id)
+                # On respecte l'affinité avec l'eau
+                if not unit.water_affinity and tile.is_water():
+                    continue
+
+                reachable.add(tile_id)
 
         return reachable
+
 
     #Pour animations
     @staticmethod

@@ -1,5 +1,6 @@
 from world.unit import UnitType, Soldier, Cavalry, Colon, Baby, Archer
 from world.biome import Biome
+from core.systems.movement import Movement
 
 
 class Combat:
@@ -49,12 +50,15 @@ class Combat:
         damage = self.compute_damage(state, attacker, defender)
 
         # Appliquer les dégâts (TODO: ajouter HP aux unités)
-        defender.hp -= damage
+        
 
         print(f"⚔️ Combat : {attacker.unit_type.name} attaque {defender.unit_type.name}")
+        print(f"avant :{defender.hp}")
         print(f"   Dégâts infligés : {damage:.1f}")
-
-        result = {"damage": damage, "defender_killed": defender.hp <= 0}  # TODO: vérifier si defender.hp <= 0
+        defender.hp -= damage
+        print(f"apres :{defender.hp}")
+        result = {"damage": damage, "defender_killed": defender.hp <= 0}
+        attacker.has_moved = True
 
         if defender.hp <= 0:
             print(f"   💀 {defender.unit_type.name} est détruit !")
@@ -100,20 +104,20 @@ class Combat:
             return False
 
         # Vérifier que l'attaquant peut bouger (pas encore implémenté pour l'attaque)
-        # if not attacker.can_move():
-        #     print(f"❌ L'unité {attacker.id} a déjà agi ce tour")
-        #     return False
+        if not attacker.can_move():
+            print(f"❌ L'unité {attacker.id} a déjà agi ce tour")
+            return False
 
         # Vérifier que les unités sont adjacentes (TODO: implémenter portée d'attaque)
         attacker_tile = state.map.tiles.get(attacker.tile_id)
-        if attacker_tile and defender.tile_id not in attacker_tile.neighbors:
+        if attacker_tile and defender.tile_id not in Movement.get_attackable_tiles(state.map,attacker):
             print(f"❌ La cible est trop loin")
             return False
 
         return True
 
 
-    DAMAGE_THRESHOLD_FOR_DEATH = 15  # Constante à mettre ici, pas dans game_engine
+    # Constante à mettre ici, pas dans game_engine
     #mzethode de merde pour la vie du truc
 
     def execute_attack(self, state, attacker, target_tile_id):
@@ -153,7 +157,7 @@ class Combat:
         damage = result.get("damage", 0)
 
         # Décider du sort du défenseur
-        defender_killed = damage >= self.DAMAGE_THRESHOLD_FOR_DEATH
+        defender_killed = damage >= defender.hp < 0
         if defender_killed:
             print(f"💀 L'unité ennemie {defender.unit_type.name} est détruite !")
         else:

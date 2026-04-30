@@ -278,7 +278,7 @@ class GameEngine:
             "Lumière",
             "Auffrac-les-Congères",
             "Victorville",
-            "Cap-de-ville"
+            "Cap-de-ville",
             "Gloire",
             "Honneur",
         ]
