@@ -10,7 +10,6 @@ Phase 0 :
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
 
 Phase 1 :
-    Peaufiner rendu TI (V : in progress)
     système de sauvegarde de partie
     Faire dessins de même taille
 
@@ -72,3 +71,5 @@ V : Construction basique (menu de constrution sur clic droit : ferme, scierie, m
 V : Ajouter routes (dans le menu de construction, bonus déplacement)
 V : Expansion des villes (achat tuiles)
 V : Villes simples (V: in progress)
+V : Ajout d'un menu contextuel si clic droit sur une tuile
+V : Peaufiner rendu TI
