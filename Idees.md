@@ -31,7 +31,7 @@ Le monde est généré de manière entièrement **déterministe** via une graine
 ### Formule de Dégâts
 Les dégâts sont calculés selon la formule suivante :
 
-`damage = base_bamage *  attack / (attack + defense) * terrain_modifier * (HP / MaxHP)`
+`damage =(attack - defense * terrain_modifier) * type_modifier * hp_ratio`
 
 ### Types d'Unités & Équilibre (Triangle d'Acier)
 * **Soldat (Infanterie) :** Efficace contre la Cavalerie.
