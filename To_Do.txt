@@ -1,7 +1,7 @@
 -----------A FAIRE-------------
 
 Phase 0 :
-    Développer système de combat
+    
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
 
 =======
@@ -73,3 +73,4 @@ V : Expansion des villes (achat tuiles)
 V : Villes simples (V: in progress)
 V : Ajout d'un menu contextuel si clic droit sur une tuile
 V : Peaufiner rendu TI
+X : Combat avec edge-case
