@@ -1,11 +1,11 @@
-from typing import List, Dict, Optional, Any
+from typing import Dict, Optional
 
-from core.game_state import GameState
+from core.game_state import GameState, TurnPhase
 from core.systems import Movement, Combat, Economy, Visibility
+from core.ai.base_ai import BaseAI
 from world.unit import Unit, UnitType, UNIT_CLASS_MAP
 from world.construction import Farm, Mine, Road, Scierie
 from world.city import City
-from world.map import Map
 from world.biome import Biome
 from config import GameConfig as gc
 import random
@@ -17,6 +17,11 @@ class GameEngine:
 
     Gère toutes les interactions entre les systèmes (mouvement, combat, économie, visibilité)
     et maintient la cohérence de l'état du jeu.
+
+    Cycle de tour :
+        1. Tour joueur  → end_turn() appelé depuis l'UI
+        2. Tours IA     → _run_ai_turns() (une passe par royaume IA, dans l'ordre)
+        3. Fin de round → _end_round() (économie, reset mouvement, compteur, FOW)
     """
 
     def __init__(self, game_state: GameState):
@@ -26,27 +31,40 @@ class GameEngine:
         self.movement = Movement  # Utiliser le système centralisé
         self.combat = Combat()
         self.economy = Economy()
-        self.visibility = Visibility(
-            self.state
-        )  # Redondant avec les calculs fait dans GameState, à peut-être dégager
+        self.visibility = Visibility(self.state)
 
-        # flag pour forcer une mise à jour UI après certaines actions
+        # Contrôleurs IA enregistrés : kingdom_id → BaseAI
+        self._ai_controllers: Dict[int, BaseAI] = {}
+
+        # Flag pour forcer une mise à jour UI après certaines actions
         self.needs_ui_update = False
 
-    # ========== GESTION DES UNITÉS ==========
+    @property
+    def input_locked(self) -> bool:
+        """True pendant les tours IA : l'UI doit ignorer toute entrée joueur."""
+        return self.state.phase == TurnPhase.AI_TURN
 
-    def spawn_unit(self, unit_type: UnitType, tile_id: int, owner: int = 0) -> Optional[Unit]:
-        """
-        Place une nouvelle unité du type spécifié sur la tuile donnée.
+    # Gestion des royaumes / IA
+    def register_ai(self, ai: BaseAI) -> None:
+        """Associe un contrôleur IA à un royaume.
+
+        Doit être appelé avant la boucle de jeu. Le royaume correspondant doit
+        déjà exister dans state.kingdoms.
 
         Args:
-            unit_type: Type d'unité à créer
-            tile_id: ID de la tuile où placer l'unité
-            owner: Propriétaire de l'unité (joueur)
-
-        Returns:
-            L'unité créée, ou None si le placement est impossible
+            ai: Instance concrète de BaseAI pour le royaume ai.kingdom_id.
         """
+        kingdom = self.state.get_kingdom(ai.kingdom_id)
+        if kingdom is None:
+            raise ValueError(f"Royaume {ai.kingdom_id} inconnu — ajouter via state.add_kingdom() d'abord")
+        if not kingdom.is_ai:
+            raise ValueError(f"Le royaume {ai.kingdom_id} n'est pas marqué is_ai=True")
+        self._ai_controllers[ai.kingdom_id] = ai
+        print(f"[IA] Contrôleur enregistré pour '{kingdom.name}' (id={ai.kingdom_id})")
+
+    #  Gestion des unités
+    def spawn_unit(self, unit_type: UnitType, tile_id: int, owner: int = 0) -> Optional[Unit]:
+        """Place une nouvelle unité du type spécifié sur la tuile donnée."""
         tile = self.state.map.tiles.get(tile_id)
 
         if not tile:
@@ -67,23 +85,17 @@ class GameEngine:
             return None
 
         new_unit = unit_class(tile_id=tile_id, owner=owner)
-
         tile.add_unit(new_unit)
         self.state.units.append(new_unit)
 
         self.visibility.update(self.state)
         self.state.update_fow()
 
-        print(f"✅ Unité {unit_type.name} numéro {new_unit.id} créée sur tuile {tile_id}")
-
+        print(f"✅ Unité {unit_type.name} numéro {new_unit.id} créée sur tuile {tile_id} (owner={owner})")
         return new_unit
 
     def move_unit(self, unit: Unit, target_tile_id: int) -> bool:
-        """
-        Déplace une unité vers une tuile cible.
-
-        MAINTENANT : Juste un wrapper qui appelle MovementSystem !
-
+        """Déplace une unité vers une tuile cible.
         Args:
             unit: L'unité à déplacer
             target_tile_id: ID de la tuile de destination
@@ -93,12 +105,10 @@ class GameEngine:
         """
         # Utiliser le système centralisé
         success = self.movement.execute_move(self.state, unit, target_tile_id)
-
         if success:
             # Mettre à jour la visibilité après le mouvement
             self.visibility.update(self.state)
             self.state.update_fow()
-
         return success
 
     def remove_unit(self, unit: Unit) -> bool:
@@ -123,11 +133,9 @@ class GameEngine:
             self.state.update_fow()
             print(f"✅ Unité {unit.id} retirée du jeu")
             return True
-
         return False
 
-    # ========== GESTION DU COMBAT ==========
-
+    #  Gestion du combat
     def attack_unit(self, attacker: Unit, target_tile_id: int) -> dict:
         """
         Attaque une unité sur une tuile cible.
@@ -172,9 +180,7 @@ class GameEngine:
         for city in self.state.cities:
             city.age += 1
             if city.age in gc.CITY_MIN_TURN_EXTENTION_AVAILABLE:
-                print(
-                    f"La ville '{city.name}' peut maintenant être étendue (âge {city.age} tours)"
-                )
+                print(f"La ville '{city.name}' peut être étendue (âge {city.age})")
                 city.expend_territory(self.state)
                 self.needs_ui_update = True
 
@@ -186,7 +192,7 @@ class GameEngine:
         print(f"Début du tour {self.state.turn}")
         print(f"{'='*50}\n")
 
-    # ========== GESTION DES VILLES ==========
+    # Gestion des villes
 
     def found_city(self, colon_unit: Unit, city_name: Optional[str] = None) -> bool:
         """
@@ -224,10 +230,12 @@ class GameEngine:
         if city_name is None:
             city_name = self._generate_city_name(colon_unit.owner)
 
-        # Créer la ville
-        new_city = City(name=city_name, owner=colon_unit.owner, center_tile_id=colon_unit.tile_id, state=self.state)
-
-        # Ajouter la ville à l'état du jeu
+        new_city = City(
+            name=city_name,
+            owner=colon_unit.owner,
+            center_tile_id=colon_unit.tile_id,
+            state=self.state,
+        )
         self.state.add_city(new_city)
 
         # Calculer la production initiale
@@ -236,10 +244,7 @@ class GameEngine:
         # Retirer le colon du jeu
         self.remove_unit(colon_unit)
 
-        print(
-            f"✅ Ville '{city_name}' fondée sur la tuile {colon_unit.tile_id} par le joueur {colon_unit.owner}"
-        )
-
+        print(f"✅ Ville '{city_name}' fondée sur la tuile {colon_unit.tile_id} par le royaume {colon_unit.owner}")
         return True
 
     def _generate_city_name(self, owner: int) -> str:
@@ -254,34 +259,13 @@ class GameEngine:
         """
         # Listes de noms de villes, je dois avouer avoir une inspiration limitée
         city_names = [
-            "Nova",
-            "Bourg Palette",
-            "Arcadia",
-            "Zenith",
-            "Aurora",
-            "Elysium",
-            "Olympus",
-            "Volucité",
-            "Atlantis",
-            "Avalon",
-            "Carmin-sur-mer",
-            "Kaamelott",
-            "Eden",
-            "Relifac-le-Haut",
-            "Utopia",
-            "Paradis",
-            "Lavanville",
-            "Harmonie",
-            "Prospérité",
-            "Liberté",
-            "Féli-Cité",
-            "Espoir",
-            "Lumière",
-            "Auffrac-les-Congères",
-            "Victorville",
-            "Cap-de-ville"
-            "Gloire",
-            "Honneur",
+            "Nova", "Bourg Palette", "Arcadia", "Zenith", "Aurora",
+            "Elysium", "Olympus", "Volucité", "Atlantis", "Avalon",
+            "Carmin-sur-mer", "Kaamelott", "Eden", "Relifac-le-Haut",
+            "Utopia", "Paradis", "Lavanville", "Harmonie", "Prospérité",
+            "Liberté", "Féli-Cité", "Espoir", "Lumière",
+            "Auffrac-les-Congères", "Victorville", "Cap-de-ville"
+            "Gloire", "Honneur",
         ]
         # Récupérer les noms déjà utilisés
         used_names = {city.name for city in self.state.cities if city.owner == owner}
@@ -298,20 +282,43 @@ class GameEngine:
             counter += 1
         return f"{base_name} {counter}"
 
-    def get_corner_tile(self, corner: str):
-        """Retourne la tuile non-occupée la plus proche d'un coin."""
-        tiles = self.state.map.tiles.values()
+    # Gestion du terrain / placement initial
+    def get_corner_tile(self, corner: str) -> Optional[int]:
+        """Retourne l'ID de la tuile non-occupée la plus proche d'un coin.
 
-        if corner == "top_left":
-            candidates = sorted(tiles, key=lambda t: t.center[0] + t.center[1])
-        else:
-            candidates = sorted(tiles, key=lambda t: t.center[0] + t.center[1], reverse=True)
-
+        Coins acceptés : "top_left", "bottom_right", "top_right", "bottom_left".
+        """
+        tiles = list(self.state.map.tiles.values())
+        corner_keys = {
+            "top_left":     (lambda t: t.center[0] + t.center[1], False),
+            "bottom_right": (lambda t: t.center[0] + t.center[1], True),
+            "top_right":    (lambda t: t.center[0] - t.center[1], True),
+            "bottom_left":  (lambda t: t.center[0] - t.center[1], False),
+        }
+        key_fn, reverse = corner_keys.get(corner, corner_keys["top_left"])
+        candidates = sorted(tiles, key=key_fn, reverse=reverse)
         for tile in candidates:
             if not tile.has_units():
                 return tile.id
 
         return None
+
+    def setup_start_units(self) -> None:
+        """Fait spawner un colon de départ pour chaque royaume enregistré.
+
+        L'ordre des coins suit l'ordre dans turn_order :
+          index 0 → top_left, 1 → bottom_right, 2 → top_right, 3 → bottom_left, ...
+        """
+        corners = ["top_left", "bottom_right", "top_right", "bottom_left"]
+        for i, kingdom_id in enumerate(self.state.turn_order):
+            corner = corners[i % len(corners)]
+            tile_id = self.get_corner_tile(corner)
+            if tile_id is not None:
+                unit = self.spawn_unit(UnitType.COLON, tile_id, owner=kingdom_id)
+                if unit and kingdom_id == self.state.current_player:
+                    unit.upkeep_cost = 0  # colon de départ du joueur : entretien offert
+            else:
+                print(f"⚠️ Impossible de trouver une tuile de départ pour le royaume {kingdom_id}")
 
     def build_construction(self, tile, construction_name: str, player: int) -> bool:
         """Construit un bâtiment sur la tuile si le joueur a les ressources nécessaires.

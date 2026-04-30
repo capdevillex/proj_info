@@ -22,6 +22,41 @@ button_font = pygame.font.SysFont("consolas,monospace", 15)
 img_path = Path(".") / "img"
 
 
+def _setup_game(seed: int) -> tuple[GameState, GameEngine]:
+    """Crée un GameState et un GameEngine frais avec les royaumes configurés.
+
+    C'est ici qu'on enregistre les royaumes ennemis (et leurs IA quand elles
+    seront implémentées). Modifier cette fonction pour ajouter / retirer des IA.
+    """
+    gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
+
+    # Royaumes ennemis
+    # Décommenter et dupliquer pour ajouter des royaumes supplémentaires.
+    # Les paramètres ai_params calibreront l'arbre de décision pondéré.
+    # Ne pas oublier d'ajouter : from world.kingdom import Kingdom
+    #
+    # Exemple royaume agressif :
+    # gs.add_kingdom(Kingdom(
+    #     kingdom_id=1, name="Barbares", color=(190, 70, 60), is_ai=True,
+    #     ai_params={"aggression": 0.8, "exploration": 0.5, "expansion": 0.3, "defense": 0.2},
+    # ))
+    #
+    # Exemple royaume expansionniste :
+    # gs.add_kingdom(Kingdom(
+    #     kingdom_id=2, name="Marchands", color=(60, 170, 90), is_ai=True,
+    #     ai_params={"aggression": 0.2, "exploration": 0.7, "expansion": 0.9, "defense": 0.5},
+    # ))
+
+    engine = GameEngine(gs)
+
+    # Enregistrement des contrôleurs IA (quand implémentés)
+    # from core.ai.my_ai import MyAI
+    # engine.register_ai(MyAI(kingdom_id=1, params=gs.get_kingdom(1).ai_params))
+
+    engine.setup_start_units()
+    return gs, engine
+
+
 def main():
     screen = pygame.display.set_mode((gc.SCREEN_WIDTH, gc.SCREEN_HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("Novum Imperium(4X Prototype)")
@@ -35,10 +70,8 @@ def main():
     clock = pygame.time.Clock()
 
     seed = random.randint(0, 1000)
-    gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
+    gs, game_engine = _setup_game(seed)
 
-    game_engine = GameEngine(gs)
-    game_engine.setup_start_units()
     camera = Camera()
     renderer = RenderPipeline(font, gc.BIOME_COLORS)
     ui_manager = UIManager(game_engine, renderer, button_font, camera)
@@ -64,22 +97,15 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
+            # Touches non-verrouillées (toujours actives)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     print(" --- Regenerating map --- ")
                     renderer.map_dirty = True
                     renderer.border_dirty = True
                     seed = random.randint(0, 1000)
-                    gs = GameState(
-                        gc.WIDTH,
-                        gc.HEIGHT,
-                        seed,
-                        log=gc.LOG_MAP_GENERATION,
-                        tile_area=gc.TILE_AVG_AREA,
-                    )
+                    gs, game_engine = _setup_game(seed)
                     game_map = gs.map
-                    game_engine = GameEngine(gs)
-                    game_engine.setup_start_units()
                     ui_manager.game_engine = game_engine
                     ui_manager.mark_dirty()
                     renderer.clear_cache()
@@ -87,6 +113,14 @@ def main():
                 if event.key == pygame.K_c:
                     renderer.show_centers = not renderer.show_centers
 
+            if event.type == pygame.MOUSEWHEEL:
+                camera.apply_zoom(pygame.mouse.get_pos(), event.y)
+
+            # Entrées joueur verrouillées pendant le tour IA
+            if game_engine.input_locked:
+                continue  # ignorer tous les inputs joueur pendant le tour IA
+
+            if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_1, pygame.K_KP1):
                     selected_unit_type = UnitType.SOLDIER
                 if event.key in (pygame.K_2, pygame.K_KP2):
@@ -103,9 +137,6 @@ def main():
                     game_engine.end_turn()
                     unit_selector.deselect_unit()
                     ui_manager.mark_dirty()
-
-            if event.type == pygame.MOUSEWHEEL:
-                camera.apply_zoom(pygame.mouse.get_pos(), event.y)
 
             # --- GESTION DES CLICS ---
             if event.type == pygame.MOUSEBUTTONUP:
