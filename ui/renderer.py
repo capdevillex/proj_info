@@ -401,6 +401,27 @@ class RenderPipeline:
 
         return surface, (min_x * tile_size, min_y * tile_size)
 
+    def _draw_hp_bar(self, screen, cx, cy, unit, bar_w):
+        """Dessine une barre d'HP sous une unité centrée en (cx, cy)."""
+        hp_ratio = max(0.0, unit.hp / unit.BASE_HP)
+        bar_w *= unit.BASE_HP / 75
+        bar_h = max(3, bar_w // 8)
+        bar_y = cy + bar_w // 2 + 2
+
+        bg_rect = pygame.Rect(cx - bar_w // 2, bar_y, bar_w, bar_h)
+        pygame.draw.rect(screen, (40, 40, 40), bg_rect)
+
+        if hp_ratio > 0.5:
+            color = (60, 200, 60)
+        elif hp_ratio > 0.25:
+            color = (220, 180, 0)
+        else:
+            color = (210, 40, 40)
+
+        fill_w = max(1, int(bar_w * hp_ratio))
+        fill_rect = pygame.Rect(cx - bar_w // 2, bar_y, fill_w, bar_h)
+        pygame.draw.rect(screen, color, fill_rect)
+
     # Méthode pour dessiner les unités
     def render_units(self, screen, game_map, cam, tile_size):
         """
@@ -444,6 +465,9 @@ class RenderPipeline:
                 alpha = int(255 * opacity)
                 scaled_img.set_alpha(alpha)
                 screen.blit(scaled_img, img_rect)
+
+                # 5. Barre d'HP sous l'unité
+                self._draw_hp_bar(screen, screen_x, screen_y, unit, scaled_size)
 
     def render_cities(self, screen, game_state, cam, tile_size):
         """
