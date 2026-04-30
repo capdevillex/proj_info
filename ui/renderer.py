@@ -62,6 +62,8 @@ class RenderPipeline:
         }
         self.default_image = pygame.image.load(img_path / "soldat.png").convert_alpha()
         self.unit_cache = {}
+        self.damage_numbers = []   # [{world_x, world_y, damage, ttl, max_ttl}]
+        self._dmg_font_cache = {}
 
         # dico avec les images des ressources
         self.rsrc_img = {
@@ -401,6 +403,52 @@ class RenderPipeline:
 
         return surface, (min_x * tile_size, min_y * tile_size)
 
+    def add_damage_number(self, tile_id, damage, game_map, tile_size, cam_zoom=1.0):
+        """Enregistre un nombre de dégâts flottant centré sur la tuile cible.
+        La surface texte est pré-rendue une seule fois ici."""
+        tile = game_map.tiles.get(tile_id)
+        if not tile:
+            return
+        cx, cy = tile.center
+
+        font_size = max(10, int(16 * cam_zoom))
+        if font_size not in self._dmg_font_cache:
+            self._dmg_font_cache[font_size] = pygame.font.SysFont(None, font_size)
+        surf = self._dmg_font_cache[font_size].render(f"-{int(damage)}", True, (255, 50, 50))
+
+        self.damage_numbers.append({
+            "world_x": cx * tile_size,
+            "world_y": cy * tile_size,
+            "surf": surf,
+            "ttl": 1.2,
+            "max_ttl": 1.2,
+        })
+
+    def render_damage_numbers(self, screen, cam, dt):
+        """Dessine et fait monter les nombres de dégâts flottants."""
+        if not self.damage_numbers:
+            return
+        remaining = []
+        for entry in self.damage_numbers:
+            entry["ttl"] -= dt
+            if entry["ttl"] <= 0:
+                continue
+            remaining.append(entry)
+
+            ratio = entry["ttl"] / entry["max_ttl"]
+            elapsed = entry["max_ttl"] - entry["ttl"]
+
+            screen_x, screen_y = world_to_screen(
+                entry["world_x"], entry["world_y"], cam.x, cam.y, cam.zoom
+            )
+            screen_y -= int(elapsed * 40 * cam.zoom)
+
+            surf = entry["surf"]
+            surf.set_alpha(int(255 * ratio))
+            screen.blit(surf, surf.get_rect(center=(int(screen_x), int(screen_y))))
+
+        self.damage_numbers = remaining
+
     def _draw_hp_bar(self, screen, cx, cy, unit, bar_w):
         """Dessine une barre d'HP sous une unité centrée en (cx, cy)."""
         hp_ratio = max(0.0, unit.hp / unit.BASE_HP)
@@ -506,6 +554,7 @@ class RenderPipeline:
         self.render_overlay(screen, game_state, cam, tile_size, hovered_tile)
         self.render_units(screen, game_state.map, cam, tile_size)
         self.render_cities(screen, game_state, cam, tile_size)
+        self.render_damage_numbers(screen, cam, dt)
         # self.render_ui(screen, game_state.map, hovered_tile, dt)
 
     def render_world(self, screen, game_map, game_state, cam, tile_size):

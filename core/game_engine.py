@@ -128,10 +128,11 @@ class GameEngine:
 
     # ========== GESTION DU COMBAT ==========
 
-    def attack_unit(self, attacker: Unit, target_tile_id: int) -> bool:
+    def attack_unit(self, attacker: Unit, target_tile_id: int) -> dict:
         """
         Attaque une unité sur une tuile cible.
         Délègue toute la logique à Combat, ne gère que les effets de bord.
+        Retourne le dict complet : success, damage, defender, defender_killed.
         """
         result = self.combat.execute_attack(self.state, attacker, target_tile_id)
 
@@ -139,7 +140,7 @@ class GameEngine:
             self.remove_unit(result["defender"])  # Effet de bord : retirer l'unité du jeu
             # (remove_unit met déjà à jour la visibilité)
 
-        return result["defender_killed"]
+        return result
 
     # ========== GESTION DES TOURS ==========
 

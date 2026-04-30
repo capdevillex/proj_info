@@ -183,14 +183,16 @@ def main():
                                 unit_selector.deselect_unit()
                             # Vérifier si on attaque une unité ennemie (tuile rouge)
                             elif unit_selector.is_tile_attackable(hovered_tile.id):
-                                if game_engine.attack_unit(
+                                atk_result = game_engine.attack_unit(
                                     unit_selector.selected_unit, hovered_tile.id
-                                ):
-                                    # Attaque réussie, désélectionner
+                                )
+                                if atk_result["success"] and atk_result["damage"] > 0:
+                                    renderer.add_damage_number(
+                                        hovered_tile.id, atk_result["damage"],
+                                        gs.map, tile_size, camera.zoom
+                                    )
+                                if atk_result["defender_killed"]:
                                     unit_selector.deselect_unit()
-                                else:
-                                    # Attaque échouée mais pas grave, on laisse sélectionné
-                                    pass
                             # Sinon, essayer de se déplacer (tuile bleue)
                             else:
                                 if game_engine.move_unit(

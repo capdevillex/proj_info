@@ -153,7 +153,7 @@ class Combat:
         damage = result.get("damage", 0)
 
         # Décider du sort du défenseur
-        defender_killed = damage >= self.DAMAGE_THRESHOLD_FOR_DEATH
+        defender_killed = result.get("defender_killed", False)
         if defender_killed:
             print(f"💀 L'unité ennemie {defender.unit_type.name} est détruite !")
         else:
