@@ -174,7 +174,7 @@ def main():
                             if hovered_tile.has_units():
                                 unit = hovered_tile.units[0]
                                 if unit.can_move():
-                                    unit_selector.select_unit(unit, game_map)
+                                    unit_selector.select_unit(unit, game_engine.state)
 
                         # Priorité C : Mouvement ou attaque d'unité déjà sélectionnée
                         else:

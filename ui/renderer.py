@@ -228,6 +228,9 @@ class RenderPipeline:
                 if tile_id not in game_map.tiles:
                     continue
 
+                if game_state.use_ti and not (game_state.discovered & (1 << tile_id)):
+                    continue
+
                 tile = game_map.tiles[tile_id]
 
                 # Dessiner chaque cellule de la tuile avec la teinte
@@ -255,6 +258,9 @@ class RenderPipeline:
             # Parcourir toutes les cellules de toutes les tuiles de la ville
             for tile_id in city_tile_ids:
                 if tile_id not in game_map.tiles:
+                    continue
+
+                if game_state.use_ti and not (game_state.discovered & (1 << tile_id)):
                     continue
 
                 tile = game_map.tiles[tile_id]
@@ -329,8 +335,9 @@ class RenderPipeline:
 
         return surface
 
-    def build_border_sf(self, game_map, tile_size):
+    def build_border_sf(self, game_state, tile_size):
         """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre les frontières des provinces"""
+        game_map = game_state.map
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
 
@@ -340,13 +347,16 @@ class RenderPipeline:
 
         for y in range(game_map.height):
             for x in range(game_map.width):
-                tile = game_map.grid[y][x]
+                tile_id = game_map.grid[y][x]
+
+                if game_state.use_ti and not (game_state.discovered & (1 << tile_id)):
+                    continue
 
                 for dx, dy in [(1, 0), (0, 1)]:
                     nx, ny = x + dx, y + dy
 
                     if 0 <= nx < game_map.width and 0 <= ny < game_map.height:
-                        if game_map.grid[ny][nx] != tile:
+                        if game_map.grid[ny][nx] != tile_id:
                             px = x * tile_size
                             py = y * tile_size
 
@@ -368,7 +378,7 @@ class RenderPipeline:
                                 )
         return surface
 
-    def build_tile_highlight(self, tile, tile_size):
+    def build_tile_highlight(self, game_state, tile, tile_size):
         """Crée une surface unique pour la mise en évidence d'une tuile spécifique."""
         min_x = min(c[0] for c in tile.cells)
         max_x = max(c[0] for c in tile.cells)
@@ -381,6 +391,9 @@ class RenderPipeline:
         surface = pygame.Surface((width, height), pygame.SRCALPHA)
 
         highlight_color = (255, 255, 255, 100)
+
+        if game_state.use_ti and not (game_state.discovered & (1 << tile.id)):
+            return surface, (min_x * tile_size, min_y * tile_size)
 
         for x, y in tile.cells:
             rect = ((x - min_x) * tile_size, (y - min_y) * tile_size, tile_size, tile_size)
@@ -466,7 +479,7 @@ class RenderPipeline:
 
     def render(self, screen, game_state, cam, tile_size, hovered_tile, dt):
         self.render_world(screen, game_state.map, game_state, cam, tile_size)
-        self.render_overlay(screen, game_state.map, cam, tile_size, hovered_tile)
+        self.render_overlay(screen, game_state, cam, tile_size, hovered_tile)
         self.render_units(screen, game_state.map, cam, tile_size)
         self.render_cities(screen, game_state, cam, tile_size)
         # self.render_ui(screen, game_state.map, hovered_tile, dt)
@@ -481,7 +494,7 @@ class RenderPipeline:
             self.resource_dirty = False
 
         if self.border_sf is None or self.border_dirty:
-            self.border_sf = self.build_border_sf(game_map, tile_size)
+            self.border_sf = self.build_border_sf(game_state, tile_size)
             self.border_dirty = False
 
         # Construire les surfaces de villes si nécessaire
@@ -595,13 +608,13 @@ class RenderPipeline:
             )
             screen.blit(scaled_city_border, (offset_x, offset_y))
 
-    def render_overlay(self, screen, game_map, cam, tile_size, hovered_tile):
+    def render_overlay(self, screen, game_state, cam, tile_size, hovered_tile):
         if not hovered_tile:
             return
 
         if hovered_tile.id not in self.tile_highlights:
             self.tile_highlights[hovered_tile.id] = self.build_tile_highlight(
-                hovered_tile, tile_size
+                game_state, hovered_tile, tile_size
             )
 
         highlight_surf, (world_x, world_y) = self.tile_highlights[hovered_tile.id]

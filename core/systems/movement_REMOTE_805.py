@@ -10,12 +10,8 @@ Gère :
 
 import heapq
 from collections import deque
-<<<<<<< HEAD
-from world.unit import Unit, UnitType, Soldier, Cavalry, Colon, Baby, Archer
-=======
 from core.game_state import GameState
 from world.unit import Unit, UnitType
->>>>>>> b00f8a452d0b82bb677371b29d37133591c7b0d2
 from world.map import Map
 from world.tile import Tile
 from world.biome import Biome
@@ -193,7 +189,6 @@ class Movement:
 
         return reachable
 
-    #Pour animations
     @staticmethod
     def get_path_to_tile(map_: Map, unit: Unit, target_tile_id: int) -> list:
         """
@@ -257,7 +252,7 @@ class Movement:
 
     @staticmethod
     def get_attackable_tiles(map_: Map, unit: Unit) -> set:
-        if unit.ATTACK_RANGE == 0:
+        if unit.attack_range == 0:
             return set()
 
         attackable = set()
@@ -266,7 +261,7 @@ class Movement:
         visited = {unit.tile_id}
         frontier = {unit.tile_id}
 
-        for _ in range(unit.ATTACK_RANGE):
+        for _ in range(unit.attack_range):
             next_frontier = set()
             for tile_id in frontier:
                 tile = map_.tiles[tile_id]
