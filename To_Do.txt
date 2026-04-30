@@ -67,7 +67,7 @@ X : Correction iconographie
 X : Correction taille des unités incorrectes.
 X : Système de combat
 V : Expansion automatique des villes
-V : Construction basique (menu de constrution sur clic droit : ferme, scierie, mine, etc.)
+V : Construction basique (menu de construction sur clic droit : ferme, scierie, mine, etc.)
 V : Ajouter routes (dans le menu de construction, bonus déplacement)
 V : Expansion des villes (achat tuiles)
 V : Villes simples (V: in progress)
