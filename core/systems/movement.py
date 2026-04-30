@@ -10,12 +10,9 @@ Gère :
 
 import heapq
 from collections import deque
-<<<<<<< HEAD
 from world.unit import Unit, UnitType, Soldier, Cavalry, Colon, Baby, Archer
-=======
 from core.game_state import GameState
 from world.unit import Unit, UnitType
->>>>>>> b00f8a452d0b82bb677371b29d37133591c7b0d2
 from world.map import Map
 from world.tile import Tile
 from world.biome import Biome
