@@ -23,7 +23,6 @@ class UnitType(Enum):
     CAVALRY = 2
     ARCHER  = 3
     COLON   = 4
-    COLONIE = 5
     BABY    = 6
 
 
@@ -150,16 +149,6 @@ class Colon(Unit):
     UPKEEP_COST    = 10
 
 
-class Colonie(Unit):
-    UNIT_TYPE    = UnitType.COLONIE
-    MAX_DISTANCE = 0
-    ATTACK_RANGE = 0
-    BASE_ATTACK  = 0
-    BASE_DEFENSE = 0
-    BASE_HP      = 0
-    SIZE         = 15
-    UPKEEP_COST  = 10
-
 class Baby(Unit):
     UNIT_TYPE      = UnitType.BABY
     MAX_DISTANCE   = 3
@@ -179,6 +168,5 @@ UNIT_CLASS_MAP = {
     UnitType.CAVALRY: Cavalry,
     UnitType.ARCHER:  Archer,
     UnitType.COLON:   Colon,
-    UnitType.COLONIE: Colonie,
     UnitType.BABY:    Baby,
 }
