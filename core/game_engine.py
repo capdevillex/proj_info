@@ -8,6 +8,7 @@ from world.city import City
 from world.map import Map
 from world.biome import Biome
 from config import GameConfig as gc
+import random
 
 
 class GameEngine:
@@ -171,7 +172,7 @@ class GameEngine:
             city.age += 1
             if city.age in gc.CITY_MIN_TURN_EXTENTION_AVAILABLE:
                 print(
-                    f"📢 La ville '{city.name}' peut maintenant être étendue (âge {city.age} tours)"
+                    f"La ville '{city.name}' peut maintenant être étendue (âge {city.age} tours)"
                 )
                 city.expend_territory(self.state)
                 self.needs_ui_update = True
@@ -263,7 +264,7 @@ class GameEngine:
             "Atlantis",
             "Avalon",
             "Carmin-sur-mer",
-            "Camelot",
+            "Kaamelott",
             "Eden",
             "Relifac-le-Haut",
             "Utopia",
@@ -276,25 +277,24 @@ class GameEngine:
             "Espoir",
             "Lumière",
             "Auffrac-les-Congères",
-            "Victoire",
+            "Victorville",
+            "Cap-de-ville"
             "Gloire",
             "Honneur",
         ]
-
         # Récupérer les noms déjà utilisés
         used_names = {city.name for city in self.state.cities if city.owner == owner}
+        # Trouver les noms disponibles
+        available_names = [name for name in city_names if name not in used_names]
 
-        # Trouver un nom disponible
-        for name in city_names:
-            if name not in used_names:
-                return name
+        if available_names:                # Piocher un nom aléatoire parmi les disponibles
+            return random.choice(available_names)
 
         # Si tous les noms sont pris, ajouter un numéro
         base_name = city_names[0]
         counter = 1
         while f"{base_name} {counter}" in used_names:
             counter += 1
-
         return f"{base_name} {counter}"
 
     def get_corner_tile(self, corner: str):

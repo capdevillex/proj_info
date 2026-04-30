@@ -74,7 +74,7 @@ class RenderPipeline:
 
         # images des bâtiments (hors routes)
         self.building_img = {
-            Farm: crop_alpha(pygame.image.load(img_path / "buildings" / "farm.png").convert_alpha()),
+            Farm: crop_alpha(pygame.image.load(img_path / "buildings" / "farm2.png").convert_alpha()),
             Mine: crop_alpha(pygame.image.load(img_path / "buildings" / "mine.png").convert_alpha()),
             Scierie: crop_alpha(pygame.image.load(img_path / "buildings" / "scierie.png").convert_alpha()),
         }

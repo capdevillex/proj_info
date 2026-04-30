@@ -39,8 +39,10 @@ class Unit:
     BASE_HP:        int
     WATER_AFFINITY: bool = False
     SIZE:           int
+    BASE_COST :     int
     UPKEEP_COST:    int
     DASH:           bool = False
+
 
     _unit_counter = 0
 
@@ -60,6 +62,7 @@ class Unit:
         self.water_affinity = self.WATER_AFFINITY
         self.upkeep_cost    = self.UPKEEP_COST
         self.can_dash       = self.DASH
+        self.base_cost      = self.BASE_COST
 
 
     def __repr__(self):
@@ -105,10 +108,11 @@ class Soldier(Unit):
     UNIT_TYPE    = UnitType.SOLDIER
     MAX_DISTANCE = 3
     ATTACK_RANGE = 1
-    BASE_ATTACK  = 10
+    BASE_ATTACK  = 9999
     BASE_DEFENSE = 8
     BASE_HP      = 100
     SIZE         = 4
+    BASE_COST    = 10000
     UPKEEP_COST  = 10
 
 class Cavalry(Unit):
@@ -120,7 +124,7 @@ class Cavalry(Unit):
     BASE_HP      = 90
     SIZE         = 4
     UPKEEP_COST  = 10
-
+    BASE_COST    = 150
 
 class Archer(Unit):
     UNIT_TYPE    = UnitType.ARCHER
@@ -131,6 +135,7 @@ class Archer(Unit):
     BASE_HP      = 70
     SIZE         = 4
     UPKEEP_COST  = 10
+    BASE_COST    = 10
 
 class Colon(Unit):
     UNIT_TYPE      = UnitType.COLON
@@ -140,8 +145,9 @@ class Colon(Unit):
     BASE_DEFENSE   = 3
     BASE_HP        = 50
     WATER_AFFINITY = True
-    SIZE = 4
-    UPKEEP_COST  = 10
+    SIZE           = 4
+    BASE_COST      = 10
+    UPKEEP_COST    = 10
 
 
 class Colonie(Unit):
@@ -162,7 +168,8 @@ class Baby(Unit):
     BASE_DEFENSE   = 3
     BASE_HP        = 50
     SIZE           = 4
-    UPKEEP_COST  = 10
+    UPKEEP_COST    = 10
+    BASE_COST      = 50
 
 
 # ── Factory ─────────────────────────────────────────────────────

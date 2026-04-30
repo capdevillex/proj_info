@@ -24,7 +24,7 @@ from world.biome import Biome
 from world.construction import Farm, Mine, Road, Scierie
 from world.resources import Resource
 from world.tile import Tile
-from world.unit import UnitType
+from world.unit import Unit, UnitType, UNIT_CLASS_MAP, Soldier,Archer,Colon
 
 #  Palette UI
 C_PANEL_BG = (12, 16, 24)  # fond principal
@@ -67,14 +67,13 @@ _CTX_WIDTH = 210  # largeur du menu
 _CTX_INNER_PAD = 8  # padding gauche/droite intérieur
 
 _CAT_BUILD_COLOR = (70, 130, 180)  # bleu acier : construction
-_CAT_UNITS_COLOR = (180, 35, 45)  # vert      : unités
-_CAT_TERRITORY_COLOR = (200, 160, 70)  # or        : territoire
+_CAT_UNITS_COLOR = (180, 35, 45)  # vert        : unités
+_CAT_TERRITORY_COLOR = (200, 160, 70)  # or     : territoire
 
 _UNIT_BUY_OPTIONS = [
-    (UnitType.SOLDIER, "Soldat", {"gold": 2}),
-    (UnitType.CAVALRY, "Cavalerie", {"gold": 3}),
-    (UnitType.ARCHER, "Archer", {"gold": 3}),
-    (UnitType.COLON, "Colon", {"gold": 10}),
+    (UnitType.SOLDIER, "Soldat", {"gold": Soldier.BASE_COST}),
+    (UnitType.ARCHER, "Archer", {"gold": Archer.BASE_COST}),
+    (UnitType.COLON, "Colon", {"gold": Colon.BASE_COST}),
 ]
 _TILE_BUY_COST = {"gold": 10}
 

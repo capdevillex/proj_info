@@ -1,4 +1,4 @@
-from world.unit import UnitType
+from world.unit import UnitType, Soldier, Cavalry, Colon, Baby, Archer
 from world.biome import Biome
 
 
@@ -10,17 +10,17 @@ class Combat:
         UnitType.SOLDIER: {UnitType.CAVALRY: 1.5, UnitType.ARCHER: 0.7},  # Soldat > Cavalerie
         UnitType.ARCHER: {UnitType.SOLDIER: 1.5, UnitType.CAVALRY: 0.7},  # Archer > Soldat
         UnitType.CAVALRY: {UnitType.ARCHER: 1.5, UnitType.SOLDIER: 0.7},  # Cavalerie > Archer
-        UnitType.BABY: {UnitType.ARCHER: 1.5, UnitType.SOLDIER: 0.7},
+        UnitType.BABY: {UnitType.ARCHER: 1.5, UnitType.SOLDIER: 1},
     }
 
     # Stats de base des unités
     BASE_STATS = {
-        UnitType.SOLDIER: {"attack": 10, "defense": 8, "hp": 100},
-        UnitType.CAVALRY: {"attack": 12, "defense": 6, "hp": 90},
-        UnitType.ARCHER: {"attack": 8, "defense": 5, "hp": 70},
-        UnitType.COLON: {"attack": 2, "defense": 3, "hp": 50},
-        UnitType.BABY: {"attack": 5, "defense": 3, "hp": 50}
-    }
+                    UnitType.SOLDIER: {"attack": Soldier.BASE_ATTACK, "defense": Soldier.BASE_DEFENSE, "hp": Soldier.BASE_HP},
+                    UnitType.CAVALRY: {"attack": Cavalry.BASE_ATTACK, "defense": Cavalry.BASE_DEFENSE, "hp": Cavalry.BASE_HP},
+                    UnitType.ARCHER: {"attack": Archer.BASE_ATTACK, "defense": Archer.BASE_DEFENSE, "hp": Archer.BASE_HP},
+                    UnitType.COLON: {"attack": Colon.BASE_ATTACK, "defense": Colon.BASE_DEFENSE, "hp": Colon.BASE_HP},
+                    UnitType.BABY: {"attack": Baby.BASE_ATTACK, "defense": Baby.BASE_DEFENSE, "hp": Baby.BASE_HP}
+                }
 
     # Modificateurs de terrain pour la défense
     TERRAIN_DEFENSE_MODIFIER = {
@@ -62,51 +62,23 @@ class Combat:
         return result
 
     def compute_damage(self, state, attacker, defender):
-        """
-        Calcule les dégâts infligés par l'attaquant au défenseur.
 
-        Formule : damage = base_damage * attack / (attack + defense) * terrain_modifier * (HP / MaxHP)
-
-        Args:
-            state: L'état du jeu
-            attacker: L'unité attaquante
-            defender: L'unité défenseur
-
-        Returns:
-            float: Les dégâts infligés
-        """
-        # Récupérer les stats de base
-        attacker_stats = self.BASE_STATS.get(
-            attacker.unit_type, {"attack": 5, "defense": 5, "hp": 50}
-        )
-        defender_stats = self.BASE_STATS.get(
-            defender.unit_type, {"attack": 5, "defense": 5, "hp": 50}
-        )
-
-        base_damage = 20  # Dégâts de base
-        attack = attacker.BASE_ATTACK
+        # Stats directement depuis les classes d'unités
+        attack  = attacker.BASE_ATTACK
         defense = defender.BASE_DEFENSE
 
-        # Modificateur de type (triangle d'acier)
+        # Modificateur de type (triangle d'or (non))
         type_modifier = self.EFFECTIVENESS.get(attacker.unit_type, {}).get(defender.unit_type, 1.0)
 
         # Modificateur de terrain (défenseur)
         defender_tile = state.map.tiles.get(defender.tile_id)
-        terrain_modifier = 1.0
-        if defender_tile:
-            terrain_modifier = self.TERRAIN_DEFENSE_MODIFIER.get(defender_tile.biome, 1.0)
+        terrain_modifier = self.TERRAIN_DEFENSE_MODIFIER.get(defender_tile.biome, 1.0) if defender_tile else 1.0
 
-        # Modificateur de santé (TODO: implémenter HP sur les unités)
-        # Pour l'instant, on suppose que les unités sont à pleine santé
+        # Modificateur de santé
         hp_ratio = attacker.hp / attacker.BASE_HP
 
         # Formule finale
-        damage = (
-            base_damage
-            * (attack / (attack + defense * terrain_modifier))
-            * type_modifier
-            * hp_ratio
-        )
+        damage =(attack - defense * terrain_modifier) * type_modifier * hp_ratio
 
         return damage
 
