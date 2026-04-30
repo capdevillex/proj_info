@@ -54,7 +54,6 @@ class Movement:
             Biome.WATER: 1,
             Biome.DESERT: 1,
         },
-        UnitType.COLONIE: {},  # N'a pas de max_distance
         UnitType.BABY: {Biome.WATER: 2},  # Pareil que soldat
     }
 

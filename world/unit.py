@@ -41,6 +41,7 @@ class Unit:
     BASE_COST :     int
     UPKEEP_COST:    int
     DASH:           bool = False
+    #HP
 
 
     _unit_counter = 0
