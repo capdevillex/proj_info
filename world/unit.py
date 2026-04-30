@@ -154,7 +154,7 @@ class Colon(Unit):
 class Plane(Unit):
     UNIT_TYPE      = UnitType.PLANE
     MAX_DISTANCE   = 10
-    ATTACK_RANGE   = 3
+    ATTACK_RANGE   = MAX_DISTANCE
     BASE_ATTACK    = 20
     BASE_DEFENSE   = 5
     BASE_HP        = 50
