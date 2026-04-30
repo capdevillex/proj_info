@@ -91,7 +91,7 @@ class GameEngine:
             True si le mouvement a réussi, False sinon
         """
         # Utiliser le système centralisé
-        success = self.movement.execute_move(self.state.map, unit, target_tile_id)
+        success = self.movement.execute_move(self.state, unit, target_tile_id)
 
         if success:
             # Mettre à jour la visibilité après le mouvement

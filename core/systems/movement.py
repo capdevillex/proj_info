@@ -10,6 +10,7 @@ Gère :
 
 import heapq
 from collections import deque
+from core.game_state import GameState
 from world.unit import Unit, UnitType
 from world.map import Map
 from world.tile import Tile
@@ -138,7 +139,7 @@ class Movement:
         return distances
 
     @staticmethod
-    def get_reachable_tiles(map_: Map, unit: Unit) -> set:
+    def get_reachable_tiles(game_state: GameState, unit: Unit) -> set:
         """
         Récupère toutes les tuiles accessibles pour une unité donnée.
 
@@ -151,6 +152,7 @@ class Movement:
         Returns:
             set: IDs des tuiles accessibles
         """
+        map_ = game_state.map
         if not unit.can_move():
             return set()
 
@@ -165,6 +167,9 @@ class Movement:
             # On exclut la tuile de départ (distance > 0)
             if movement_cost == 0:
                 continue
+
+            if game_state.use_ti and not (game_state.discovered & (1 << tile_id)):
+                    continue
 
             # On ne dépasse pas le mouvement max
             if movement_cost > unit.max_distance:
@@ -244,7 +249,7 @@ class Movement:
             return distances[target_tile_id]
         return -1
 
-   
+
     @staticmethod
     def get_attackable_tiles(map_: Map, unit: Unit) -> set:
         if unit.attack_range == 0:
@@ -313,7 +318,7 @@ class Movement:
         return tiles_in_range
 
     @staticmethod
-    def execute_move(map_: Map, unit: Unit, target_tile_id):
+    def execute_move(state: GameState, unit: Unit, target_tile_id):
         """
         EXÉCUTE le mouvement d'une unité.
 
@@ -325,13 +330,14 @@ class Movement:
         5. Marquer l'unité comme ayant bougé
 
         Args:
-            map_: L'objet Map
+            state: L'objet GameState
             unit: L'unité à déplacer
             target_tile_id: ID de la tuile de destination
 
         Returns:
             bool: True si le mouvement a réussi, False sinon
         """
+        map_ = state.map
 
         # Vérifier que l'unité peut bouger
         if not unit.can_move():
@@ -339,7 +345,7 @@ class Movement:
             return False
 
         # Vérifier que la nouvelle tuile est accessible
-        if target_tile_id not in Movement.get_reachable_tiles(map_, unit):
+        if target_tile_id not in Movement.get_reachable_tiles(state, unit):
             print(f"❌ La tuile {target_tile_id} n'est pas accessible pour l'unité {unit.id}")
             return False
 
