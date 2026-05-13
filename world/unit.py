@@ -31,7 +31,7 @@ class Unit:
     """Classe de base — ne pas instancier directement."""
 
     #Attention à bein le redéfinir dans chaque type d'unités
-    UNIT_TYPE:     UnitType
+    UNIT_TYPE:      UnitType
     MAX_DISTANCE:   int
     ATTACK_RANGE:   int
     BASE_ATTACK:    int
@@ -43,7 +43,11 @@ class Unit:
     UPKEEP_COST:    int
     DASH:           bool = False
     FLY :           bool = False
-    #HP
+    CARRY:          bool = False
+    ESCAPE:         bool = False
+    SCOUT:          bool = False
+    PERSIST:        bool = False
+
 
 
     _unit_counter = 0
@@ -95,8 +99,17 @@ class Unit:
         """Calcule le bitmask de visibilité pour cette unité."""
         visible_tiles = set()
         visible_tiles.add(self.tile_id)
-        for neighbor_id in map_.tiles[self.tile_id].neighbors:
-            visible_tiles.add(neighbor_id)
+        if self.SCOUT:
+                print("Je suis un scout")
+                for neighbor_id in map_.tiles[self.tile_id].neighbors:
+                    visible_tiles.add(neighbor_id)
+                    for neigh_of_neigh in map_.tiles[neighbor_id].neighbors:
+                        visible_tiles.add(neigh_of_neigh)
+
+        else:
+            for neighbor_id in map_.tiles[self.tile_id].neighbors:
+                visible_tiles.add(neighbor_id)
+
         mask = 0
         for tile_id in visible_tiles:
             mask |= 1 << tile_id
@@ -127,6 +140,7 @@ class Cavalry(Unit):
     SIZE         = 4
     UPKEEP_COST  = 1
     BASE_COST    = 150
+    DASH         = True
 
 class Archer(Unit):
     UNIT_TYPE    = UnitType.ARCHER
@@ -138,6 +152,7 @@ class Archer(Unit):
     SIZE         = 4
     UPKEEP_COST  = 1
     BASE_COST    = 10
+    SCOUT        = True
 
 class Colon(Unit):
     UNIT_TYPE      = UnitType.COLON

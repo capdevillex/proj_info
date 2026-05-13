@@ -21,7 +21,7 @@ class Visibility:
             Set[int]: Un ensemble d'identifiants de cellules visibles
         """
         visible = {unit.tile_id}  # Commencer par les cellules de la province
-
+        print(f"voici l'unite {unit}")
         # Ajouter les provinces adjacentes
         for neighbor_id in map_.tiles[unit.tile_id].neighbors:
             neighbor_tile = map_.tiles[neighbor_id]
