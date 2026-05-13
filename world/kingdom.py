@@ -11,12 +11,12 @@ class Kingdom:
     """
 
     kingdom_id: int
-    cities: List[int]
+    
     name: str
     color: tuple  # RGB utilisé pour l'affichage UI
 
     is_ai: bool = False
-
+    cities: List[int] = field(default_factory=list)
     # Paramètres de décision pour l'IA (arbre de décision pondéré).
     # Clés typiques : "aggression", "expansion", "defense", "exploration". (j'en sais rien, j'écris juste ce qui me vient à l'esprit)
     # Valeurs : float dans [0, 1] ; une valeur élevée augmente le poids de ce comportement.

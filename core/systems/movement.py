@@ -197,7 +197,7 @@ class Movement:
 
         # Utiliser Dijkstra au lieu du BFS simple
         if unit.FLY :
-            print("Bisous je m'envol")
+            print("Bisous je m'envole")
             return Movement.get_reachable_tiles_fly(game_state,unit)
         else:
 
