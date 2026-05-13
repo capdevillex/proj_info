@@ -17,6 +17,7 @@ import pygame
 from ui.button import Button
 from config import GameConfig as gc
 from core.game_engine import GameEngine
+from core.game_state import TurnPhase
 from ui.camera import Camera, world_to_screen
 from ui.renderer import RenderPipeline
 from ui.ui_utils import compute_tile_size
@@ -683,27 +684,41 @@ class UIManager:
     def _draw_turn_indicator(self, screen, sw):
         state = self.game_engine.state
         turn = state.turn
-        player = state.current_player
+        is_ai_turn = state.phase == TurnPhase.AI_TURN
 
-        panel_w, panel_h = 170, 42
+        panel_w, panel_h = 200, 52
         panel_x = sw - panel_w - 16
         panel_y = 12
 
         panel_rect = pygame.Rect(panel_x, panel_y, panel_w, panel_h)
         _draw_panel(screen, panel_rect, bg=C_PANEL_BG, border=C_BORDER_LIT)
 
-        # Pulse border pour "ton tour"
-        pulse = (math.sin(self._pulse_t) + 1) / 2
-        pb = _lerp_color(C_BORDER, C_BLUE_ACC, pulse * 0.5)
+        if is_ai_turn:
+            # Bordure rouge pulsée pendant le tour IA
+            pulse = (math.sin(self._pulse_t * 3) + 1) / 2
+            pb = _lerp_color(C_BORDER, C_RED, pulse * 0.7)
+        else:
+            # Bordure bleue pulsée pendant le tour joueur
+            pulse = (math.sin(self._pulse_t) + 1) / 2
+            pb = _lerp_color(C_BORDER, C_BLUE_ACC, pulse * 0.5)
         pygame.draw.rect(screen, pb, panel_rect, 1)
 
         t1 = self._fnt_big.render(f"Tour  {turn}", True, C_TEXT_BRIGHT)
         screen.blit(t1, (panel_x + 12, panel_y + 6))
 
-        player_colors = [(80, 130, 210), (210, 80, 70), (70, 190, 100)]
-        pc_text = _lerp_color(C_TEXT_DIM, player_colors[player % 3], 1.0)
-        t2 = self._fnt_tiny.render(f"Joueur {player + 1}", True, pc_text)
-        screen.blit(t2, (panel_x + 12, panel_y + 26))
+        if is_ai_turn:
+            # Afficher le nom du royaume IA en train de jouer
+            active_kingdom = state.get_kingdom(state.active_kingdom_id)
+            kingdom_name = active_kingdom.name if active_kingdom else "IA"
+            kingdom_color = active_kingdom.color if active_kingdom else (210, 80, 70)
+            t2 = self._fnt_tiny.render(f"⚔ Tour IA : {kingdom_name}", True, kingdom_color)
+        else:
+            player = state.current_player
+            active_kingdom = state.get_kingdom(player)
+            kingdom_color = active_kingdom.color if active_kingdom else (80, 130, 210)
+            kingdom_name = active_kingdom.name if active_kingdom else f"Joueur {player + 1}"
+            t2 = self._fnt_tiny.render(f"▶ {kingdom_name}", True, kingdom_color)
+        screen.blit(t2, (panel_x + 12, panel_y + 32))
 
     # Gestion des clics
     def handle_click(self, mouse_pos, game_map, selected_unit_type):

@@ -157,7 +157,11 @@ class Combat:
         damage = result.get("damage", 0)
 
         # Décider du sort du défenseur
+<<<<<<< HEAD
         defender_killed = damage >= defender.hp < 0
+=======
+        defender_killed = result.get("defender_killed", False)
+>>>>>>> 872b9585c4ca9a42a1b645e97185c71b538b3336
         if defender_killed:
             print(f"💀 L'unité ennemie {defender.unit_type.name} est détruite !")
         else:

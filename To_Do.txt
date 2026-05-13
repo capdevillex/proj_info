@@ -1,7 +1,6 @@
 -----------A FAIRE-------------
 
 Phase 0 :
-    
     Ajouter un Point de Vue (Admin/Player) pour pouvoir bouger/spawner des ennemies
 
 =======
@@ -39,7 +38,7 @@ Cool si on a le temps et la motivation :
 
 V : Fenêtre basique
 V : Génération procédurale de la carte
-X : Changer le fonctionnement des boutons, faire en sorte que ce soit une classe bouton avec la positon, taille et couleur en paramètres)
+X : Changer le fonctionnement des boutons, faire en sorte que ce soit une classe bouton avec la positon, taille et couleur en paramètres
 X : Création d'unités basique
 V : Réparer génération buguée
 V : Placement du HUD relativement aux bordures de l'écran
@@ -70,7 +69,9 @@ V : Expansion automatique des villes
 V : Construction basique (menu de construction sur clic droit : ferme, scierie, mine, etc.)
 V : Ajouter routes (dans le menu de construction, bonus déplacement)
 V : Expansion des villes (achat tuiles)
-V : Villes simples (V: in progress)
+V : Villes simples
 V : Ajout d'un menu contextuel si clic droit sur une tuile
 V : Peaufiner rendu TI
 X : Combat avec edge-case
+V : Ajout des effets de dégâts à l'écran
+V : préparation du projet à l'ajout d'un système d'IA
