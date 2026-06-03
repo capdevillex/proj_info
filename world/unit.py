@@ -25,6 +25,7 @@ class UnitType(Enum):
     COLON   = 4
     BABY    = 5
     PLANE   = 6
+    BOAT    = 7
 
 
 class Unit:
@@ -47,6 +48,7 @@ class Unit:
     ESCAPE:         bool = False
     SCOUT:          bool = False
     PERSIST:        bool = False
+    LAND_AFFINITY:  bool = True
 
 
 
@@ -67,6 +69,7 @@ class Unit:
         self.max_distance   = self.MAX_DISTANCE
         self.attack_range   = self.ATTACK_RANGE
         self.water_affinity = self.WATER_AFFINITY
+        self.land_affinity  = self.LAND_AFFINITY
         self.upkeep_cost    = self.UPKEEP_COST
         self.can_dash       = self.DASH
         self.base_cost      = self.BASE_COST
@@ -206,6 +209,19 @@ class Baby(Unit):
     UPKEEP_COST    = 1
     BASE_COST      = 50
 
+class Boat(Unit):
+    UNIT_TYPE      = UnitType.BOAT
+    MAX_DISTANCE   = 3
+    ATTACK_RANGE   = 1
+    BASE_ATTACK    = 5
+    BASE_DEFENSE   = 3
+    BASE_HP        = 50
+    SIZE           = 4
+    UPKEEP_COST    = 1
+    BASE_COST      = 50
+    WATER_AFFINITY = True
+    LAND_AFFINITY  = False
+
 
 # ── Factory ─────────────────────────────────────────────────────
 
@@ -216,4 +232,5 @@ UNIT_CLASS_MAP = {
     UnitType.COLON:   Colon,
     UnitType.BABY:    Baby,
     UnitType.PLANE:   Plane,
+    UnitType.BOAT:    Boat,
 }

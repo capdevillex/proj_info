@@ -132,6 +132,8 @@ def main():
                     selected_unit_type = UnitType.COLON
                 if event.key in (pygame.K_5, pygame.K_KP5):
                     selected_unit_type = UnitType.PLANE
+                if event.key in (pygame.K_6, pygame.K_KP6):
+                    selected_unit_type = UnitType.BOAT
                 if event.key == pygame.K_ESCAPE:
                     unit_selector.deselect_unit()
                     ui_manager.close_construction_menu()

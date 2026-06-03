@@ -10,7 +10,7 @@ Gère :
 
 import heapq
 from collections import deque
-from world.unit import Unit, UnitType, Soldier, Cavalry, Colon, Baby, Archer
+from world.unit import Unit, UnitType, Soldier, Cavalry, Colon, Baby, Archer, Plane, Boat
 from core.game_state import GameState
 from world.unit import Unit, UnitType
 from world.map import Map
@@ -60,9 +60,14 @@ class Movement:
             Biome.MOUNTAIN: 1,
             Biome.FOREST: 1,
             Biome.WATER: 1,
+            Biome.DESERT: 1,},
+    
+    UnitType.BOAT: {Biome.MOUNTAIN: 1,
+            Biome.FOREST: 1,
+            Biome.WATER: 1,
             Biome.DESERT: 1,}
-    }
 
+            }
     @staticmethod
     def get_movement_cost(biome: Biome, unit_type: UnitType) -> float:
         """
@@ -179,6 +184,7 @@ class Movement:
 
     @staticmethod
     def get_reachable_tiles(game_state: GameState, unit: Unit) -> set:
+        print("je suis select")
         """
         Récupère toutes les tuiles accessibles pour une unité donnée.
 
@@ -225,9 +231,11 @@ class Movement:
                 if tile.has_units():
                     continue
 
-                # On respecte l'affinité avec l'eau
-                if not unit.water_affinity and tile.is_water():
+                if not unit.land_affinity and not tile.is_water():
                     continue
+                # On respecte l'affinité avec l'eau
+                    if not unit.water_affinity and tile.is_water():
+                        continue
 
                 reachable.add(tile_id)
 
