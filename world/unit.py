@@ -62,6 +62,7 @@ class Unit:
         self.hp             = self.BASE_HP
         self.unit_type      = self.UNIT_TYPE
         self.has_moved      = False
+        self.has_attacked   = False
         self.unit_type      = self.UNIT_TYPE
         self.max_distance   = self.MAX_DISTANCE
         self.attack_range   = self.ATTACK_RANGE
@@ -84,16 +85,28 @@ class Unit:
 
     def can_move(self):
         """Vérifie si l'unité peut encore se déplacer ce tour."""
-        return not self.has_moved
+        if self.has_attacked and not self.has_moved and self.ESCAPE:
+            return True
+        else:
+            return not self.has_moved
+
+    def unit_can_attack(self):
+        """Vérifie si l'unité peut encore se déplacer ce tour."""
+        return not self.has_attacked
+
 
     def move_to_tile(self, new_tile_id):
-        """Déplace l'unité vers une nouvelle tuile."""
-        self.tile_id   = new_tile_id
+        """Déplace simplement l'unité vers une nouvelle tuile."""
+        self.tile_id = new_tile_id
         self.has_moved = True
 
-    def reset_movement(self):
-        """Réinitialise le mouvement (appelé au début d'un nouveau tour)."""
+    def reset_turn(self):
+        """Appelé au début de chaque nouveau tour."""
         self.has_moved = False
+        self.has_attacked = False
+
+
+  
 
     def get_visibility_mask(self, map_):
         """Calcule le bitmask de visibilité pour cette unité."""
@@ -141,6 +154,7 @@ class Cavalry(Unit):
     UPKEEP_COST  = 1
     BASE_COST    = 150
     DASH         = True
+    ESCAPE       = True
 
 class Archer(Unit):
     UNIT_TYPE    = UnitType.ARCHER
@@ -178,6 +192,7 @@ class Plane(Unit):
     BASE_COST      = 15
     UPKEEP_COST    = 10
     FLY            = True
+    SCOUT          = True
 
 
 class Baby(Unit):

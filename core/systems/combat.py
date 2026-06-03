@@ -59,7 +59,11 @@ class Combat:
         defender.hp -= damage
         print(f"apres :{defender.hp}")
         result = {"damage": damage, "defender_killed": defender.hp <= 0}
-        attacker.has_moved = True
+        if not attacker.PERSIST:
+            attacker.has_attacked = True
+        if not attacker.ESCAPE:
+            attacker.has_moved = True
+
 
         if defender.hp <= 0:
             print(f"{defender.unit_type.name} est détruit !")
@@ -87,6 +91,23 @@ class Combat:
 
         return damage
 
+    def execute_dash(self, state, unit, target_tile_id):
+        # 1. Vérifier si l'unité peut dasher (c'est une Cavalerie, etc.)
+        if not unit.DASH or unit.has_moved or unit.has_attacked:
+            return False
+            
+        # 2. Vérifier si la cible est à portée de dash (ici on réutilise la portée de mouvement)
+        reachable = Movement.get_reachable_tiles(state, unit)
+        if target_tile_id not in reachable:
+            return False
+            
+        # 3. Exécuter le mouvement
+        Movement.execute_move(state, unit, target_tile_id)
+        
+        # 4. Consommer l'attaque en plus du mouvement
+        unit.has_attacked = True 
+        return True
+
     def can_attack(self, state, attacker, defender):
         """
         Vérifie si une unité peut attaquer une autre.
@@ -104,10 +125,14 @@ class Combat:
             print(f"Impossible d'attaquer une unité alliée")
             return False
 
-        # Vérifier que l'attaquant peut bouger (pas encore implémenté pour l'attaque)
-        if not attacker.can_move():
-            print(f"L'unité {attacker.id} a déjà agi ce tour")
+        # Vérifier que l'attaquant attaquer
+        if not attacker.unit_can_attack():
+            print(f"L'unité {attacker.id} ne peut pas attaquer ce tour")
             return False
+
+        #condition de dash
+        if attacker.has_moved and attacker.DASH:
+            return True
 
         # Vérifier que les unités sont adjacentes (TODO: implémenter portée d'attaque)
         attacker_tile = state.map.tiles.get(attacker.tile_id)
@@ -118,6 +143,14 @@ class Combat:
         return True
 
 
+    def perform_dash(self, state, attacker, target_tile_id):
+        # 1. Valider que le mouvement est possible
+        if Movement.execute_move(state, attacker, target_tile_id):
+            # 2. Consommer l'attaque immédiatement car le Dash est une action complète
+            attacker.has_attacked = True
+            attacker.has_moved = True
+            return True
+        return False
     # Constante à mettre ici, pas dans game_engine
     #mzethode de merde pour la vie du truc
 

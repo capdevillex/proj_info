@@ -171,7 +171,7 @@ class GameEngine:
 
         # Réinitialiser le mouvement de toutes les unités
         for unit in self.state.units:
-            unit.reset_movement()
+            unit.reset_turn()
 
         # Incrémenter le tour
         self.state.turn += 1
