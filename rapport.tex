@@ -1,0 +1,607 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+
+\input{preambule_settings.tex}
+
+% Style listings Python
+\lstdefinestyle{python}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{orange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!8},
+    tabsize=4,
+}
+
+\lstnewenvironment{myverbatim}[1][]{%
+  \lstset{
+    basicstyle=\ttfamily,
+    frame=tb,
+    #1
+  }%
+}{}
+
+% Métadonnées du Document
+\title{\textbf{Rapport : Projet Informatique}\\[0.5em]
+       \large Novum Imperium : Jeu de stratégie 4X en Python}
+\author{Victor CACHAU \and Xavier CAPDEVILLE}
+\date{2025:2026}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Projet Info : Novum Imperium}
+\rhead{CACHAU et CAPDEVILLE}
+\cfoot{\thepage}
+
+\begin{document}
+
+\input{page_de_garde}
+
+\thispagestyle{empty}
+
+\newpage
+\tableofcontents
+\thispagestyle{fancy}
+
+\newpage
+
+
+\section{Introduction}
+
+
+Ce rapport présente le projet informatique réalisé dans le cadre de l'UE 2.1 à l'ENSTA Bretagne.
+L'objectif est de concevoir et d'implémenter un jeu de stratégie de type 4X (\textit{eXplore,
+eXpand, eXploit, eXterminate}) en Python, jouable en mode tour par tour avec une interface
+graphique.
+
+Le projet, baptisé \textbf{Novum Imperium}, modélise un monde procédural sur lequel un joueur
+déplace des unités, fonde des villes, exploite des ressources et entre en conflit avec des
+adversaires. L'implémentation s'appuie sur la bibliothèque \texttt{pygame} pour le rendu
+graphique et de l'aide de \texttt{scipy} pour la génération procédurale de la carte.
+
+
+
+\section{Analyse du problème}
+
+
+\subsection{Définition exacte du problème}
+
+Un jeu 4X est un genre de jeu de stratégie dans lequel chaque joueur développe une
+civilisation selon quatre axes fondamentaux :
+\begin{enumerate}
+    \item \textbf{Exploration} : découvrir la carte progressivement à travers un brouillard de guerre ;
+    \item \textbf{Expansion} : fonder des villes et étendre leur territoire ;
+    \item \textbf{Exploitation} : collecter des ressources et construire des bâtiments ;
+    \item \textbf{Extermination} : attaquer les unités et villes adverses.
+\end{enumerate}
+
+Le problème consiste à modéliser informatiquement ces quatre mécaniques de façon cohérente,
+dans un système tour par tour. La carte est une grille de provinces (\textit{tuiles}) de types
+variés, chacune pouvant contenir des unités et des ressources. Plusieurs systèmes interagissent
+simultanément : la gestion du mouvement, du combat, de l'économie et de la visibilité.
+
+\subsection{Buts du projet}
+
+Les objectifs définis pour ce projet sont les suivants :
+\begin{itemize}
+    \item Concevoir une architecture orientée objet claire et modulaire ;
+    \item Générer procéduralement une carte de jeu variée et jouable ;
+    \item Implémenter les mécaniques fondamentales : déplacement, combat, production, exploration ;
+    \item Réaliser une interface graphique interactive permettant de jouer effectivement une
+    partie ;
+    \item Respecter des règles de jeu équilibrées (coûts de terrain, triangles d'efficacité
+    des unités, expansion des villes).
+\end{itemize}
+
+\subsection{Domaines d'utilisation}
+
+Ce projet relève de plusieurs domaines informatiques :
+
+\begin{description}
+    \item[Algorithmique de graphes] : pathfinding avec Dijkstra sur un graphe de provinces,
+    BFS pour la visibilité et l'expansion des villes, transformée de distance pour la
+    génération de super-tuiles d'eau.
+    \item[Génération procédurale] : bruit de Perlin multi-octaves pour les biomes, échantillonnage
+    de Poisson pour les centres de provinces, diagrammes de Voronoï pour la partition de la carte.
+    \item[Programmation orientée objet] : hiérarchie de classes (unités, villes, constructions),
+    patron Facade pour le moteur de jeu, pattern Factory pour les unités.
+    \item[Infographie 2D] : rendu Pygame avec surfaces mises en cache par couches, système de
+    caméra avec zoom et panoramique, interface utilisateur (barres, menus contextuels).
+\end{description}
+
+\subsection{Limites actuelles du projet}
+
+Plusieurs limites sont actuellement dans le projet et seront adressées dans les versions futures :
+\begin{itemize}
+    \item \textbf{Joueur unique} : le jeu ne supporte actuellement qu'un seul joueur humain
+    actif. La gestion multi-joueurs n'est pas implémentée et l'intelligence artificielle qui joue contre le joueur reste basique et ne présente pas vraiment de menace pour le joueur du fait de sa simplicité.
+
+    \item \textbf{Absence de condition de victoire} : aucune condition de fin de partie n'est
+    formalisée dans le code (pas de score, pas de domination, pas de limite de tours).
+
+    \item \textbf{Dépendance à la résolution} : la carte est définie en 444$\times$250 tuiles
+    avec une taille de tuile de 2 pixels, limitant la résolution effective à 888$\times$500
+    pixels avant zoom.
+\end{itemize}
+
+\newpage
+
+\section{Description des classes}
+
+
+La figure suivante résume l'organisation modulaire du projet :
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Module} & \textbf{Rôle} \\
+\midrule
+\texttt{config.py} & Constantes globales de configuration \\
+\texttt{core/} & Moteur du jeu \\
+\texttt{\phantom{core}game\_state.py} & État global du jeu \\
+\texttt{\phantom{core}game\_engine.py} & Orchestrateur (façade) \\
+\texttt{\phantom{core}systems/} & Systèmes fondamentaux \\
+\texttt{\phantom{coresystems}movement.py} & Système de déplacement \\
+\texttt{\phantom{coresystems}combat.py} & Système de combat \\
+\texttt{\phantom{coresystems}economy.py} & Système économique \\
+\texttt{\phantom{coresystems}visibility.py} & Brouillard de guerre \\
+\texttt{world/} & Génération et stockage de la carte \\
+\texttt{\phantom{world}map.py} & Génération et stockage de la carte \\
+\texttt{\phantom{world}tile.py} & Province individuelle \\
+\texttt{\phantom{world}unit.py} & Hiérarchie des unités \\
+\texttt{\phantom{world}city.py} & Gestion des villes \\
+\texttt{\phantom{world}construction.py} & Bâtiments (Ferme, Mine, Route, Scierie) \\
+\texttt{\phantom{world}resources.py} & Enumération des types de ressources \\
+\texttt{\phantom{world}biome.py} & Enumération des biomes \\
+\texttt{ui/} & Logique du rendu graphique \\
+\texttt{\phantom{ui}main.py} & Boucle principale du jeu \\
+\texttt{\phantom{ui}renderer.py} & Pipeline de rendu Pygame \\
+\texttt{\phantom{ui}camera.py} & Caméra avec zoom et panoramique \\
+\texttt{\phantom{ui}ui\_manager.py} & Gestionnaire de l'interface utilisateur \\
+\texttt{utils/noise.py} & Bruit de Perlin \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{GameConfig (config.py)}
+
+Classe de configuration regroupant toutes les constantes du jeu sous forme d'attributs de
+classe. Elle évite la dispersion des paramètres dans le code et centralise les réglages de la
+carte, des boutons, de l'interface et des villes.
+
+\begin{lstlisting}[style=python, caption={Extrait de \texttt{config.py}}]
+class GameConfig:
+    TILE_SIZE = 2
+    TILE_AVG_AREA = 35          # Taille moyenne d'une province (en cellules)
+    HEIGHT = 250                # Hauteur de la carte en tuiles
+    WIDTH = (HEIGHT * 16) // 9  # Largeur 16:9
+    CITY_MIN_TURN_EXTENTION_AVAILABLE = [3, 5, 8, 13, 21, 34, 53, 89]
+    CITY_EXTENSION_RADIUS = 3
+\end{lstlisting}
+
+\subsection{GameState (core/game\_state.py)}
+
+Classe centrale qui encapsule l'intégralité de l'état d'une partie en cours. Elle ne contient
+pas de logique métier, mais sert de structure de données partagée entre tous les systèmes.
+
+Attributs principaux :
+\begin{itemize}
+    \item \texttt{map} : l'objet \texttt{Map} généré procéduralement ;
+    \item \texttt{units} : liste de toutes les unités en jeu ;
+    \item \texttt{cities} : liste de toutes les villes fondées ;
+    \item \texttt{player\_resources} : dictionnaire \texttt{\{joueur\_id: \{ressource: quantité\}\}} ;
+    \item \texttt{turn} : compteur de tours ;
+    \item \texttt{discovered}, \texttt{visibility} : bitmasks pour le brouillard de guerre ;
+    \item \texttt{use\_ti}, \texttt{use\_fow} : drapeaux pour activer la \textit{terra incognita} et
+    le brouillard de guerre.
+\end{itemize}
+
+\subsection{GameEngine (core/game\_engine.py)}
+
+Moteur de jeu central qui implémente un patron \textit{Facade} : il délègue chaque action à
+un système spécialisé tout en gérant les effets de bord (mise à jour de la visibilité, retrait
+des unités mortes, incrémentation des tours).
+
+Systèmes délégués :
+\begin{itemize}
+    \item \texttt{self.movement} : classe statique \texttt{Movement} ;
+    \item \texttt{self.combat} : instance de \texttt{Combat} ;
+    \item \texttt{self.economy} : instance de \texttt{Economy} ;
+    \item \texttt{self.visibility} : instance de \texttt{Visibility}.
+\end{itemize}
+
+\subsection{Unit et sous-classes (world/unit.py)}
+
+\texttt{Unit} est une classe de base abstraite définissant l'interface commune à toutes les
+unités. Elle ne doit pas être instanciée directement. Chaque sous-classe redéfinit les
+attributs de classe (constantes) décrivant ses caractéristiques :
+
+\begin{center}
+\begin{tabular}{lrrrrrc}
+\toprule
+\textbf{Type} & \textbf{ATK} & \textbf{DEF} & \textbf{PV} & \textbf{Mvt} & \textbf{Portée} & \textbf{Coût} \\
+\midrule
+Soldier  & 10 & 8 & 100 & 3 & 1 & 7 or \\
+Cavalry  & 12   & 6 & 90  & 5 & 1 & 100 or \\
+Archer   & 8    & 5 & 70  & 2 & 2 & 10 or \\
+Colon    & 2    & 3 & 50  & 1 & 0 & 10 or \\
+Baby     & 5    & 3 & 50  & 3 & 1 & 50 or \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Une factory \texttt{UNIT\_CLASS\_MAP} associe chaque valeur de l'énumération \texttt{UnitType}
+à la classe concrète correspondante.
+
+\subsection{City (world/city.py)}
+
+Représente une ville fondée par un colon. Une ville contrôle un ensemble de tuiles
+(\texttt{tile\_ids}) et produit des ressources chaque tour en fonction des tuiles et des
+bâtiments présents. L'expansion du territoire est déclenchée automatiquement à des âges
+prédéfinis : $[3, 5, 8, 13, 21, 34, 53, 89]$ tours (suite de Fibonacci tronquée).
+
+Attributs principaux :
+\begin{itemize}
+    \item \texttt{center\_tile\_id} : tuile fondatrice ;
+    \item \texttt{tile\_ids} : territoire contrôlé (ensemble d'IDs de tuiles) ;
+    \item \texttt{population}, \texttt{age} : état démographique et temporel ;
+    \item \texttt{production} : dictionnaire \texttt{\{ressource: quantité/tour\}}.
+\end{itemize}
+
+\subsection{Construction et sous-classes (world/construction.py)}
+
+Quatre types de bâtiments peuvent être construits sur les tuiles contrôlées par une ville :
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\textbf{Bâtiment} & \textbf{Coût} & \textbf{Bonus produit} \\
+\midrule
+Ferme     & 5 bois        & +1 à +3 nourriture \\
+Mine      & 2 pierre + 3 bois & +1 à +3 fer/or, +1 pierre \\
+Route     & 1 pierre + 1 bois & +1 mouvement sur la tuile \\
+Scierie   & 5 bois        & +1 à +3 bois \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+La règle de placement autorise une route et un bâtiment non-route par tuile, mais pas deux
+bâtiments.
+
+\subsection{Map (world/map.py)}
+
+Classe centrale de la carte. Elle stocke le dictionnaire \texttt{tiles : \{id : Tile\}} et
+encapsule le pipeline de génération procédurale en neuf étapes (voir section~\ref{sec:methodes}).
+Elle utilise une structure de graphe (voisins) pour permettre le pathfinding et la diffusion.
+
+\subsection{Tile (world/tile.py)}
+
+Représente une province individuelle. Chaque tuile possède :
+\begin{itemize}
+    \item un identifiant unique \texttt{id} ;
+    \item un biome (\texttt{Biome}) et une ressource (\texttt{Resource}) ;
+    \item une liste de cellules visuelles (\texttt{cells}) qui la composent ;
+    \item un ensemble de voisins (\texttt{neighbors}) pour le graphe ;
+    \item une liste d'unités présentes (\texttt{units}) et de constructions (\texttt{constructions}).
+\end{itemize}
+
+\subsection{Systèmes de jeu}
+
+\subsubsection{Movement (core/systems/movement.py)}
+Classe statique gérant les déplacements. Utilise l'algorithme de Dijkstra sur le graphe de
+voisinage des tuiles avec des coûts variables selon le biome et le type d'unité.
+
+\subsubsection{Combat (core/systems/combat.py)}
+Gère la résolution des combats selon une formule intégrant l'attaque, la défense, un
+modificateur de terrain et un modificateur de type d'unité (triangle d'efficacité).
+
+\subsubsection{Economy (core/systems/economy.py)}
+Calcule la production des villes et déduit les coûts d'entretien des unités en or à chaque
+fin de tour.
+
+\subsubsection{Visibility (core/systems/visibility.py)}
+Met à jour les bitmasks de visibilité et de découverte à partir des positions des unités et
+des villes du joueur courant.
+
+\subsection{Interface utilisateur}
+
+\begin{itemize}
+    \item \textbf{Camera (ui/camera.py)} : gère le panoramique et le zoom (1$\times$ à 25$\times$) avec conversion de coordonnées monde/écran.
+    \item \textbf{Renderer (ui/renderer.py)} : pipeline de rendu en couches (carte, ressources, bâtiments, unités, brouillard, interface). Les surfaces Pygame sont mises en cache et reconstruites uniquement si marquées comme \textit{dirty}.
+    \item \textbf{UIManager (ui/ui\_manager.py)} : gère la barre latérale gauche (ressources, boutons), la barre de statut basse et les menus contextuels de construction.
+\end{itemize}
+
+
+
+\section{Description des méthodes importantes}
+\label{sec:methodes}
+
+
+\subsection{Génération de la carte : Map (world/map.py)}
+
+La génération procédurale se déroule en neuf étapes successives.
+
+\subsubsection{Étape 1 : Échantillonnage de Poisson}
+Les centres de provinces sont distribués uniformément sur la carte avec une contrainte de
+distance minimale, en utilisant l'algorithme de Poisson Disk Sampling (Ebeida). Une grille
+d'accélération spatiale assure une complexité en $O(n)$.
+
+\subsubsection{Étapes 2 et 3 : Attribution des biomes et partition de Voronoï}
+Un bruit de Perlin multi-octaves génère une carte d'élévation. Des seuils distincts
+classifient chaque cellule en biome :
+\begin{itemize}
+    \item Eau : $n < -0{,}225$
+    \item Plaine : $-0{,}225 \leq n < 0{,}14$
+    \item Forêt : $0{,}14 \leq n < 0{,}325$
+    \item Montagne : $n \geq 0{,}325$
+    \item Désert : Plaine avec indice de chaleur élevé
+\end{itemize}
+
+Un KD-tree (\texttt{scipy.spatial.KDTree}) assigne chaque cellule de la grille à la province
+la plus proche en $O(n \log n)$.
+
+\subsubsection{Étapes 4 et 5 : Nettoyage morphologique}
+Un BFS détecte les composantes connexes et fusionne les micro-provinces sous un seuil de taille
+minimum avec leurs voisines dominantes.
+
+\subsubsection{Étapes 6 et 7 : Traitement des zones d'eau}
+\begin{enumerate}
+    \item Suppression des clusters d'eau isolés trop petits.
+    \item Connexion des masses d'eau proches par des détroits.
+    \item Élargissement des corridors d'eau trop fins.
+    \item Fusion des tuiles d'eau en super-tuiles plus grandes pour améliorer la jouabilité
+    (transformée de distance + Lloyd relaxation).
+\end{enumerate}
+
+\subsubsection{Étapes 8 : Graphe de voisinage}
+Construction du graphe à 8-connexité entre tuiles adjacentes.
+
+\subsubsection{Étapes 9 : Validation}
+Validation de l'intégrité de la carte (cohérence bidirectionnelle entre cellules et tuiles).
+
+\subsection{Dijkstra : Movement.dijkstra\_reachable}
+
+\begin{lstlisting}[style=python, caption={Algorithme de Dijkstra pour le déplacement}]
+@staticmethod
+def dijkstra_reachable(map_, start_tile_id, max_movement, unit_type):
+    heap = [(0, start_tile_id)]
+    distances = {start_tile_id: 0}
+    visited = set()
+
+    while heap:
+        current_cost, current_tile_id = heapq.heappop(heap)
+        if current_tile_id in visited:
+            continue
+        visited.add(current_tile_id)
+        if current_cost > max_movement:
+            continue
+
+        for neighbor_tile_id in map_.tiles[current_tile_id].neighbors:
+            if neighbor_tile_id in visited:
+                continue
+            terrain_cost = Movement.get_movement_cost(
+                map_.tiles[neighbor_tile_id].biome, unit_type
+            )
+            if terrain_cost == float("inf"):
+                continue
+            new_cost = current_cost + terrain_cost
+            if neighbor_tile_id not in distances or new_cost < distances[neighbor_tile_id]:
+                distances[neighbor_tile_id] = new_cost
+                heapq.heappush(heap, (new_cost, neighbor_tile_id))
+
+    return distances
+\end{lstlisting}
+
+Les coûts de terrain varient selon le biome (1,0 en plaine, 1,5 en forêt, 2,0 en montagne,
+$+\infty$ sur l'eau) et sont modulés par des coefficients propres à chaque type d'unité
+(la cavalerie est plus rapide en plaine mais très pénalisée en forêt et en montagne).
+
+\subsection{Résolution du combat : Combat.compute\_damage}
+
+La formule de dégâts intègre quatre facteurs :
+
+\begin{equation}
+    \text{dégâts} = (\text{ATK} - \text{DEF} \times m_\text{terrain}) \times m_\text{type} \times \frac{\text{PV}_\text{courant}}{\text{PV}_\text{max}}
+\end{equation}
+
+\begin{itemize}
+    \item $m_\text{terrain}$ : modificateur de défense selon le biome du défenseur
+    (montagne $\times 1{,}5$, forêt $\times 1{,}3$, plaine $\times 1{,}0$,
+    désert $\times 0{,}9$, eau $\times 0{,}8$) ;
+    \item $m_\text{type}$ : modificateur d'efficacité selon le triangle
+    Soldat\,$\succ$\,Cavalerie\,$\succ$\,Archer\,$\succ$\,Soldat
+    (valeurs 1,5 / 0,7) ;
+    \item le ratio PV modélise l'affaiblissement d'une unité blessée.
+\end{itemize}
+
+\subsection{Expansion des villes : City.expend\_territory}
+
+L'expansion utilise un BFS depuis la tuile centrale, limité au rayon \texttt{CITY\_EXTENSION\_RADIUS} (3 tuiles). Parmi les tuiles candidates libres (non-eau, non déjà attribuées), une tuile est tirée aléatoirement avec une probabilité inversement proportionnelle à sa distance :
+
+\begin{equation}
+    P(\text{tuile}_i) = \frac{1/d_i}{\displaystyle\sum_j 1/d_j}
+\end{equation}
+
+L'expansion n'est déclenchée que lors des tours où l'âge de la ville concernée appartient à la suite $[3, 5, 8, 13, 21, 34, 53, 89]$.
+
+\subsection{Fin de tour : GameEngine.end\_turn}
+
+La méthode orchestre les opérations suivantes dans l'ordre :
+
+\begin{enumerate}
+    \item Mise à jour de l'économie (\texttt{Economy.update}) : production des villes créditée
+    aux ressources du joueur, entretien des unités débité en or ;
+    \item Réinitialisation du drapeau \texttt{has\_moved} de toutes les unités ;
+    \item Incrémentation du compteur \texttt{state.turn} ;
+    \item Vieillissement des villes et expansion éventuelle ;
+    \item Recalcul du brouillard de guerre.
+\end{enumerate}
+
+\subsection{Fondation d'une ville : GameEngine.found\_city}
+
+Un colon positionné sur une tuile terrestre libre peut fonder une ville. La méthode
+vérifie les préconditions (type d'unité, existence de la tuile, absence de ville existante,
+biome non-eau), crée l'objet \texttt{City}, calcule sa production initiale, puis supprime
+le colon.
+
+\subsection{Bruit de Perlin : utils/noise.py}
+
+Implémentation du bruit de Perlin standard avec table de permutation de Ken Perlin,
+courbe de lissage quintic $f(t) = 6t^5 - 15t^4 + 10t^3$, et génération de bruit fractionnaire
+Brownien (fBm) par superposition d'octaves :
+
+\begin{equation}
+    \text{fBm}(x, y) = \sum_{k=0}^{n-1} p^k \cdot \text{Perlin}\!\left(l^k \cdot x,\; l^k \cdot y\right)
+\end{equation}
+
+où $p$ est la persistance et $l$ la lacunarité. L'implémentation est une copie de la librairie \verb|noise| disponible avec \verb|pip| mais non mise à jour depuis 8 ans.
+
+
+
+\section{Description des tests et des résultats}
+
+
+\subsection{Stratégie de test}
+
+Le projet ne dispose actuellement pas de suite de tests unitaires automatisés formels (pas de fichier
+\texttt{pytest} ou \texttt{unittest} à la racine), ce sera rajouté sous peu lorsque le développement et la modification
+de méthodes déjà existantes sera moins intense. Les tests ont été conduits selon trois approches complémentaires.
+
+\subsubsection{Tests manuels en jeu}
+
+La principale méthode de validation est le test par le jeu lui-même : lancer une partie,
+observer le comportement de chaque mécanique (déplacement, combat, fondation de villes,
+économie) et vérifier visuellement la cohérence. Les retours de débogage sont imprimés dans
+la console (\texttt{print}).
+
+Exemples de sorties observées :
+\begin{myverbatim}[title={Messages de débogage en console}]
+OK Unite COLON numero 1 creee sur tuile 42
+OK Ville 'Aurora' fondee sur la tuile 42 par le joueur 0
+Attaque : ARCHER attaque CAVALRY
+   Degats infliges : 6.2
+   L'unite ennemie CAVALRY resiste à l'attaque !
+==================================================
+Fin du tour 3
+==================================================
+La ville 'Aurora' peut maintenant etre etendue (age 3 tours)
+City Aurora candidates for expansion: {(58, 1), (61, 2), (44, 1)}
+\end{myverbatim}
+
+\subsubsection{Tests de génération de carte}
+
+Un outil dédié, \texttt{perlin\_visualizer.py}, permet de visualiser interactivement le
+bruit de Perlin généré et d'ajuster ses paramètres (octaves, persistance, lacunarité). Ce
+visualiseur a été utilisé pour calibrer les seuils de biomes.
+
+La génération de carte a été testée en faisant varier les paramètres de
+\texttt{GameConfig} :
+\begin{itemize}
+    \item \texttt{BORDER\_STRENGTH} (2,75) : contrôle la quantité d'eau sur les bords ;
+    \item \texttt{OCEANIC\_COEFF} (1,5) : influence de l'océan ;
+    \item \texttt{MIN\_WATER\_CLUSTER\_SIZE} (2) : seuil de suppression des micro-lacs ;
+    \item \texttt{WATER\_BRIDGE\_MAX\_HOPS} (3) : longueur maximale des détroits.
+\end{itemize}
+
+La touche \textbf{R} permet de régénérer la carte en temps réel pendant une partie, ce qui
+a facilité l'itération sur les paramètres de génération.
+
+\subsubsection{Tests hérités (legacy)}
+
+Le dossier \texttt{legacy/} contient deux fichiers de test préliminaires :
+\begin{itemize}
+    \item \texttt{test\_grille\_filling.py} : test du remplissage initial de la grille de
+    cases (prototype pré-architecture) ;
+    \item \texttt{test\_pygame.py} : test de l'initialisation de Pygame et du rendu de base.
+\end{itemize}
+Ces tests correspondent à une phase exploratoire antérieure à la mise en place de
+l'architecture finale.
+
+\subsection{Résultats obtenus}
+
+\subsubsection{Génération de carte}
+
+La génération procédurale produit des cartes cohérentes avec :
+\begin{itemize}
+    \item une distribution réaliste des biomes (plaines, forêts, montagnes, déserts, océans) ;
+    \item des provinces de taille homogène (cible : $\approx 35$ cellules) ;
+    \item des masses d'eau connectées entre elles via des détroits ;
+    \item des ressources distribuées selon le biome (bois uniquement en forêt, fer/or en montagne, etc.).
+\end{itemize}
+
+\subsubsection{Mécaniques de jeu}
+
+\begin{itemize}
+    \item \textbf{Déplacement} : le pathfinding Dijkstra fonctionne correctement. La surbrillance
+    des tuiles accessibles est cohérente avec les points de mouvement et les coûts de terrain.
+    \item \textbf{Combat} : la formule de dégâts est fonctionnelle. Le triangle d'efficacité
+    (Soldat : Cavalier : Archer) est respecté.
+    \item \textbf{Économie} : la production des villes est calculée chaque tour. L'entretien
+    des unités est déduit. Une balance négative en or n'est pas encore pénalisée.
+    \item \textbf{Visibilité} : le brouillard de guerre (FoW) et la \textit{terra incognita} (TI)
+    fonctionnent correctement pour un petit nombre de tuiles. Le bitmask est suffisant pour la
+    carte de démonstration.
+    \item \textbf{Fondation de villes} : un colon peut fonder une ville. L'expansion territoriale
+    se déclenche aux bons tours et sélectionne aléatoirement une tuile voisine selon une loi de
+    probabilité inverse à la distance.
+    \item \textbf{Construction} : les bâtiments (Ferme, Mine, Route, Scierie) peuvent être
+    construits depuis le menu contextuel si le joueur dispose des ressources nécessaires.
+\end{itemize}
+
+\subsubsection{Interface graphique}
+
+L'IHM est fonctionnelle :
+\begin{itemize}
+    \item panoramique fluide à la souris et au clavier (Z/S/Q/D) ;
+    \item zoom de 1$\times$ à 25$\times$ centré sur la position du curseur ;
+    \item barre latérale affichant les ressources et les boutons d'action ;
+    \item barre de statut affichant les informations de la tuile survolée ;
+    \item rendu optimisé par mise en cache des surfaces \texttt{Pygame} (reconstruction uniquement
+    si l'état a changé).
+\end{itemize}
+
+\subsection{Limites et perspectives}
+
+Les améliorations prioritaires identifiées sont :
+\begin{enumerate}
+    \item Implémenter une condition de victoire (score, domination, limite de tours) ;
+    \item Améliorer l'intelligence artificielle basique pour un adversaire automatique ;
+    \item Formaliser des tests unitaires avec \texttt{pytest} pour les systèmes de combat,
+    de mouvement et d'économie.
+\end{enumerate}
+
+
+
+\section{Conclusion}
+
+
+Le projet \textbf{Novum Imperium} remplit ses objectifs principaux : il constitue un jeu 4X
+simplifié, jouable et structuré, avec une architecture orientée objet modulaire et une interface
+graphique interactive. Les quatre axes du genre (exploration, expansion, exploitation,
+extermination) sont représentés, même si certains restent partiellement implémentés.
+
+Les points forts du projet sont la qualité du pipeline de génération procédurale de carte,
+le système de déplacement basé sur Dijkstra, et l'architecture en systèmes découplés
+(Movement, Combat, Economy, Visibility) coordonnés par le moteur.
+
+Les faiblesses identifiées : principalement les statistiques provisoires de certaines unités ainsi que les coûts des unités et bâtimes, nous pouvons aussi mentionner l'absence d'IA capablede mettre en difficulté le joueur. Cela constitue des pistes de développement claires pour une prochaine itération.
+
+\end{document}
