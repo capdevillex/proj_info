@@ -23,14 +23,16 @@ class UnitType(Enum):
     CAVALRY = 2
     ARCHER  = 3
     COLON   = 4
-    BABY    = 6
+    BABY    = 5
+    PLANE   = 6
+    BOAT    = 7
 
 
 class Unit:
     """Classe de base — ne pas instancier directement."""
 
     #Attention à bein le redéfinir dans chaque type d'unités
-    UNIT_TYPE:     UnitType
+    UNIT_TYPE:      UnitType
     MAX_DISTANCE:   int
     ATTACK_RANGE:   int
     BASE_ATTACK:    int
@@ -41,7 +43,13 @@ class Unit:
     BASE_COST :     int
     UPKEEP_COST:    int
     DASH:           bool = False
-    #HP
+    FLY :           bool = False
+    CARRY:          bool = False
+    ESCAPE:         bool = False
+    SCOUT:          bool = False
+    PERSIST:        bool = False
+    LAND_AFFINITY:  bool = True
+
 
 
     _unit_counter = 0
@@ -56,10 +64,12 @@ class Unit:
         self.hp             = self.BASE_HP
         self.unit_type      = self.UNIT_TYPE
         self.has_moved      = False
+        self.has_attacked   = False
         self.unit_type      = self.UNIT_TYPE
         self.max_distance   = self.MAX_DISTANCE
         self.attack_range   = self.ATTACK_RANGE
         self.water_affinity = self.WATER_AFFINITY
+        self.land_affinity  = self.LAND_AFFINITY
         self.upkeep_cost    = self.UPKEEP_COST
         self.can_dash       = self.DASH
         self.base_cost      = self.BASE_COST
@@ -78,23 +88,44 @@ class Unit:
 
     def can_move(self):
         """Vérifie si l'unité peut encore se déplacer ce tour."""
-        return not self.has_moved and self.max_distance > 0
+        if self.has_attacked and not self.has_moved and self.ESCAPE:
+            return True
+        else:
+            return not self.has_moved
+
+    def unit_can_attack(self):
+        """Vérifie si l'unité peut encore se déplacer ce tour."""
+        return not self.has_attacked
+
 
     def move_to_tile(self, new_tile_id):
-        """Déplace l'unité vers une nouvelle tuile."""
-        self.tile_id   = new_tile_id
+        """Déplace simplement l'unité vers une nouvelle tuile."""
+        self.tile_id = new_tile_id
         self.has_moved = True
 
-    def reset_movement(self):
-        """Réinitialise le mouvement (appelé au début d'un nouveau tour)."""
+    def reset_turn(self):
+        """Appelé au début de chaque nouveau tour."""
         self.has_moved = False
+        self.has_attacked = False
+
+
+  
 
     def get_visibility_mask(self, map_):
         """Calcule le bitmask de visibilité pour cette unité."""
         visible_tiles = set()
         visible_tiles.add(self.tile_id)
-        for neighbor_id in map_.tiles[self.tile_id].neighbors:
-            visible_tiles.add(neighbor_id)
+        if self.SCOUT:
+                print("Je suis un scout")
+                for neighbor_id in map_.tiles[self.tile_id].neighbors:
+                    visible_tiles.add(neighbor_id)
+                    for neigh_of_neigh in map_.tiles[neighbor_id].neighbors:
+                        visible_tiles.add(neigh_of_neigh)
+
+        else:
+            for neighbor_id in map_.tiles[self.tile_id].neighbors:
+                visible_tiles.add(neighbor_id)
+
         mask = 0
         for tile_id in visible_tiles:
             mask |= 1 << tile_id
@@ -113,7 +144,7 @@ class Soldier(Unit):
     BASE_HP      = 100
     SIZE         = 4
     BASE_COST    = 10000
-    UPKEEP_COST  = 10
+    UPKEEP_COST  = 1
 
 class Cavalry(Unit):
     UNIT_TYPE    = UnitType.CAVALRY
@@ -123,8 +154,10 @@ class Cavalry(Unit):
     BASE_DEFENSE = 6
     BASE_HP      = 90
     SIZE         = 4
-    UPKEEP_COST  = 10
+    UPKEEP_COST  = 1
     BASE_COST    = 150
+    DASH         = True
+    ESCAPE       = True
 
 class Archer(Unit):
     UNIT_TYPE    = UnitType.ARCHER
@@ -134,8 +167,9 @@ class Archer(Unit):
     BASE_DEFENSE = 5
     BASE_HP      = 70
     SIZE         = 4
-    UPKEEP_COST  = 10
+    UPKEEP_COST  = 1
     BASE_COST    = 10
+    SCOUT        = True
 
 class Colon(Unit):
     UNIT_TYPE      = UnitType.COLON
@@ -146,8 +180,22 @@ class Colon(Unit):
     BASE_HP        = 50
     WATER_AFFINITY = True
     SIZE           = 4
-    BASE_COST      = 10
+    BASE_COST      = 15
     UPKEEP_COST    = 10
+
+class Plane(Unit):
+    UNIT_TYPE      = UnitType.PLANE
+    MAX_DISTANCE   = 10
+    ATTACK_RANGE   = MAX_DISTANCE
+    BASE_ATTACK    = 20
+    BASE_DEFENSE   = 5
+    BASE_HP        = 50
+    WATER_AFFINITY = True
+    SIZE           = 4
+    BASE_COST      = 15
+    UPKEEP_COST    = 10
+    FLY            = True
+    SCOUT          = True
 
 
 class Baby(Unit):
@@ -158,8 +206,21 @@ class Baby(Unit):
     BASE_DEFENSE   = 3
     BASE_HP        = 50
     SIZE           = 4
-    UPKEEP_COST    = 10
+    UPKEEP_COST    = 1
     BASE_COST      = 50
+
+class Boat(Unit):
+    UNIT_TYPE      = UnitType.BOAT
+    MAX_DISTANCE   = 3
+    ATTACK_RANGE   = 1
+    BASE_ATTACK    = 5
+    BASE_DEFENSE   = 3
+    BASE_HP        = 50
+    SIZE           = 4
+    UPKEEP_COST    = 1
+    BASE_COST      = 50
+    WATER_AFFINITY = True
+    LAND_AFFINITY  = False
 
 
 # ── Factory ─────────────────────────────────────────────────────
@@ -170,4 +231,6 @@ UNIT_CLASS_MAP = {
     UnitType.ARCHER:  Archer,
     UnitType.COLON:   Colon,
     UnitType.BABY:    Baby,
+    UnitType.PLANE:   Plane,
+    UnitType.BOAT:    Boat,
 }

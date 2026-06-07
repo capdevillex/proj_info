@@ -59,6 +59,8 @@ class RenderPipeline:
             UnitType.CAVALRY: pygame.image.load(img_path / "cavalier.png").convert_alpha(),
             UnitType.COLON: pygame.image.load(img_path / "colon.png").convert_alpha(),
             UnitType.BABY: pygame.image.load(img_path / "baby.png").convert_alpha(),
+            UnitType.PLANE: pygame.image.load(img_path / "plane.png").convert_alpha(),
+            UnitType.BOAT:  pygame.image.load(img_path / "boat.png").convert_alpha(),
         }
         self.default_image = pygame.image.load(img_path / "soldat.png").convert_alpha()
         self.unit_cache = {}

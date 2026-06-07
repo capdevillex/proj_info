@@ -1,5 +1,6 @@
-from world.unit import UnitType, Soldier, Cavalry, Colon, Baby, Archer
+from world.unit import UnitType, Soldier, Cavalry, Colon, Baby, Archer, Plane
 from world.biome import Biome
+from core.systems.movement import Movement
 
 
 class Combat:
@@ -19,7 +20,8 @@ class Combat:
                     UnitType.CAVALRY: {"attack": Cavalry.BASE_ATTACK, "defense": Cavalry.BASE_DEFENSE, "hp": Cavalry.BASE_HP},
                     UnitType.ARCHER: {"attack": Archer.BASE_ATTACK, "defense": Archer.BASE_DEFENSE, "hp": Archer.BASE_HP},
                     UnitType.COLON: {"attack": Colon.BASE_ATTACK, "defense": Colon.BASE_DEFENSE, "hp": Colon.BASE_HP},
-                    UnitType.BABY: {"attack": Baby.BASE_ATTACK, "defense": Baby.BASE_DEFENSE, "hp": Baby.BASE_HP}
+                    UnitType.BABY: {"attack": Baby.BASE_ATTACK, "defense": Baby.BASE_DEFENSE, "hp": Baby.BASE_HP},
+                    UnitType.PLANE: {"attack": Plane.BASE_ATTACK, "defense": Plane.BASE_DEFENSE, "hp": Plane.BASE_HP}
                 }
 
     # Modificateurs de terrain pour la défense
@@ -49,15 +51,22 @@ class Combat:
         damage = self.compute_damage(state, attacker, defender)
 
         # Appliquer les dégâts (TODO: ajouter HP aux unités)
-        defender.hp -= damage
+        
 
         print(f"⚔️ Combat : {attacker.unit_type.name} attaque {defender.unit_type.name}")
+        print(f"avant :{defender.hp}")
         print(f"   Dégâts infligés : {damage:.1f}")
+        defender.hp -= damage
+        print(f"apres :{defender.hp}")
+        result = {"damage": damage, "defender_killed": defender.hp <= 0}
+        if not attacker.PERSIST:
+            attacker.has_attacked = True
+        if not attacker.ESCAPE:
+            attacker.has_moved = True
 
-        result = {"damage": damage, "defender_killed": defender.hp <= 0}  # TODO: vérifier si defender.hp <= 0
 
         if defender.hp <= 0:
-            print(f"   💀 {defender.unit_type.name} est détruit !")
+            print(f"{defender.unit_type.name} est détruit !")
 
         return result
 
@@ -82,6 +91,23 @@ class Combat:
 
         return damage
 
+    def execute_dash(self, state, unit, target_tile_id):
+        # 1. Vérifier si l'unité peut dasher (c'est une Cavalerie, etc.)
+        if not unit.DASH or unit.has_moved or unit.has_attacked:
+            return False
+            
+        # 2. Vérifier si la cible est à portée de dash (ici on réutilise la portée de mouvement)
+        reachable = Movement.get_reachable_tiles(state, unit)
+        if target_tile_id not in reachable:
+            return False
+            
+        # 3. Exécuter le mouvement
+        Movement.execute_move(state, unit, target_tile_id)
+        
+        # 4. Consommer l'attaque en plus du mouvement
+        unit.has_attacked = True 
+        return True
+
     def can_attack(self, state, attacker, defender):
         """
         Vérifie si une unité peut attaquer une autre.
@@ -96,24 +122,36 @@ class Combat:
         """
         # Vérifier que les unités sont ennemies
         if attacker.owner == defender.owner:
-            print(f"❌ Impossible d'attaquer une unité alliée")
+            print(f"Impossible d'attaquer une unité alliée")
             return False
 
-        # Vérifier que l'attaquant peut bouger (pas encore implémenté pour l'attaque)
-        # if not attacker.can_move():
-        #     print(f"❌ L'unité {attacker.id} a déjà agi ce tour")
-        #     return False
+        # Vérifier que l'attaquant attaquer
+        if not attacker.unit_can_attack():
+            print(f"L'unité {attacker.id} ne peut pas attaquer ce tour")
+            return False
+
+        #condition de dash
+        if attacker.has_moved and attacker.DASH:
+            return True
 
         # Vérifier que les unités sont adjacentes (TODO: implémenter portée d'attaque)
         attacker_tile = state.map.tiles.get(attacker.tile_id)
-        if attacker_tile and defender.tile_id not in attacker_tile.neighbors:
-            print(f"❌ La cible est trop loin")
+        if attacker_tile and defender.tile_id not in Movement.get_attackable_tiles(state.map,attacker):
+            print(f"La cible est trop loin")
             return False
 
         return True
 
 
-    DAMAGE_THRESHOLD_FOR_DEATH = 15  # Constante à mettre ici, pas dans game_engine
+    def perform_dash(self, state, attacker, target_tile_id):
+        # 1. Valider que le mouvement est possible
+        if Movement.execute_move(state, attacker, target_tile_id):
+            # 2. Consommer l'attaque immédiatement car le Dash est une action complète
+            attacker.has_attacked = True
+            attacker.has_moved = True
+            return True
+        return False
+    # Constante à mettre ici, pas dans game_engine
     #mzethode de merde pour la vie du truc
 
     def execute_attack(self, state, attacker, target_tile_id):
@@ -132,7 +170,7 @@ class Combat:
         # Trouver le défenseur sur la tuile
         target_tile = state.map.tiles.get(target_tile_id)
         if not target_tile or not target_tile.has_units():
-            print(f"❌ Aucune unité sur la tuile {target_tile_id}")
+            print(f"Aucune unité sur la tuile {target_tile_id}")
             return {"success": False, "defender": None, "defender_killed": False, "damage": 0}
 
         defender = target_tile.units[0]
@@ -141,7 +179,7 @@ class Combat:
         from core.systems.movement import Movement
         attackable_tiles = Movement.get_attackable_tiles(state.map, attacker)
         if target_tile_id not in attackable_tiles:
-            print(f"❌ La cible n'est pas à portée d'attaque")
+            print(f"La cible n'est pas à portée d'attaque")
             return {"success": False, "defender": None, "defender_killed": False, "damage": 0}
 
         # Vérifier les conditions d'attaque
@@ -153,11 +191,13 @@ class Combat:
         damage = result.get("damage", 0)
 
         # Décider du sort du défenseur
-        defender_killed = result.get("defender_killed", False)
+        defender_killed = damage >= defender.hp < 0
+
+        #defender_killed = result.get("defender_killed", False)
         if defender_killed:
-            print(f"💀 L'unité ennemie {defender.unit_type.name} est détruite !")
+            print(f"L'unité ennemie {defender.unit_type.name} est détruite !")
         else:
-            print(f"⚔️ L'unité ennemie {defender.unit_type.name} résiste à l'attaque !")
+            print(f"L'unité ennemie {defender.unit_type.name} résiste à l'attaque !")
 
         return {
             "success": True,

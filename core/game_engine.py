@@ -171,7 +171,7 @@ class GameEngine:
 
         # Réinitialiser le mouvement de toutes les unités
         for unit in self.state.units:
-            unit.reset_movement()
+            unit.reset_turn()
 
         # Incrémenter le tour
         self.state.turn += 1
@@ -350,15 +350,3 @@ class GameEngine:
         tile.constructions.append(cls(tile))
         print(f"Construction '{construction_name}' bâtie sur tuile {tile.id} par joueur {player}")
         return True
-
-    def setup_start_units(self):
-        """Fait spawner les unités de départ dans les coins."""
-        top_left = self.get_corner_tile("top_left")
-        if top_left is not None:
-            unit = self.spawn_unit(UnitType.COLON, top_left, owner=0)
-            if unit:
-                unit.upkeep_cost = 0  # Le colon de départ n'a pas de coût d'entretien
-            else:
-                print(
-                    "⚠️ Impossible de faire spawn le colon de départ dans le coin supérieur gauche"
-                )
