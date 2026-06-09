@@ -75,7 +75,7 @@
 
 Ce rapport présente le projet informatique réalisé dans le cadre de l'UE 2.1 à l'ENSTA Bretagne.
 L'objectif est de concevoir et d'implémenter un jeu de stratégie de type 4X (\textit{eXplore,
-eXpand, eXploit, eXterminate}) en Python, jouable en mode tour par tour avec une interface
+eXpand, eXploit, eXterminate}) en Python, jouable au tour par tour avec une interface
 graphique.
 
 Le projet, baptisé \textbf{Imperium Novum }, modélise un monde procédural sur lequel un joueur
@@ -87,7 +87,7 @@ L'architecture repose sur un système de \textbf{royaumes} (\texttt{Kingdom}) : 
 jeu (joueur humain ou intelligence artificielle) est encapsulé dans un royaume identifié,
 ce qui prépare un support multi-IA extensible. Un cadre abstrait (\texttt{BaseAI}) est déjà en
 place ; les contrôleurs d'IA concrets se branchent sur ce cadre via un cycle de tour
-Joueur\,$\to$\,IA\,$\to$\,Fin de round.
+Joueur\,$\to$\,IA\,$\to$\,Fin de tour.
 
 \begin{figure}[H]
   \centering
@@ -105,10 +105,10 @@ Joueur\,$\to$\,IA\,$\to$\,Fin de round.
 Un jeu 4X est un genre de jeu de stratégie dans lequel chaque joueur développe une
 civilisation selon quatre axes fondamentaux :
 \begin{enumerate}
-    \item \textbf{Exploration} : découvrir la carte progressivement à travers un brouillard de guerre ;
-    \item \textbf{Expansion} : fonder des villes et étendre leur territoire ;
-    \item \textbf{Exploitation} : collecter des ressources et construire des bâtiments ;
-    \item \textbf{Extermination} : attaquer les unités et villes adverses.
+    \item \textbf{eXploration} : découvrir la carte progressivement à travers un brouillard de guerre ;
+    \item \textbf{eXpansion} : fonder des villes et étendre leur territoire ;
+    \item \textbf{eXploitation} : collecter des ressources et construire des bâtiments ;
+    \item \textbf{eXtermination} : attaquer les unités et villes adverses.
 \end{enumerate}
 
 Le problème consiste à modéliser informatiquement ces quatre mécaniques de façon cohérente,
@@ -148,21 +148,21 @@ Ce projet relève de plusieurs domaines informatiques :
     multi-catégories).
 \end{description}
 
-\subsection{Limites actuelles du projet}
+% \subsection{Limites actuelles du projet}
 
-Plusieurs limites sont actuellement dans le projet et seront adressées dans les versions futures :
-\begin{itemize}
+% Plusieurs limites sont actuellement dans le projet et seront adressées dans les versions futures :
+% \begin{itemize}
 
-    \item \textbf{Statistiques d'unités en cours d'équilibrage} : les statistiques des unités et de
-    production des villes sont des valeurs temporaires, un équilibrage est nécessaire pour que le jeu soit réellement jouable.
+%     \item \textbf{Statistiques d'unités en cours d'équilibrage} : les statistiques des unités et de
+%     production des villes sont des valeurs temporaires, un équilibrage est nécessaire pour que le jeu soit réellement jouable.
 
-    \item \textbf{Absence de condition de victoire} : aucune condition de fin de partie n'est
-    formalisée dans le code (pas de score, pas de domination, pas de limite de tours).
+%     \item \textbf{Absence de condition de victoire} : aucune condition de fin de partie n'est
+%     formalisée dans le code (pas de score, pas de domination, pas de limite de tours).
 
-    \item \textbf{Dépendance à la résolution} : la carte est définie en 444$\times$250 tuiles
-    avec une taille de tuile de 2 pixels, limitant la résolution effective à 888$\times$500
-    pixels avant zoom.
-\end{itemize}
+%     \item \textbf{Dépendance à la résolution} : la carte est définie en 444$\times$250 tuiles
+%     avec une taille de tuile de 2 pixels, limitant la résolution effective à 888$\times$500
+%     pixels avant zoom.
+% \end{itemize}
 
 
 \section{Description des classes}
@@ -220,7 +220,7 @@ Le tableau suivant résume l'organisation modulaire du projet :
 
 \subsection{GameConfig (config.py)}
 
-Classe de configuration regroupant toutes les constantes du jeu sous forme d'attributs de
+\textit{GameConfig} est une classe de configuration regroupant toutes les constantes du jeu sous forme d'attributs de
 classe. Elle évite la dispersion des paramètres dans le code et centralise les réglages de la
 carte, des boutons, de l'interface et des villes.
 
@@ -241,7 +241,7 @@ class GameConfig:
 
 \subsection{Kingdom (world/kingdom.py)}
 
-Dataclass représentant un royaume, qu'il soit contrôlé par un joueur humain ou par une IA.
+\textit{Kingdom} est une dataclass représentant un royaume, qu'il soit contrôlé par un joueur humain ou par une IA.
 Chaque royaume possède une identité visuelle (couleur RGB) et, s'il est IA, un dictionnaire
 \texttt{ai\_params} calibrant son arbre de décision.
 
@@ -278,7 +278,7 @@ Attributs principaux :
     \item \texttt{current\_kingdom\_idx} : index courant dans \texttt{turn\_order} (utilisé pendant la phase IA) ;
     \item \texttt{phase} : valeur de \texttt{TurnPhase} indiquant la phase active ;
     \item \texttt{player\_resources} : dictionnaire \texttt{\{kingdom\_id: \{ressource: quantité\}\}} ;
-    \item \texttt{turn} : compteur de rounds ;
+    \item \texttt{turn} : compteur de tours ;
     \item \texttt{discovered}, \texttt{visibility} : bitmasks pour le brouillard de guerre ;
     \item \texttt{use\_ti}, \texttt{use\_fow} : drapeaux pour activer la \textit{terra incognita} et
     le brouillard de guerre.
@@ -358,15 +358,15 @@ attributs de classe (constantes) décrivant ses caractéristiques.
 \begin{description}
     \item[\texttt{DASH}] : peut se déplacer et attaquer en un seul tour ;
     \item[\texttt{ESCAPE}] : peut se déplacer après avoir attaqué ;
-    \item[\texttt{SCOUT}] : portée de visibilité étendue (2 couronnes de tuiles au lieu de 1), applicable à l'Archer et à l'Avion ;
+    \item[\texttt{SCOUT}] : portée de visibilité étendue (2 couronnes de tuiles au lieu de 1);
     \item[\texttt{FLY}] : ignore les coûts de terrain (traverse eau, montagne, forêt sans pénalité) ;
-    \item[\texttt{PERSIST}] : n'est pas marqué \og a attaqué \fg{} après un combat ;
+    \item[\texttt{PERSIST}] : peut attaquer tant qu'il y a des ennemis à portée, même après avoir attaqué (contrairement à DASH qui ne peut attaquer qu'une fois) ;
     \item[\texttt{WATER\_AFFINITY}] : peut traverser et se poser sur des tuiles d'eau ;
     \item[\texttt{LAND\_AFFINITY}] : peut se déplacer sur des tuiles terrestres.
 \end{description}
 
 \medskip
-Le tableau suivant récapitule les caractéristiques de chaque unité.
+Le tableau \ref{tab:unites} suivant récapitule les caractéristiques de chaque unité.
 
 \begin{table}[H]
 \centering
@@ -378,12 +378,11 @@ Soldier  & 5 & 8   & 100 & 3  & 1 & 8 & --- \\
 Cavalry  & 12       & 6   & 90  & 5  & 1 & 150  & DASH, ESCAPE \\
 Archer   & 8        & 5   & 70  & 2  & 2 & 10   & SCOUT \\
 Colon    & 2        & 3   & 50  & 1  & 0 & 15   & WATER\_AFFINITY \\
-Baby     & 5        & 3   & 50  & 3  & 1 & 50   & --- \\
-Plane    & 20       & 5   & 50  & 10 & 10 & 15  & FLY, SCOUT, WATER\_AFFINITY \\
-Boat     & 5        & 3   & 50  & 3  & 1 & 50   & WATER\_AFFINITY, LAND=Non \\
+Plane    & 20       & 5   & 50  & 10 & 10 & 500  & FLY, SCOUT, WATER\_AFFINITY \\
+Boat     & 5        & 3   & 50  & 3  & 1 & 100   & WATER\_AFFINITY \\
 \bottomrule
 \end{tabular}
-\caption{Caractéristiques des unités (valeurs de débogage provisoires\,†)}
+\caption{Caractéristiques des unités}
 \label{tab:unites}
 \end{table}
 
@@ -429,14 +428,14 @@ de son royaume : toutes les tuiles du territoire et leurs voisines immédiates s
 \subsection{Construction et sous-classes (world/construction.py)}
 
 Quatre types de bâtiments peuvent être construits sur les tuiles contrôlées par une ville.
-Le boost de production est calculé dynamiquement à la construction en fonction de la ressource
+Le bonus de production est calculé dynamiquement à la construction en fonction de la ressource
 présente sur la tuile.
 
 \begin{table}[H]
 \centering
 \begin{tabular}{llll}
 \toprule
-\textbf{Bâtiment} & \textbf{Coût} & \textbf{Boost calculé dynamiquement} \\
+\textbf{Bâtiment} & \textbf{Coût} & \textbf{Bonus calculé dynamiquement} \\
 \midrule
 Ferme     & 5 bois            & +1 à +3 nourriture (selon FOOD1/2/3 présente) \\
 Mine      & 2 pierre + 3 bois & +1 à +3 fer/or/pierre selon ressource minière \\
@@ -653,7 +652,7 @@ L'expansion n'est déclenchée que lors des tours où l'âge de la ville concern
 
 \subsection{Cycle de tour : GameEngine.end\_turn}
 
-Le cycle complet d'un round comporte trois phases :
+Le cycle complet d'un tour comporte trois phases :
 
 \begin{enumerate}
     \item \textbf{Tour joueur} (\texttt{PLAYER\_TURN}) : le joueur humain interagit jusqu'à
@@ -662,7 +661,7 @@ Le cycle complet d'un round comporte trois phases :
     \texttt{register\_ai()} joue son tour en appelant \texttt{ai.play\_turn(state, engine)}.
     Pendant cette phase, \texttt{input\_locked} est \texttt{True} et tous les événements
     clavier/souris joueur sont ignorés ;
-    \item \textbf{Fin de round} : mise à jour de l'économie (\texttt{Economy.update}),
+    \item \textbf{Fin de tour} : mise à jour de l'économie (\texttt{Economy.update}),
     réinitialisation des drapeaux \texttt{has\_moved}/\texttt{has\_attacked}, vieillissement
     des villes et expansion éventuelle, recalcul du brouillard de guerre.
 \end{enumerate}
@@ -705,7 +704,7 @@ de méthodes déjà existantes sera moins intense. Les tests ont été conduits 
 
 \subsubsection{Tests manuels en jeu}
 
-La principale méthode de validation est le test par le jeu lui-même : lancer une partie,
+Une méthode de validation de bout en bout est le test par le jeu lui-même : lancer une partie,
 observer le comportement de chaque mécanique (déplacement, combat, fondation de villes,
 économie) et vérifier visuellement la cohérence. Les retours de débogage sont imprimés dans
 la console (\texttt{print}).
