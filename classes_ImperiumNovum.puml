@@ -1,0 +1,3 @@
+@startuml classes_ImperiumNovum
+set namespaceSeparator none
+@enduml

@@ -96,6 +96,8 @@ Joueur\,$\to$\,IA\,$\to$\,Fin de tour.
   \label{fig:ihm_general}
 \end{figure}
 
+Il convient de noter que les visuels intégrés à ce stade du projet sont des éléments de substitution (placeholders). N'ayant pas vocation à nous substituer à des professionnels du graphisme, nous nous sommes concentrés sur l'aspect fonctionnel et structurel de l'interface, laissant la charte graphique finale à la discrétion d'experts métier.
+
 
 \section{Analyse du problème}
 
@@ -167,13 +169,44 @@ Ce projet relève de plusieurs domaines informatiques :
 
 \section{Description des classes}
 
-La figure~\ref{fig:diagramme_classes} résume les relations entre les classes principales du projet.
+La figure~\ref{fig:diagramme_classes} présente le diagramme de classes UML complet du projet. La figure~\ref{fig:uml_packages} en donne une vue détaillée par package.
 
 \begin{figure}[H]
   \centering
-  \imgplaceholder[2.2cm]{Diagramme de classes UML, relations entre GameState, GameEngine, Kingdom, Map, Tile, Unit, City, Construction, BaseAI, UnitSelector}
-  \caption{Diagramme de classes UML de \textit{Imperium Novum }}
+  \includegraphics[width=\textwidth, height=0.88\textheight, keepaspectratio]{uml_classes.pdf}
+  \caption{Diagramme de classes UML complet de \textit{Imperium Novum} (généré par graphviz)}
   \label{fig:diagramme_classes}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth, height=0.30\textheight, keepaspectratio]{uml_world.png}
+    \caption{Package \texttt{world} — modèle du jeu (unités, tuiles, carte, villes, constructions)}
+    \label{fig:uml_world}
+  \end{subfigure}
+
+  \vspace{0.5em}
+
+  \begin{subfigure}{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth, height=0.30\textheight, keepaspectratio]{uml_core.png}
+    \caption{Package \texttt{core} — moteur, état global et systèmes (combat, mouvement, économie, visibilité)}
+    \label{fig:uml_core}
+  \end{subfigure}
+
+  \vspace{0.5em}
+
+  \begin{subfigure}{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth, height=0.25\textheight, keepaspectratio]{uml_ui.png}
+    \caption{Package \texttt{ui} — interface graphique (gestionnaire UI, rendu, caméra, boutons)}
+    \label{fig:uml_ui}
+  \end{subfigure}
+
+  \caption{Diagrammes UML détaillés par package}
+  \label{fig:uml_packages}
 \end{figure}
 
 Le tableau suivant résume l'organisation modulaire du projet :
@@ -877,7 +910,7 @@ lasse pas le joueur et qui reste ouverte jusqu'au bout, relève de la conception
 plus que de l'informatique.
 
 L'implémentation d'une IA adversaire illustre encore mieux ce fossé. Le défi ne venait pas
-du code — l'interface \texttt{BaseAI} est en place — mais du fait que nous sommes les
+du code, l'interface \texttt{BaseAI} est en place, mais du fait que nous sommes les
 concepteurs du jeu et savons donc, par définition, comment y jouer parfaitement. Vouloir
 inculquer des stratégies à une IA sans passer par de l'apprentissage automatique revient
 à écrire à la main tout ce que nous faisons intuitivement, ce qui constituerait à lui seul
@@ -893,9 +926,16 @@ base de code conséquente et multi-couches. Il nous a surtout fait prendre consc
 développement va bien au-delà du terminal : le retour utilisateur est primordial, et c'est
 ce que les tests illustrent parfaitement. Une batterie de 334 tests ne peut pas reproduire
 les centaines d'actions imprévues qu'une vraie base de joueurs découvrirait en quelques
-heures de partie — deux bugs ont pourtant déjà été détectés à leur rédaction. Cela confirme
-que formaliser les tests est bénéfique dès maintenant, et qu'une couverture plus large reste
-un objectif pour les prochaines itérations.
+heures de partie, deux bugs non trouvé jusqu'à lors ont pourtant été détectés à leur rédaction. Cela confirme
+que formaliser les tests est bénéfique dès maintenant.
+
+En définitive, la réalisation de ce projet s'est révélée particulièrement formatrice.
+Au-delà des compétences techniques acquises, cette expérience nous apporte aujourd'hui le recul
+méthodologique et la maturité nécessaires pour appréhender la suite de notre parcours avec une
+réelle sérénité. Nous sommes désormais pleinement armés pour identifier et privilégier les choix
+ d'avenir qui correspondent le mieux à nos aspirations professionnelles.
+
+
 
 \newpage
 
