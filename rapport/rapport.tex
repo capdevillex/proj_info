@@ -91,8 +91,8 @@ Joueur\,$\to$\,IA\,$\to$\,Fin de tour.
 
 \begin{figure}[H]
   \centering
-  \imgplaceholder[1.8cm]{Capture d'écran : vue générale de l'interface (carte + barre latérale + barre de statut)}
-  \caption{Interface générale de \textit{Imperium Novum }, carte procédurale, barre latérale et barre de statut}
+  \includegraphics[width=0.85\textwidth]{../screenshots/villes.png}
+  \caption{Interface générale de \textit{Imperium Novum } : carte procédurale avec villes, unités et indicateur de tour (tour 120)}
   \label{fig:ihm_general}
 \end{figure}
 
@@ -402,8 +402,8 @@ Ces ensembles sont recalculés à chaque sélection en appelant
 
 \begin{figure}[H]
   \centering
-  \imgplaceholder[1.8cm]{Capture d'écran : sélection d'un archer, tuiles bleues (mouvement) et tuiles rouges (attaque à portée 2)}
-  \caption{Visualisation des zones de mouvement (bleu) et d'attaque (rouge) lors de la sélection d'une unité}
+  \includegraphics[width=0.85\textwidth]{../screenshots/portee_attaque.png}
+  \caption{Visualisation des zones de mouvement (bleu) lors de la sélection d'un archer}
   \label{fig:unit_selection}
 \end{figure}
 
@@ -517,8 +517,8 @@ du contexte :
 
 \begin{figure}[H]
   \centering
-  \imgplaceholder[1.8cm]{Capture d'écran : menu contextuel ouvert sur une tuile de ville, catégories Construction, Unités et Territoire visibles}
-  \caption{Menu contextuel multi-catégories (clic droit sur une tuile)}
+  \includegraphics[width=0.55\textwidth]{../screenshots/fenetre_menu.png}
+  \caption{Menu contextuel multi-catégories : Construction, Unités et Territoire}
   \label{fig:context_menu}
 \end{figure}
 
@@ -579,8 +579,8 @@ de la carte (cohérence bidirectionnelle entre cellules et tuiles).
 
 \begin{figure}[H]
   \centering
-  \imgplaceholder[2cm]{Capture d'écran : carte générée procéduralement, biomes visibles (plaine verte, forêt sombre, montagne grise, désert beige, eau bleue) avec provinces délimitées}
-  \caption{Exemple de carte générée procéduralement avec le pipeline Poisson--Voronoï--Perlin}
+  \includegraphics[width=0.85\textwidth]{../screenshots/génération de base.png}
+  \caption{Exemple de carte générée procéduralement avec le pipeline Poisson--Voronoï--Perlin (plaine verte, forêt sombre, montagne grise, désert beige, eau bleue)}
   \label{fig:carte_generee}
 \end{figure}
 
@@ -698,59 +698,104 @@ où $p$ est la persistance et $l$ la lacunarité. L'implémentation est une copi
 
 \subsection{Stratégie de test}
 
-Le projet ne dispose actuellement pas de suite de tests unitaires automatisés formels (pas de fichier
-\texttt{pytest} ou \texttt{unittest} à la racine), ce sera rajouté sous peu lorsque le développement et la modification
-de méthodes déjà existantes sera moins intense. Les tests ont été conduits selon trois approches complémentaires.
+Le projet dispose d'une suite de \textbf{334 tests unitaires automatisés} exécutés avec
+\texttt{pytest}, organisés dans le dossier \texttt{test/}. Ces tests couvrent l'ensemble
+des modules fonctionnels : modèle du monde, systèmes de jeu et utilitaires.
 
-\subsubsection{Tests manuels en jeu}
+\subsubsection{Architecture de la suite de tests}
 
-Une méthode de validation de bout en bout est le test par le jeu lui-même : lancer une partie,
-observer le comportement de chaque mécanique (déplacement, combat, fondation de villes,
-économie) et vérifier visuellement la cohérence. Les retours de débogage sont imprimés dans
-la console (\texttt{print}).
+La suite est structurée en miroir de l'architecture du projet :
 
-Exemples de sorties observées :
-\begin{myverbatim}[title={Messages de débogage en console}]
-Unite COLON numero 1 creee sur tuile 42 (owner=0)
-Ville 'Aurora' fondee sur la tuile 42 par le royaume 0
-Combat : ARCHER attaque CAVALRY
-   Degats infliges : 6.2
-   L'unite ennemie CAVALRY resiste a l'attaque !
-==================================================
-Fin du tour 3
-==================================================
-La ville 'Aurora' peut etre etendue (age 3 tours)
-City Aurora candidates for expansion: {(58, 1), (61, 2), (44, 1)}
+\begin{description}[leftmargin=2em]
+    \item[\texttt{test/world/}] — Couche modèle (6 fichiers, $\approx 200$ tests) :
+    \begin{itemize}
+        \item \texttt{test\_tile.py} : initialisation, centre de gravité, \texttt{is\_water()},
+        ajout/suppression/itération d'unités, \texttt{clear\_units()}, \texttt{\_\_repr\_\_} ;
+        \item \texttt{test\_unit.py} : statistiques de toutes les classes d'unités (Soldat,
+        Cavalerie, Archer, Colon, Bébé, Avion, Bateau), compteur d'ID global,
+        \texttt{can\_move()}, \texttt{reset\_turn()}, masque de visibilité, fabrique
+        \texttt{UNIT\_CLASS\_MAP} ;
+        \item \texttt{test\_construction.py} : bonus de production des bâtiments (Ferme, Mine,
+        Scierie, Route) pour chaque niveau de ressource (1 à 3) ;
+        \item \texttt{test\_city.py} : auto-incrément d'ID, calcul de production par type
+        de ressource, masque de visibilité, protection de la tuile centrale ;
+        \item \texttt{test\_kingdom.py} : dataclass Kingdom, valeurs par défaut, \texttt{\_\_repr\_\_} ;
+        \item \texttt{test\_resources.py} : énumération Resource, 16 membres, extraction du
+        niveau (chiffres 1–3).
+    \end{itemize}
+    \item[\texttt{test/core/}] — Systèmes de jeu (4 fichiers, $\approx 120$ tests) :
+    \begin{itemize}
+        \item \texttt{test\_game\_state.py} : royaumes, villes, phases de tour, accumulation
+        du bitmask de visibilité (avec patch de \texttt{core.game\_state.Map}) ;
+        \item \texttt{test\_movement.py} : coûts de déplacement par biome/unité, distances
+        Dijkstra, tuiles accessibles, tuiles attaquables, \texttt{execute\_move()},
+        coût vers une tuile cible ;
+        \item \texttt{test\_combat.py} : table d'efficacité (triangle Soldat/Cavalerie/Archer),
+        calcul des dégâts (terrain, type, ratio PV), \texttt{can\_attack()}, \texttt{resolve()},
+        \texttt{execute\_attack()} ;
+        \item \texttt{test\_economy.py} : accumulation de la production de villes, déduction
+        de l'entretien des unités pour le joueur actif uniquement ;
+        \item \texttt{test\_visibility.py} : application du masque de brouillard de guerre.
+    \end{itemize}
+    \item[\texttt{test/utils/}] — Utilitaires (1 fichier, $\approx 25$ tests) :
+    \begin{itemize}
+        \item \texttt{test\_noise.py} : interpolation linéaire, gradient 2D, plage du bruit de
+        Perlin (borné en $[-1, 1]$), déterminisme, octaves multiples, table de permutation.
+    \end{itemize}
+\end{description}
+
+\subsubsection{Défis techniques et solutions}
+
+\paragraph{Isolation de Pygame.}
+Le module \texttt{world/unit.py} appelle \texttt{pygame.init()} et
+\texttt{pygame.font.Sys\\Font()} à l'import, ce qui provoque une erreur dans un environnement
+sans affichage. La solution adoptée est d'injecter un \texttt{MagicMock} dans
+\texttt{sys.modules["pygame"]} \emph{avant} tout import de module projet, dans
+\texttt{test/conftest.py}. Ceci garantit que tous les tests s'exécutent sans interface
+graphique.
+
+\paragraph{Substituts légers (MockMap, MockGameState).}
+Les systèmes de jeu (Mouvement, Combat, Économie) opèrent sur un objet \texttt{GameState}
+contenant une vraie \texttt{Map} générée procéduralement, ce qui rendrait les tests lents et
+non déterministes. On leur substitue :
+\begin{itemize}
+    \item \texttt{MockMap} : dictionnaire de tuiles créées à la main avec voisinage explicite ;
+    \item \texttt{MockGameState} : état minimal avec ressources, joueur courant et bitmask
+    de visibilité pré-initialisés.
+\end{itemize}
+Cette approche réduit le temps d'exécution de la suite complète à moins de $0{,}2$\,s.
+
+\paragraph{Compteurs globaux.}
+\texttt{Unit.\_unit\_counter} et \texttt{City.\_next\_id} sont des attributs de classe
+(entiers auto-incrémentés). Une fixture \texttt{autouse=True} dans \texttt{conftest.py}
+les remet à zéro avant chaque test, garantissant l'isolation inter-tests.
+
+\paragraph{Chemin relatif dans noise.py.}
+\texttt{utils/noise.py} ouvre \texttt{"utils/perm.json"} avec un chemin relatif au
+répertoire courant. Le conftest effectue \texttt{os.chdir(PROJECT\_ROOT)} au démarrage de
+pytest pour que ce chemin soit toujours résolu correctement.
+
+
+\subsubsection{Lancement de la suite}
+
+\begin{myverbatim}[title={Commande de lancement des tests}]
+# Depuis la racine du projet
+python3 -m pytest test/
+
+# Avec rapport de couverture détaillé
+python3 -m pytest test/ -v --tb=short
 \end{myverbatim}
 
-\subsubsection{Tests de génération de carte}
+\subsubsection{Tests manuels complémentaires}
+
+En parallèle des tests automatisés, une méthode de validation de bout en bout reste
+indispensable : lancer une partie, observer le comportement de chaque mécanique
+(déplacement, combat, fondation de villes, économie) et vérifier visuellement la cohérence.
+Les retours de débogage sont imprimés dans la console (\texttt{print}).
 
 Un outil dédié, \texttt{perlin\_visualizer.py}, permet de visualiser interactivement le
-bruit de Perlin généré et d'ajuster ses paramètres (octaves, persistance, lacunarité). Ce
-visualiseur a été utilisé pour calibrer les seuils de biomes.
-
-La génération de carte a été testée en faisant varier les paramètres de
-\texttt{GameConfig} :
-\begin{itemize}
-    \item \texttt{BORDER\_STRENGTH} (2,75) : contrôle la quantité d'eau sur les bords ;
-    \item \texttt{OCEANIC\_COEFF} (1,5) : influence de l'océan ;
-    \item \texttt{MIN\_WATER\_CLUSTER\_SIZE} (2) : seuil de suppression des micro-lacs ;
-    \item \texttt{WATER\_BRIDGE\_MAX\_HOPS} (3) : longueur maximale des détroits.
-\end{itemize}
-
-La touche \textbf{R} permet de régénérer la carte en temps réel pendant une partie, ce qui
-a facilité l'itération sur les paramètres de génération.
-
-\subsubsection{Tests hérités (legacy)}
-
-Le dossier \texttt{legacy/} contient deux fichiers de test préliminaires :
-\begin{itemize}
-    \item \texttt{test\_grille\_filling.py} : test du remplissage initial de la grille de
-    cases (prototype pré-architecture) ;
-    \item \texttt{test\_pygame.py} : test de l'initialisation de Pygame et du rendu de base.
-\end{itemize}
-Ces tests correspondent à une phase exploratoire antérieure à la mise en place de
-l'architecture finale.
+bruit de Perlin et d'ajuster ses paramètres. La touche \textbf{R} régénère la carte en
+temps réel, ce qui a facilité l'itération sur les paramètres de génération.
 
 \subsection{Résultats obtenus}
 
@@ -770,7 +815,7 @@ La génération procédurale produit des cartes cohérentes avec :
     \item \textbf{Déplacement} : le pathfinding Dijkstra fonctionne correctement. La surbrillance
     des tuiles accessibles (bleue) est cohérente avec les points de mouvement et les coûts de terrain.
     \item \textbf{Combat} : la formule de dégâts est fonctionnelle. Le triangle d'efficacité
-    (Soldat\,$\succ$\,Cavalerie\,$\succ$\,Archer\,$\succ$\,Soldat) est respecté. Le dash de la
+    (Soldat\,$\succ$\,Cavalerie\,$\succ$\,\\Archer\,$\succ$\,Soldat) est respecté. Le dash de la
     cavalerie fonctionne.
     \item \textbf{Économie} : la production des villes est calculée chaque tour. L'entretien
     des unités est déduit. Une balance négative en or n'est pas encore pénalisée.
@@ -803,20 +848,10 @@ L'IHM est fonctionnelle :
 
 \begin{figure}[H]
   \centering
-  \imgplaceholder[2cm]{Capture d'écran : brouillard de guerre actif, zones noires (terra incognita), zones grises (vu précédemment mais hors portée), zones claires (actuellement visibles)}
-  \caption{Rendu du brouillard de guerre (\textit{Fog of War}) et de la \textit{Terra Incognita}}
+  \includegraphics[width=0.85\textwidth]{../screenshots/FOW_TI.png}
+  \caption{Rendu du brouillard de guerre (\textit{Fog of War}) et de la \textit{Terra Incognita} : zones noires (inconnues), grises (déjà explorées), claires (actuellement visibles)}
   \label{fig:fog_of_war}
 \end{figure}
-
-\subsection{Limites et perspectives}
-
-Les améliorations prioritaires identifiées sont :
-\begin{enumerate}
-    \item Finaliser l'équilibrage des statistiques d'unités ;
-    \item Implémenter une condition de victoire (score, domination, limite de tours) ;
-    \item Formaliser des tests unitaires avec \texttt{pytest} pour les systèmes de combat,
-    de mouvement et d'économie.
-\end{enumerate}
 
 
 
@@ -833,10 +868,34 @@ basé sur Dijkstra, et l'architecture en systèmes découplés coordonnés par l
 cadre multi-royaumes et l'interface abstraite \texttt{BaseAI} constituent une base solide
 pour l'ajout d'adversaires automatiques sans modifier le code existant.
 
-Les faiblesses identifiées sont principalement l'absence d'une IA concrète branchée par
-défaut, des statistiques d'unités encore en cours d'équilibrage, et l'absence de condition
-de victoire formalisée. Ces points constituent des pistes de développement claires pour
-la prochaine itération.
+Ce projet nous a surtout permis de réaliser qu'il existe un monde entre \textit{coder} et
+\textit{créer un jeu}. Fixer un coût d'entretien à une unité tient en une ligne de code ;
+équilibrer ce coût pour que la partie soit intéressante du début à la fin est un problème
+d'une toute autre nature. Il en va de même pour les conditions de victoire : écrire
+\texttt{if gold > 10000} est trivial, mais concevoir une fin de partie cohérente, qui ne
+lasse pas le joueur et qui reste ouverte jusqu'au bout, relève de la conception de jeu bien
+plus que de l'informatique.
+
+L'implémentation d'une IA adversaire illustre encore mieux ce fossé. Le défi ne venait pas
+du code — l'interface \texttt{BaseAI} est en place — mais du fait que nous sommes les
+concepteurs du jeu et savons donc, par définition, comment y jouer parfaitement. Vouloir
+inculquer des stratégies à une IA sans passer par de l'apprentissage automatique revient
+à écrire à la main tout ce que nous faisons intuitivement, ce qui constituerait à lui seul
+un projet informatique entier.
+
+Il faut également souligner que la génération procédurale de la carte est d'une complexité
+algorithmique telle qu'elle constitue elle aussi un projet à part entière. Le pipeline
+Poisson--Voronoï--Perlin, les post-traitements hydrographiques et les heuristiques de
+validation ont mobilisé plus de \textbf{30 heures de travail} à eux seuls.
+
+Ce projet nous a confortés dans notre capacité à concevoir, maintenir et faire évoluer une
+base de code conséquente et multi-couches. Il nous a surtout fait prendre conscience que le
+développement va bien au-delà du terminal : le retour utilisateur est primordial, et c'est
+ce que les tests illustrent parfaitement. Une batterie de 334 tests ne peut pas reproduire
+les centaines d'actions imprévues qu'une vraie base de joueurs découvrirait en quelques
+heures de partie — deux bugs ont pourtant déjà été détectés à leur rédaction. Cela confirme
+que formaliser les tests est bénéfique dès maintenant, et qu'une couverture plus large reste
+un objectif pour les prochaines itérations.
 
 \newpage
 
@@ -1087,15 +1146,15 @@ def perlin_noise(x, y,
 
 \begin{figure}[H]
 \centering
-\imgplaceholder[1.5cm]{Capture d'écran complète de l'interface – à remplacer}
-\caption{Vue générale de l'interface de jeu annotée}
+\includegraphics[width=0.85\textwidth]{../screenshots/unites.png}
+\caption{Diversité des unités en jeu : soldat, cavalerie, avion, bateau (naviguant sur l'eau) et colon avec bâtiment}
 \label{fig:annex_ihm}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\imgplaceholder[1.5cm]{Détail de la barre latérale et des ressources – à remplacer}
-\caption{Barre latérale : ressources, tour actuel, indicateur de royaume}
+\includegraphics[width=0.45\textwidth]{../screenshots/ex_ressources.png}
+\caption{Barre latérale : ressources du joueur 1 au tour 51 (nourriture, bois, pierre, fer, or)}
 \label{fig:annex_sidebar}
 \end{figure}
 

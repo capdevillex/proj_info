@@ -1,135 +1,80 @@
-"""
-Configuration globale pytest et fixtures partagées.
-
-Lancer les tests depuis la racine du projet :
-    cd ~/proj_info
-    pytest test/
-
-Dépendances de test :
-    pip install pytest scipy pygame-ce
-"""
+"""Configuration pytest — sys.path, mocks pygame, fixtures partagées."""
 import os
 import sys
+from unittest.mock import MagicMock
 
-#  1. Chemins absolus
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(_TEST_DIR)
 
-#  2. CWD = racine du projet (noise.py utilise open("utils/perm.json"))
+# CWD = racine du projet (nécessaire pour utils/perm.json dans noise.py)
 os.chdir(_PROJECT_ROOT)
 
-#  3. sys.path : racine projet + dossier test
-#     - _PROJECT_ROOT : permet `from world.xxx import ...`
-#     - _TEST_DIR     : permet `from helpers import ...` depuis les sous-dossiers
+# sys.path : racine projet ET dossier test (pour `from helpers import …`)
 for _p in (_PROJECT_ROOT, _TEST_DIR):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-#  4. Mock pygame AVANT tout import de module projet
-# world/unit.py appelle pygame.init() et pygame.font.SysFont() au niveau module.
-from unittest.mock import MagicMock
+# Mock pygame AVANT tout import de module projet
 _pygame_mock = MagicMock()
 _pygame_mock.init.return_value = (1, 0)
 _pygame_mock.font = MagicMock()
 _pygame_mock.font.SysFont.return_value = MagicMock()
 sys.modules.setdefault("pygame", _pygame_mock)
 
-#  5. Imports projet
 import pytest
-from world.biome import Biome
-from world.resources import Resource
-from world.tile import Tile
-from world.unit import Unit, Soldier, Cavalry, Archer, Colon, Baby, Plane, Boat
-from world.kingdom import Kingdom
-
-# helpers.py centralise MockMap / make_tile / make_linear_map / MockGameState
+from world.unit import Unit
+from world.city import City
 from helpers import MockMap, make_tile, make_linear_map, MockGameState
+from world.unit import Soldier, Cavalry, Archer, Colon, Baby, Boat
 
-
-#  Fixtures de réinitialisation (autouse)
 
 @pytest.fixture(autouse=True)
-def _reset_unit_counter():
-    """Remet le compteur global d'ID d'unités à zéro avant chaque test."""
+def reset_global_counters():
+    """Réinitialise les compteurs globaux avant chaque test."""
     Unit._unit_counter = 0
-    yield
-
-
-@pytest.fixture(autouse=True)
-def _reset_city_id():
-    """Remet le compteur global d'ID de villes à zéro avant chaque test."""
-    from world.city import City
     City._next_id = 0
     yield
 
 
-#  Fixtures de tuiles
+# --- Fixtures d'unités ---
 
 @pytest.fixture
-def plain_tile() -> Tile:
-    return make_tile(0, biome=Biome.PLAIN)
-
-
-@pytest.fixture
-def water_tile() -> Tile:
-    return make_tile(0, biome=Biome.WATER)
-
-
-@pytest.fixture
-def forest_tile() -> Tile:
-    return make_tile(0, biome=Biome.FOREST)
-
-
-@pytest.fixture
-def mountain_tile() -> Tile:
-    return make_tile(0, biome=Biome.MOUNTAIN)
-
-
-@pytest.fixture
-def desert_tile() -> Tile:
-    return make_tile(0, biome=Biome.DESERT)
-
-
-#  Fixtures d'unités
-
-@pytest.fixture
-def soldier() -> Soldier:
+def soldier():
     return Soldier(tile_id=0, owner=0)
 
 
 @pytest.fixture
-def enemy_soldier() -> Soldier:
-    return Soldier(tile_id=1, owner=1)
-
-
-@pytest.fixture
-def cavalry() -> Cavalry:
+def cavalry():
     return Cavalry(tile_id=0, owner=0)
 
 
 @pytest.fixture
-def archer() -> Archer:
+def archer():
     return Archer(tile_id=0, owner=0)
 
 
 @pytest.fixture
-def colon() -> Colon:
+def colon():
     return Colon(tile_id=0, owner=0)
 
 
 @pytest.fixture
-def boat() -> Boat:
+def baby():
+    return Baby(tile_id=0, owner=0)
+
+
+@pytest.fixture
+def boat():
     return Boat(tile_id=0, owner=0)
 
 
-#  Fixtures de carte
+# --- Fixtures de carte ---
 
 @pytest.fixture
-def five_tile_map() -> MockMap:
-    """Chaîne linéaire de 5 tuiles : 0 ↔ 1 ↔ 2 ↔ 3 ↔ 4 (biome PLAIN)."""
+def five_tile_map():
     return make_linear_map(5)
 
 
 @pytest.fixture
-def mock_game_state(five_tile_map) -> MockGameState:
+def mock_game_state(five_tile_map):
     return MockGameState(five_tile_map)

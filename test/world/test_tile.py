@@ -8,6 +8,11 @@ from world.unit import Soldier, Cavalry
 from helpers import make_tile
 
 
+@pytest.fixture
+def plain_tile():
+    return make_tile(0, biome=Biome.PLAIN)
+
+
 class TestTileInit:
     def test_id_is_set(self):
         t = make_tile(7)
