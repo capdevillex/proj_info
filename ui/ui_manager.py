@@ -345,7 +345,7 @@ class UIManager:
         self._sidebar_dirty = False
         self._sidebar_built_size = (cw, sh)
 
-    # ── Context menu builders ──────────────────────────────────────────────
+    #  Context menu builders
 
     def _build_context_menu(self, tile: Tile, pos: tuple) -> None:
         """Construit le menu contextuel (toutes catégories) pour une tuile."""

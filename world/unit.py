@@ -133,7 +133,7 @@ class Unit:
 
 
 
-# ── Sous-classes ────────────────────────────────────────────────
+#  Sous-classes
 
 class Soldier(Unit):
     UNIT_TYPE    = UnitType.SOLDIER
@@ -223,7 +223,7 @@ class Boat(Unit):
     LAND_AFFINITY  = False
 
 
-# ── Factory ─────────────────────────────────────────────────────
+#  Factory
 
 UNIT_CLASS_MAP = {
     UnitType.SOLDIER: Soldier,
