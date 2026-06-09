@@ -1,0 +1,75 @@
+% --- Configuration de la Langue, de la Police et de l'Encodage ---
+\usepackage[french]{babel}
+\usepackage{csquotes}
+\usepackage{graphicx}
+% When using babel or polyglossia with biblatex, loading csquotes is recommended to ensure that quoted texts are typeset according to the rules of your main language.
+
+% --- Géométrie (Marges) ---
+\usepackage[
+    a4paper,
+    top=1.5cm,
+    bottom=1.75cm,
+    left=1.5cm,
+    right=1.5cm,
+    includehead,
+    nomarginpar,
+    headheight=0pt
+    ]{geometry}
+
+% --- Structure et Table des Matières ---
+\usepackage{titlesec} % Pour personnaliser l'apparence des titres de section
+
+\usepackage{tocloft} % Pour personnaliser la table des matières
+\setlength{\cftsecnumwidth}{2.5em} % Assure un espace suffisant pour les numéros de section
+
+
+% --- En-têtes et Pieds de Page ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead{} % Vider l'en-tête existant
+\fancyhead[L]{\nouppercase{\leftmark}} % Titre de la section actuelle à gauche
+\fancyhead[R]{Rapport Année 0} % Titre du rapport à droite
+\fancyfoot[C]{\thepage} % Numéro de page centré
+\renewcommand{\headrulewidth}{0.4pt} % Ligne sous l'en-tête
+\renewcommand{\footrulewidth}{0pt} % Pas de ligne sous le pied de page
+
+
+% --- Bibliographie (biblatex) ---
+\usepackage[
+    style=ieee, % Style de citation (Auteur, Année)
+    backend=biber,    % Moteur de backend
+    sorting=nyvt,     % Tri : Nom, Année, Titre, Volume
+    natbib=true,      % Pour utiliser les commandes natbib comme \citep et \citet
+]{biblatex}
+\addbibresource{source.bib}
+
+\usepackage{amsmath}   % Pour les formules mathématiques
+\usepackage{amssymb}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\usepackage{tikz}
+\usepackage{caption}
+
+\usepackage{anyfontsize}
+\usepackage{marvosym}
+
+% --- Hyperliens (Doit être le dernier package de la partie structure) ---
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=blue,
+    citecolor=green,
+}
+
+\baselineskip=18pt  % Interligne de base
+\parskip=10pt % Interligne supplémentaire entre paragraphe
+
+
+% --- Définitions ou redéfinitions de commandes utiles ---
+\renewcommand{\thesection}{\Roman{section}}
+\renewcommand{\thesubsubsection}{\thesubsection.\alph{subsubsection}}
+\newcommand{\todo}[1]{\textbf{\color{red}\uppercase{#1}}}
+
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.5ex plus 1ex minus .2ex}{1ex plus .2ex}

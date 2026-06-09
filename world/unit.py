@@ -109,7 +109,7 @@ class Unit:
         self.has_attacked = False
 
 
-  
+
 
     def get_visibility_mask(self, map_):
         """Calcule le bitmask de visibilité pour cette unité."""
@@ -143,7 +143,7 @@ class Soldier(Unit):
     BASE_DEFENSE = 8
     BASE_HP      = 100
     SIZE         = 4
-    BASE_COST    = 10000
+    BASE_COST    = 8
     UPKEEP_COST  = 1
 
 class Cavalry(Unit):
@@ -192,7 +192,7 @@ class Plane(Unit):
     BASE_HP        = 50
     WATER_AFFINITY = True
     SIZE           = 4
-    BASE_COST      = 15
+    BASE_COST      = 500
     UPKEEP_COST    = 10
     FLY            = True
     SCOUT          = True
@@ -218,7 +218,7 @@ class Boat(Unit):
     BASE_HP        = 50
     SIZE           = 4
     UPKEEP_COST    = 1
-    BASE_COST      = 50
+    BASE_COST      = 100
     WATER_AFFINITY = True
     LAND_AFFINITY  = False
 

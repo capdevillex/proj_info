@@ -1,0 +1,105 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nyvt/global//global/global}
+    \entry{duncan_noise}{misc}{}
+      \name{author}{1}{}{%
+        {{hash=6570885d3b11041301e84471157c50b7}{%
+           family={Duncan},
+           familyi={D\bibinitperiod},
+           given={Casey},
+           giveni={C\bibinitperiod}}}%
+      }
+      \strng{namehash}{6570885d3b11041301e84471157c50b7}
+      \strng{fullhash}{6570885d3b11041301e84471157c50b7}
+      \strng{bibnamehash}{6570885d3b11041301e84471157c50b7}
+      \strng{authorbibnamehash}{6570885d3b11041301e84471157c50b7}
+      \strng{authornamehash}{6570885d3b11041301e84471157c50b7}
+      \strng{authorfullhash}{6570885d3b11041301e84471157c50b7}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://github.com/caseman/noise}}
+      \field{note}{Version 1.2.2, last accessed 2026-06-07}
+      \field{title}{noise: Perlin noise library for Python}
+      \field{year}{2015}
+    \endentry
+    \entry{Ebeida2011-hx}{inproceedings}{}
+      \name{author}{6}{}{%
+        {{hash=890e5833761910b735dd696edc3ae0ff}{%
+           family={Ebeida},
+           familyi={E\bibinitperiod},
+           given={Mohamed\bibnamedelima S},
+           giveni={M\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+        {{hash=9c6cee95ee9e99ec0bad17d66577ddba}{%
+           family={Davidson},
+           familyi={D\bibinitperiod},
+           given={Andrew\bibnamedelima A},
+           giveni={A\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=2deb8979d4e3bd767c5d940fea16c373}{%
+           family={Patney},
+           familyi={P\bibinitperiod},
+           given={Anjul},
+           giveni={A\bibinitperiod}}}%
+        {{hash=6dbd6be01bf0d5d00c71282ec4fc4781}{%
+           family={Knupp},
+           familyi={K\bibinitperiod},
+           given={Patrick\bibnamedelima M},
+           giveni={P\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+        {{hash=8ce411a07f0dd0e75ce8d2700f0ae3d8}{%
+           family={Mitchell},
+           familyi={M\bibinitperiod},
+           given={Scott\bibnamedelima A},
+           giveni={S\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=3abd271e57ac317eba30410ddecb9dbb}{%
+           family={Owens},
+           familyi={O\bibinitperiod},
+           given={John\bibnamedelima D},
+           giveni={J\bibinitperiod\bibinitdelim D\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {Vancouver British Columbia Canada}%
+      }
+      \list{publisher}{1}{%
+        {ACM}%
+      }
+      \strng{namehash}{673c54d928577e6a8cc955927073e722}
+      \strng{fullhash}{726802906139f7182d4fbde2e278e8fc}
+      \strng{bibnamehash}{726802906139f7182d4fbde2e278e8fc}
+      \strng{authorbibnamehash}{726802906139f7182d4fbde2e278e8fc}
+      \strng{authornamehash}{673c54d928577e6a8cc955927073e722}
+      \strng{authorfullhash}{726802906139f7182d4fbde2e278e8fc}
+      \field{sortinit}{E}
+      \field{sortinithash}{8da8a182d344d5b9047633dfc0cc9131}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{We solve the problem of generating a uniform Poisson-disk sampling that is both maximal and unbiased over bounded non-convex domains. To our knowledge this is the first provably correct algorithm with time and space dependent only on the number of points produced. Our method has two phases, both based on classical dart-throwing. The first phase uses a background grid of square cells to rapidly create an unbiased, near-maximal covering of the domain. The second phase completes the maximal covering by calculating the connected components of the remaining uncovered voids, and by using their geometry to efficiently place unbiased samples that cover them. The second phase converges quickly, overcoming a common difficulty in dart-throwing methods. The deterministic memory is O(n) and the expected running time is O(n log n), where n is the output size, the number of points in the final sample. Our serial implementation verifies that the log n dependence is minor, and nearly O(n) performance for both time and memory is achieved in practice. We also present a parallel implementation on GPUs to demonstrate the parallel-friendly nature of our method, which achieves 2.4x the performance of our serial version.}
+      \field{booktitle}{{ACM} {SIGGRAPH} 2011 papers}
+      \field{month}{7}
+      \field{title}{Efficient maximal poisson-disk sampling}
+      \field{year}{2011}
+      \field{pages}{1\bibrangedash 12}
+      \range{pages}{12}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

@@ -1,0 +1,45 @@
+@INPROCEEDINGS{Ebeida2011-hx,
+  title           = "Efficient maximal poisson-disk sampling",
+  booktitle       = "{ACM} {SIGGRAPH} 2011 papers",
+  author          = "Ebeida, Mohamed S and Davidson, Andrew A and Patney, Anjul
+                     and Knupp, Patrick M and Mitchell, Scott A and Owens, John
+                     D",
+  abstract        = "We solve the problem of generating a uniform Poisson-disk
+                     sampling that is both maximal and unbiased over bounded
+                     non-convex domains. To our knowledge this is the first
+                     provably correct algorithm with time and space dependent
+                     only on the number of points produced. Our method has two
+                     phases, both based on classical dart-throwing. The first
+                     phase uses a background grid of square cells to rapidly
+                     create an unbiased, near-maximal covering of the domain.
+                     The second phase completes the maximal covering by
+                     calculating the connected components of the remaining
+                     uncovered voids, and by using their geometry to
+                     efficiently place unbiased samples that cover them. The
+                     second phase converges quickly, overcoming a common
+                     difficulty in dart-throwing methods. The deterministic
+                     memory is O(n) and the expected running time is O(n log
+                     n), where n is the output size, the number of points in
+                     the final sample. Our serial implementation verifies that
+                     the log n dependence is minor, and nearly O(n) performance
+                     for both time and memory is achieved in practice. We also
+                     present a parallel implementation on GPUs to demonstrate
+                     the parallel-friendly nature of our method, which achieves
+                     2.4x the performance of our serial version.",
+  publisher       = "ACM",
+  pages           = "1--12",
+  month           =  jul,
+  year            =  2011,
+  address         = "New York, NY, USA",
+  conference      = "SIGGRAPH '11: Special Interest Group on Computer Graphics
+                     and Interactive Techniques Conference",
+  location        = "Vancouver British Columbia Canada"
+}
+
+@misc{duncan_noise,
+  author       = {Casey Duncan},
+  title        = {noise: Perlin noise library for Python},
+  year         = {2015},
+  howpublished = {\url{https://github.com/caseman/noise}},
+  note         = {Version 1.2.2, last accessed 2026-06-07}
+}
