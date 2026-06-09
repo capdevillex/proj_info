@@ -60,7 +60,7 @@ def _setup_game(seed: int) -> tuple[GameState, GameEngine]:
 
 def main():
     screen = pygame.display.set_mode((gc.SCREEN_WIDTH, gc.SCREEN_HEIGHT), pygame.RESIZABLE)
-    pygame.display.set_caption("Novum Imperium(4X Prototype)")
+    pygame.display.set_caption("Imperium Novum (4X Prototype)")
 
     try:
         icone = pygame.image.load(img_path / "Logo.png")

@@ -1,0 +1,58 @@
+% ------------------------- PAGE DE GARDE PERSONNALISÉE -------------------------
+\begin{titlepage}
+\thispagestyle{empty} % Enlève le numéro de page sur la page de titre
+
+% ---------- Fond décoratif avec TikZ ----------
+\begin{tikzpicture}[remember picture, overlay]
+
+    % Encadrement élégant
+    \draw[black!40, line width=1pt]
+        ([xshift=1.5cm,yshift=-1.5cm]current page.north west) rectangle
+        ([xshift=-1.5cm,yshift=1.5cm]current page.south east);
+
+\end{tikzpicture}
+
+\vspace*{0.5cm}
+
+% ---------- Logo ----------
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{ensta-logo-noir.png}\\[1cm]
+\end{center}
+
+% ---------- Titre principal ----------
+\begin{center}
+    {\Huge \bfseries \color{black}
+    Rapport \\
+    projet info}\\[0.7cm]
+\end{center}
+
+\vfill
+
+% ---------- Auteurs ----------
+\begin{center}
+    {\large \bfseries \color{black}
+    Victor CACHAU, \\ Xavier CAPDEVILLE}
+\end{center}
+
+
+\vfill
+
+% ---------- Promo ----------
+\begin{center}
+    {\Large \bfseries \color{gray!60!black!85}
+   FISE 2028}\\[1.75cm]
+\end{center}
+
+\vspace{0.5cm}
+
+% ---------- Date ----------
+\begin{center}
+    {\large \color{black}
+    % DATE DE SOUMISSION / RÉDACTION
+    \today}
+\end{center}
+
+
+\end{titlepage}
+
+% ------------------------------------------------------------------------------
