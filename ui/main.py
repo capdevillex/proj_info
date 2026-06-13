@@ -6,6 +6,7 @@ from pathlib import Path
 from config import GameConfig as gc
 from core.game_state import GameState
 from core.game_engine import GameEngine
+from core.persistence import save_game, load_game
 from ui.camera import Camera
 from ui.renderer import RenderPipeline
 from ui.ui_manager import UIManager
@@ -75,6 +76,8 @@ def main():
 
     clock = pygame.time.Clock()
 
+    save_path = Path("saves") / "autosave.json"
+
     seed = random.randint(0, 1000)
     gs, game_engine = _setup_game(seed)
 
@@ -118,6 +121,33 @@ def main():
 
                 if event.key == pygame.K_c:
                     renderer.show_centers = not renderer.show_centers
+
+                if event.key == pygame.K_F5:
+                    try:
+                        save_path.parent.mkdir(parents=True, exist_ok=True)
+                        save_game(gs, str(save_path))
+                        print(f" --- Partie sauvegardée : {save_path} --- ")
+                    except Exception as e:
+                        print(f" --- Erreur de sauvegarde : {e} --- ")
+
+                if event.key == pygame.K_F9:
+                    try:
+                        loaded_gs = load_game(str(save_path))
+                        gs = loaded_gs
+                        game_engine = GameEngine(gs)
+                        game_map = gs.map
+                        unit_selector.deselect_unit()
+                        ui_manager.game_engine = game_engine
+                        ui_manager.mark_dirty()
+                        renderer.map_dirty = True
+                        renderer.border_dirty = True
+                        renderer.city_dirty = True
+                        renderer.clear_cache()
+                        print(f" --- Partie chargée : {save_path} --- ")
+                    except FileNotFoundError:
+                        print(f" --- Aucune sauvegarde trouvée : {save_path} --- ")
+                    except Exception as e:
+                        print(f" --- Erreur de chargement : {e} --- ")
 
             if event.type == pygame.MOUSEWHEEL:
                 camera.apply_zoom(pygame.mouse.get_pos(), event.y)
