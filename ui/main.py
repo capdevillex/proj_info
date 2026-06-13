@@ -88,7 +88,6 @@ def main():
 
     # Type d'unité à placer par défaut
     selected_unit_type = UnitType.SOLDIER
-    selected_enn_unit_type = UnitType.BABY
     running = True
     game_map = gs.map
 
@@ -235,7 +234,7 @@ def main():
                             )
                         elif ui_manager.placement_button_enn.is_active:
                             game_engine.spawn_unit(
-                                unit_type=selected_enn_unit_type,
+                                unit_type=selected_unit_type,
                                 tile_id=hovered_tile.id,
                                 owner=1,
                             )

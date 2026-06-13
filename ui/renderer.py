@@ -124,15 +124,25 @@ class RenderPipeline:
         """
         return self.owner_colors[owner_id % len(self.owner_colors)]
 
-    def get_unit_image(self, unit, size):
+    def _apply_red_tint(self, surface, strength=0.50):
+        tinted = surface.copy()
+        reduce = int(255 * (1 - strength))
+        red_layer = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
+        red_layer.fill((255, reduce, reduce, 255))
+        tinted.blit(red_layer, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        return tinted
+
+    def get_unit_image(self, unit, size, red_tint=False):
         """
         Retourne l'image redimensionnée pour une unité donnée.
         Author : Victor
         """
-        key = (unit.unit_type, size)
+        key = (unit.unit_type, size, red_tint)
         if key not in self.unit_cache:
             base_image = self.unit_images.get(unit.unit_type, self.default_image)
             scaled_img = pygame.transform.scale(base_image, (size, size))
+            if red_tint:
+                scaled_img = self._apply_red_tint(scaled_img)
             self.unit_cache[key] = scaled_img
         return self.unit_cache[key]
 
@@ -500,10 +510,14 @@ class RenderPipeline:
         bar_h = max(3, bar_w // 8)
         bar_y = cy + bar_w // 2 + 2
 
-        bg_rect = pygame.Rect(cx - bar_w // 2, bar_y, bar_w, bar_h)
-        pygame.draw.rect(screen, (40, 40, 40), bg_rect)
+        is_enemy = unit.owner != 0
 
-        if hp_ratio > 0.5:
+        bg_rect = pygame.Rect(cx - bar_w // 2, bar_y, bar_w, bar_h)
+        pygame.draw.rect(screen, (0, 0, 0) if is_enemy else (40, 40, 40), bg_rect)
+
+        if is_enemy:
+            color = (210, 40, 40)
+        elif hp_ratio > 0.5:
             color = (60, 200, 60)
         elif hp_ratio > 0.25:
             color = (220, 180, 0)
@@ -515,14 +529,18 @@ class RenderPipeline:
         pygame.draw.rect(screen, color, fill_rect)
 
     # Méthode pour dessiner les unités
-    def render_units(self, screen, game_map, cam, tile_size):
+    def render_units(self, screen, game_state, cam, tile_size):
         """
         Dessine toutes les unités de la carte.
         Author : Victor and Xavier (modified multiples times)
         """
+        game_map = game_state.map
         for tile in game_map.tiles.values():
             if not tile.has_units():
                 continue
+
+            tile_hidden_fow = game_state.use_fow and not (game_state.visibility & (1 << tile.id))
+            tile_hidden_ti  = game_state.use_ti  and not (game_state.discovered & (1 << tile.id))
 
             # Position du centre de la tuile
             tile_center_x, tile_center_y = tile.center
@@ -538,6 +556,8 @@ class RenderPipeline:
 
             # Dessiner chaque unité
             for unit in tile.units:
+                if unit.owner != 0 and (tile_hidden_fow or tile_hidden_ti):
+                    continue
                 # 1. Récupérer l'image associée au type de cette unité
                 base_image = self.unit_images.get(unit.unit_type, self.default_image)
 
@@ -548,7 +568,7 @@ class RenderPipeline:
                 scaled_size = max(1, scaled_size)
 
                 # 3. Redimensionner LA bonne image
-                scaled_img = self.get_unit_image(unit, scaled_size)
+                scaled_img = self.get_unit_image(unit, scaled_size, red_tint=unit.owner != 0)
 
                 # 4. Centrer et afficher
                 img_rect = scaled_img.get_rect(center=(screen_x, screen_y))
@@ -601,7 +621,7 @@ class RenderPipeline:
         """
         self.render_world(screen, game_state.map, game_state, cam, tile_size)
         self.render_overlay(screen, game_state, cam, tile_size, hovered_tile)
-        self.render_units(screen, game_state.map, cam, tile_size)
+        self.render_units(screen, game_state, cam, tile_size)
         self.render_cities(screen, game_state, cam, tile_size)
         self.render_damage_numbers(screen, cam, dt)
         # self.render_ui(screen, game_state.map, hovered_tile, dt)
