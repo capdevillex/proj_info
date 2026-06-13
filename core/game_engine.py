@@ -91,6 +91,13 @@ class GameEngine:
             print(f"❌ Impossible de placer une unité terrestre sur l'eau (tuile {tile_id})")
             return None
 
+        if not tile.biome == Biome.WATER and not unit_class.LAND_AFFINITY:
+            print(f"❌ Impossible de placer une unité aquatique sur la terre (tuile {tile_id})")
+            return None
+
+
+        print(f"tile_id {tile_id}")
+
         new_unit = unit_class(tile_id=tile_id, owner=owner)
         tile.add_unit(new_unit)
         self.state.units.append(new_unit)
