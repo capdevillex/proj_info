@@ -8,14 +8,17 @@ from world.tile import Tile
 
 
 def lighten(color, amount=40):
+    """Author : Xavier"""
     return tuple(min(255, c + amount) for c in color)
 
 
 def compute_tile_size(window_w, window_h):
+    """Author : Xavier"""
     return min(window_w // gc.WIDTH, window_h // gc.HEIGHT)
 
 
 def draw_centers(screen, game_map, tile_size, cam, font):
+    """Author : Xavier"""
     for tile in game_map.tiles.values():
         x, y = tile.center
         wx = x * tile_size
@@ -29,6 +32,7 @@ def draw_centers(screen, game_map, tile_size, cam, font):
 
 
 def get_hovered_tile(game_map, cam, tile_size) -> Optional[Tile]:
+    """Author : Xavier"""
     mouse_x, mouse_y = pygame.mouse.get_pos()
 
     world_x, world_y = screen_to_world(mouse_x, mouse_y, cam.x, cam.y, cam.zoom)

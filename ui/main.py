@@ -28,6 +28,8 @@ def _setup_game(seed: int) -> tuple[GameState, GameEngine]:
 
     C'est ici qu'on enregistre les royaumes ennemis (et leurs IA quand elles
     seront implémentées). Modifier cette fonction pour ajouter / retirer des IA.
+
+    Author : Victor
     """
     gs = GameState(gc.WIDTH, gc.HEIGHT, seed, tile_area=gc.TILE_AVG_AREA, log=gc.LOG_MAP_GENERATION)
 
@@ -59,6 +61,9 @@ def _setup_game(seed: int) -> tuple[GameState, GameEngine]:
 
 
 def main():
+    """
+    Author : Victor and Xavier (modified back and forth at different places)
+    """
     screen = pygame.display.set_mode((gc.SCREEN_WIDTH, gc.SCREEN_HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("Imperium Novum (4X Prototype)")
 

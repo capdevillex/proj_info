@@ -80,19 +80,27 @@ _TILE_BUY_COST = {"gold": 10}
 
 
 def _lerp_color(a, b, t):
+    """
+    Author : Victor
+    """
     t = max(0.0, min(1.0, t))
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
 def _draw_panel(surface, rect, bg=C_PANEL_BG, border=C_BORDER, alpha=None):
-    """Dessine un panneau rectangulaire avec fond et bordure.
+    """
+    Dessine un panneau rectangulaire avec fond et bordure.
     Le paramètre alpha est conservé pour compatibilité mais ignoré :
-    les panels UI sont tous opaques, pas de SRCALPHA."""
+    les panels UI sont tous opaques, pas de SRCALPHA.
+    Author : Victor"""
     pygame.draw.rect(surface, bg, rect)
     pygame.draw.rect(surface, border, rect, 1)
 
 
 def _draw_separator(surface, x1, y, x2, color=C_BORDER):
+    """
+    Author : Victor
+    """
     pygame.draw.line(surface, color, (x1, y), (x2, y), 1)
 
 
@@ -104,7 +112,9 @@ class UIManager:
     """
 
     def __init__(self, game_engine: GameEngine, renderer: RenderPipeline, font, camera: Camera):
-        """Crée tous les boutons UI"""
+        """
+        Crée tous les boutons UI
+        Author : Victor and Xavier"""
         self.game_engine = game_engine
         self.renderer = renderer
         self.font = font
@@ -217,7 +227,9 @@ class UIManager:
         self._context_all_btns: list = []
 
     def load_resource_images(self):
-        """Charge les images depuis le dossier img/ basé sur les noms des ressources."""
+        """
+        Charge les images depuis le dossier img/ basé sur les noms des ressources.
+        Author : Victor"""
         img_path = Path(".") / "img"
         for res_name in ["food", "wood", "stone", "iron", "gold"]:
             try:
@@ -227,13 +239,19 @@ class UIManager:
                 self.resource_images[res_name] = None
 
     def mark_dirty(self):
-        """Invalide la surface cachée de la sidebar. À appeler après un changement
-        d'état (fin de tour, resize fenêtre) pour forcer un rebuild au prochain draw."""
+        """
+        Invalide la surface cachée de la sidebar. À appeler après un changement
+        d'état (fin de tour, resize fenêtre) pour forcer un rebuild au prochain draw.
+        Author : Victor
+        """
         self._sidebar_dirty = True
 
     # Mise à jour
     def update_positions(self, screen_width, screen_height):
-        """Met à jour les positions des boutons en fonction de la taille de l'écran"""
+        """
+        Met à jour les positions des boutons en fonction de la taille de l'écran
+        Author : Victor
+        """
         self.screen_width = screen_width
         self.screen_height = screen_height
 
@@ -263,22 +281,32 @@ class UIManager:
         )
 
     def _sidebar_action_y(self, index):
-        """Y pour les boutons d'action dans la sidebar."""
+        """
+        Y pour les boutons d'action dans la sidebar.
+        Author : Victor
+        """
         base_y = self._resource_section_end() + 16
         return base_y + index * 38
 
     def _resource_section_end(self):
-        """Y de fin de la section ressources (pour positionner les boutons en dessous)."""
+        """
+        Y de fin de la section ressources (pour positionner les boutons en dessous).
+        Author : Victor
+        """
         n = len(self._get_resources())
         return 60 + n * 36 + 8
 
     def _get_resources(self):
-        """Retourne le dict des ressources du joueur courant."""
+        """
+        Retourne le dict des ressources du joueur courant.
+        Author : Victor
+        """
         return self.game_engine.state.player_resources.get(
             self.game_engine.state.current_player, {}
         )
 
     def update(self, mouse_pos, dt):
+        """Author : Victor"""
         # Mettre à jour les positions
         self.update_positions(self.screen_width, self.screen_height)
 
@@ -308,6 +336,7 @@ class UIManager:
 
     # Dessin
     def draw(self, screen, selected_unit_type, mouse_pos):
+        """Author : Victor, completed by Xavier"""
         cw = int(self._sidebar_cur_w)
         sw, sh = self.screen_width, self.screen_height
 
@@ -338,7 +367,10 @@ class UIManager:
     # --- Builders de surfaces cachées ---
 
     def _rebuild_sidebar_bg(self, cw: int, sh: int):
-        """Reconstruit la surface de fond de la sidebar (sans les boutons)."""
+        """
+        Reconstruit la surface de fond de la sidebar (sans les boutons).
+        Author : Victor
+        """
         sf = pygame.Surface((cw, sh))
         self._draw_sidebar(sf, cw, sh)
         self._sidebar_bg_sf = sf
@@ -348,7 +380,10 @@ class UIManager:
     #  Context menu builders
 
     def _build_context_menu(self, tile: Tile, pos: tuple) -> None:
-        """Construit le menu contextuel (toutes catégories) pour une tuile."""
+        """
+        Construit le menu contextuel (toutes catégories) pour une tuile.
+        Author : Victor
+        """
         state = self.game_engine.state
         player = state.current_player
         owning_city = self._get_city_owning_tile(tile.id)
@@ -415,7 +450,10 @@ class UIManager:
         return None
 
     def _get_adjacent_player_city(self, tile_id: int):
-        """Retourne la ville du joueur courant adjacente à tile_id, ou None."""
+        """
+        Retourne la ville du joueur courant adjacente à tile_id, ou None.
+        Author : Victor
+        """
         player = self.game_engine.state.current_player
         tile = self.game_engine.state.map.tiles.get(tile_id)
         if tile is None:
@@ -426,6 +464,9 @@ class UIManager:
         return None
 
     def _construction_options(self, tile: Tile) -> list:
+        """
+        Author : Victor
+        """
         owning_city = self._get_city_owning_tile(tile.id)
         has_road = any(c.name == "Route" for c in tile.constructions)
         has_building = any(c.name != "Route" for c in tile.constructions)
@@ -452,14 +493,17 @@ class UIManager:
         return items
 
     def _buy_unit_options(self) -> list:
+        """Author : Victor"""
         return [
             ("buy_unit", unit_type, cost, label) for unit_type, label, cost in _UNIT_BUY_OPTIONS
         ]
 
     def _buy_tile_option(self, tile: Tile, city) -> list:
+        """Author : Victor"""
         return [("buy_tile", (tile.id, city), _TILE_BUY_COST, "Annexer cette tuile")]
 
     def _context_total_height(self) -> int:
+        """Author : Victor"""
         if not self._context_categories:
             return 0
         h = _CTX_OUTER_PAD
@@ -471,6 +515,7 @@ class UIManager:
         return h
 
     def _get_context_menu_rect(self) -> pygame.Rect | None:
+        """Author : Victor"""
         if not self._context_categories:
             return None
         return pygame.Rect(
@@ -481,6 +526,7 @@ class UIManager:
         )
 
     def _compute_menu_screen_pos(self) -> tuple[int, int]:
+        """Author : Victor"""
         assert self._context_menu_anchor_world is not None
         wx, wy = self._context_menu_anchor_world
         sx, sy = world_to_screen(wx, wy, self.camera.x, self.camera.y, self.camera.zoom)
@@ -492,6 +538,7 @@ class UIManager:
         return (sx, sy)
 
     def _update_context_buttons_pos(self) -> None:
+        """Author : Victor"""
         new_pos = self._compute_menu_screen_pos()
         if new_pos == self._context_menu_pos:
             return
@@ -504,11 +551,13 @@ class UIManager:
                 entry[0].set_position(entry[0].rect.x + dx, entry[0].rect.y + dy)
 
     def close_construction_menu(self):
+        """Author : Victor"""
         self._context_menu_visible = False
         self._context_menu_anchor_world = None
 
     #  Sidebar (dessine sur la surface passée en argument — écran ou cache)
     def _draw_sidebar(self, screen, cw, sh):
+        """Author : Victor"""
         # Fond principal
         sidebar_rect = pygame.Rect(0, 0, cw, sh)
         _draw_panel(screen, sidebar_rect, bg=C_PANEL_BG, border=C_BORDER)
@@ -528,7 +577,10 @@ class UIManager:
         # directement sur l'écran dans draw() — pas dans le cache.
 
     def _draw_context_menu(self, screen) -> None:
-        """Dessine le menu contextuel multi-catégories."""
+        """
+        Dessine le menu contextuel multi-catégories.
+        Author : Victor
+        """
         if not self._context_menu_visible or not self._context_categories:
             return
 
@@ -561,6 +613,7 @@ class UIManager:
                     screen.blit(cs, (btn.rect.x + 6, btn.rect.bottom - cs.get_height() - 4))
 
     def _draw_player_header(self, screen, cw, alpha):
+        """Author : Victor"""
         state = self.game_engine.state
         player = state.current_player
         turn = state.turn
@@ -582,6 +635,7 @@ class UIManager:
         _draw_separator(screen, 0, 54, cw)
 
     def _draw_resource_section(self, screen, cw, alpha):
+        """Author : Victor"""
         resources = self._get_resources()
         y = 62
         label = self._fnt_tiny.render("RESSOURCES", True, C_TEXT_DIM)
@@ -596,6 +650,7 @@ class UIManager:
         _draw_separator(screen, 0, y, cw)
 
     def _draw_resource_row(self, screen, panel_w, name, disp, real, y):
+        """Author : Victor"""
         icon = RESOURCE_ICONS.get(name, "-")
         color = RESOURCE_COLORS.get(name, C_TEXT)
 
@@ -620,7 +675,10 @@ class UIManager:
 
     #  Barre de statut
     def _draw_status_bar(self, screen, cw, sw, sh, selected_unit_type):
-        """Dessine la barre de statut directement sur l'écran (coordonnées absolues)."""
+        """
+        Dessine la barre de statut directement sur l'écran (coordonnées absolues).
+        Author : Victor
+        """
         y_offset = sh - gc.STATUS_H
         bar_rect = pygame.Rect(0, y_offset, sw, gc.STATUS_H)
         _draw_panel(screen, bar_rect, bg=C_PANEL_BG, border=C_BORDER)
@@ -678,10 +736,12 @@ class UIManager:
 
     #  Panneau infos tuile
     def _draw_tile_info(self, screen, cw, sh):
+        """Author : Victor"""
         pass  # Intégré dans la status bar
 
     #  Indicateur tour
     def _draw_turn_indicator(self, screen, sw):
+        """Author : Victor"""
         state = self.game_engine.state
         turn = state.turn
         is_ai_turn = state.phase == TurnPhase.AI_TURN
@@ -722,6 +782,7 @@ class UIManager:
 
     # Gestion des clics
     def handle_click(self, mouse_pos, game_map, selected_unit_type):
+        """Author : Victor, enhanced by Xavier then modified multiple times by both"""
         # Languette toggle sidebar
         cw = int(self._sidebar_cur_w)
         sh = self.screen_height
@@ -784,7 +845,10 @@ class UIManager:
         return None
 
     def is_mouse_over_ui(self, mouse_pos):
-        """Retourne True si la souris est sur un élément d'interface."""
+        """
+        Retourne True si la souris est sur un élément d'interface.
+        Author : Victor
+        """
         cw = int(self._sidebar_cur_w)
         sh = self.screen_height
 
@@ -816,7 +880,10 @@ class UIManager:
         return False
 
     def open_construction_menu(self, hovered_tile: Tile):
-        """Ouvre le menu contextuel ancré sur le centre de la tuile."""
+        """
+        Ouvre le menu contextuel ancré sur le centre de la tuile.
+        Author : Victor
+        """
         ts = compute_tile_size(self.screen_width, self.screen_height)
         self._context_menu_anchor_world = (
             hovered_tile.center[0] * ts,

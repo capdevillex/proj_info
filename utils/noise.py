@@ -2,6 +2,8 @@
 Utilitaires de base pour le bruit de Perlin
 
 Pris de la bibliothèques `noise` mais plus mise à jour depuis 8 ans, d'où le choix de ne prendre que les bouts utiles.
+
+Author : Victor (whole file copied from the `nose` library on pypi)
 """
 
 import math

@@ -1,3 +1,7 @@
+"""
+Author : Victor (full file)
+"""
+
 import math
 import pygame
 

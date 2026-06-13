@@ -21,6 +21,8 @@ class BaseAI(ABC):
       - Déplacer les unités vers le joueur si visibles
       - Attaquer les unités adjacentes ennemies
       - Explorer les tuiles inconnues si rien de mieux à faire
+
+    Author : Victor
     """
 
     def __init__(self, kingdom_id: int, params: dict):
@@ -28,6 +30,8 @@ class BaseAI(ABC):
         Args:
             kingdom_id: ID du royaume contrôlé par cette IA.
             params: Poids de décision (ex. {"aggression": 0.8, "exploration": 0.5}).
+
+        Author : Victor
         """
         self.kingdom_id = kingdom_id
         self.params = params
@@ -39,10 +43,13 @@ class BaseAI(ABC):
         Appelé une fois par round, après le tour du joueur humain.
         L'implémentation doit utiliser engine.move_unit() et engine.attack_unit()
         pour agir ; elle ne doit PAS modifier state directement.
+
+        Author : Victor
         """
         ...
 
     # Helpers de lecture (n'appellent pas engine, lecture seule)
+    # Author tous : Victor
     def get_own_units(self, state: "GameState") -> List["Unit"]:
         return [u for u in state.units if u.owner == self.kingdom_id]
 

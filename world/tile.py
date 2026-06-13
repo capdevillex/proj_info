@@ -21,6 +21,8 @@ class Tile:
         biome (Biome): Type de terrain dominant assigné à la tuile.
 
         units (List[Unit]): NOUVEAU - Liste des unités présentes sur cette tuile
+
+    Author : Victor (whole class)
     """
 
     def __init__(self, id_, cells, biome=Biome.BLANK, resource=Resource.NONE):

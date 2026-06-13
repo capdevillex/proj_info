@@ -46,12 +46,14 @@ class Combat:
 
         Returns:
             Dictionnaire avec les résultats du combat
+
+        Author : Victor, multiple changes by Xavier
         """
         # Calculer les dégâts
         damage = self.compute_damage(state, attacker, defender)
 
         # Appliquer les dégâts (TODO: ajouter HP aux unités)
-        
+
 
         print(f"⚔️ Combat : {attacker.unit_type.name} attaque {defender.unit_type.name}")
         print(f"avant :{defender.hp}")
@@ -71,6 +73,9 @@ class Combat:
         return result
 
     def compute_damage(self, state, attacker, defender):
+        """
+        Author : Victor, multiple changes by Xavier
+        """
 
         # Stats directement depuis les classes d'unités
         attack  = attacker.BASE_ATTACK
@@ -92,20 +97,23 @@ class Combat:
         return damage
 
     def execute_dash(self, state, unit, target_tile_id):
+        """
+        Author : Xavier
+        """
         # 1. Vérifier si l'unité peut dasher (c'est une Cavalerie, etc.)
         if not unit.DASH or unit.has_moved or unit.has_attacked:
             return False
-            
+
         # 2. Vérifier si la cible est à portée de dash (ici on réutilise la portée de mouvement)
         reachable = Movement.get_reachable_tiles(state, unit)
         if target_tile_id not in reachable:
             return False
-            
+
         # 3. Exécuter le mouvement
         Movement.execute_move(state, unit, target_tile_id)
-        
+
         # 4. Consommer l'attaque en plus du mouvement
-        unit.has_attacked = True 
+        unit.has_attacked = True
         return True
 
     def can_attack(self, state, attacker, defender):
@@ -119,6 +127,8 @@ class Combat:
 
         Returns:
             bool: True si l'attaque est possible
+
+        Author : Xavier, multiple changes by Victor
         """
         # Vérifier que les unités sont ennemies
         if attacker.owner == defender.owner:
@@ -144,6 +154,9 @@ class Combat:
 
 
     def perform_dash(self, state, attacker, target_tile_id):
+        """
+        Author : Xavier
+        """
         # 1. Valider que le mouvement est possible
         if Movement.execute_move(state, attacker, target_tile_id):
             # 2. Consommer l'attaque immédiatement car le Dash est une action complète
@@ -166,6 +179,8 @@ class Combat:
                 - "defender": Unit | None
                 - "defender_killed": bool
                 - "damage": float
+
+        Author : Xavier
         """
         # Trouver le défenseur sur la tuile
         target_tile = state.map.tiles.get(target_tile_id)

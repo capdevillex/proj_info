@@ -25,6 +25,9 @@ class GameEngine:
     """
 
     def __init__(self, game_state: GameState):
+        """
+        Author : Victor
+        """
         self.state = game_state
 
         # Systèmes de jeu
@@ -41,7 +44,8 @@ class GameEngine:
 
     @property
     def input_locked(self) -> bool:
-        """True pendant les tours IA : l'UI doit ignorer toute entrée joueur."""
+        """True pendant les tours IA : l'UI doit ignorer toute entrée joueur.
+        Author : Victor"""
         return self.state.phase == TurnPhase.AI_TURN
 
     # Gestion des royaumes / IA
@@ -53,6 +57,8 @@ class GameEngine:
 
         Args:
             ai: Instance concrète de BaseAI pour le royaume ai.kingdom_id.
+
+        Author : Victor, 5 lines modified by Xavier
         """
         kingdom = self.state.get_kingdom(ai.kingdom_id)
         if kingdom is None:
@@ -64,7 +70,8 @@ class GameEngine:
 
     #  Gestion des unités
     def spawn_unit(self, unit_type: UnitType, tile_id: int, owner: int = 0) -> Optional[Unit]:
-        """Place une nouvelle unité du type spécifié sur la tuile donnée."""
+        """Place une nouvelle unité du type spécifié sur la tuile donnée.
+        Author : Victor"""
         tile = self.state.map.tiles.get(tile_id)
 
         if not tile:
@@ -102,6 +109,8 @@ class GameEngine:
 
         Returns:
             True si le mouvement a réussi, False sinon
+
+        Author : Victor
         """
         # Utiliser le système centralisé
         success = self.movement.execute_move(self.state, unit, target_tile_id)
@@ -120,6 +129,8 @@ class GameEngine:
 
         Returns:
             True si l'unité a été retirée, False sinon
+
+        Author : Victor
         """
         # Retirer de la tuile
         tile = self.state.map.tiles.get(unit.tile_id)
@@ -141,6 +152,7 @@ class GameEngine:
         Attaque une unité sur une tuile cible.
         Délègue toute la logique à Combat, ne gère que les effets de bord.
         Retourne le dict complet : success, damage, defender, defender_killed.
+        Author : Victor et Xavier
         """
         result = self.combat.execute_attack(self.state, attacker, target_tile_id)
 
@@ -161,6 +173,8 @@ class GameEngine:
         - Réinitialisation des mouvements des unités
         - Incrémentation du compteur de tours
         - Mise à jour de la visibilité
+
+        Author : Victor
         """
         print(f"\n{'='*50}")
         print(f"Fin du tour {self.state.turn}")
@@ -204,6 +218,8 @@ class GameEngine:
 
         Returns:
             True si la ville a été fondée, False sinon
+
+        Author : Victor
         """
         # Vérifier que c'est bien un colon
         if colon_unit.unit_type != UnitType.COLON:
@@ -256,6 +272,8 @@ class GameEngine:
 
         Returns:
             Nom de la ville
+
+        Author : Victor, modifié par Xavier
         """
         # Listes de noms de villes, je dois avouer avoir une inspiration limitée
         city_names = [
@@ -287,6 +305,8 @@ class GameEngine:
         """Retourne l'ID de la tuile non-occupée la plus proche d'un coin.
 
         Coins acceptés : "top_left", "bottom_right", "top_right", "bottom_left".
+
+        Author : Xavier, modifié par Victor
         """
         tiles = list(self.state.map.tiles.values())
         corner_keys = {
@@ -308,6 +328,8 @@ class GameEngine:
 
         L'ordre des coins suit l'ordre dans turn_order :
           index 0 → top_left, 1 → bottom_right, 2 → top_right, 3 → bottom_left, ...
+
+        Author : Victor
         """
         corners = ["top_left", "bottom_right", "top_right", "bottom_left"]
         for i, kingdom_id in enumerate(self.state.turn_order):
@@ -325,6 +347,8 @@ class GameEngine:
 
         Règles : une route peut coexister avec un bâtiment (Ferme/Mine),
         mais on ne peut pas construire deux routes ni deux bâtiments non-route.
+
+        Author : Victor
         """
         construction_map = {"Ferme": Farm, "Mine": Mine, "Route": Road, "Scierie": Scierie}
         cls = construction_map.get(construction_name)

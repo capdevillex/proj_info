@@ -1,3 +1,5 @@
+"""Author : Victor (whole file), fixed by Xavier"""
+
 from typing import List
 from dataclasses import dataclass, field
 
@@ -11,7 +13,7 @@ class Kingdom:
     """
 
     kingdom_id: int
-    
+
     name: str
     color: tuple  # RGB utilisé pour l'affichage UI
 

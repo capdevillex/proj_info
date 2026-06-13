@@ -3,7 +3,10 @@ from core.game_state import GameState
 
 class Economy:
     def update(self, game_state: GameState):
-        """Met à jour les ressources du joueur en fonction des unités et des villes."""
+        """
+        Met à jour les ressources du joueur en fonction des unités et des villes.
+        Author : Victor
+        """
 
         # Calculer les ressources générées par les villes
         self.process_city_production(game_state)
@@ -18,6 +21,8 @@ class Economy:
         Traite la production de toutes les villes pour le tour actuel.
 
         Calcule la production de chaque ville et l'ajoute aux ressources du joueur.
+
+        Author : Victor
         """
         for city in game_state.cities:
             # Calculer la production de la ville

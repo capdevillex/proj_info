@@ -3,6 +3,8 @@ Module de gestion des unités dans le jeu.
 
 Les unités sont des entités placées sur les provinces de la carte.
 Elles représentent des éléments du gameplay (soldats, villes, etc.)
+
+Author : Xavier (whole file)
 """
 
 import pygame

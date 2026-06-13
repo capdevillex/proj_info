@@ -34,6 +34,9 @@ def crop_alpha(surface):
 
 class RenderPipeline:
     def __init__(self, font, biome_colors):
+        """
+        Author : Victor
+        """
         self.show_centers = False
 
         self._overlay_sf = None
@@ -96,7 +99,10 @@ class RenderPipeline:
         ]
 
     def clear_cache(self):
-        """Vide les surfaces mises en cache pour forcer un recalcul total."""
+        """
+        Vide les surfaces mises en cache pour forcer un recalcul total.
+        Author : Victor
+        """
         self.tile_highlights = {}
         self._scaled_cache = {}
         self.map_dirty = True
@@ -112,11 +118,17 @@ class RenderPipeline:
         self.building_sf = None
 
     def get_owner_color(self, owner_id):
-        """Retourne la couleur associée à un propriétaire."""
+        """
+        Retourne la couleur associée à un propriétaire.
+        Author : Victor
+        """
         return self.owner_colors[owner_id % len(self.owner_colors)]
 
     def get_unit_image(self, unit, size):
-        """Retourne l'image redimensionnée pour une unité donnée."""
+        """
+        Retourne l'image redimensionnée pour une unité donnée.
+        Author : Victor
+        """
         key = (unit.unit_type, size)
         if key not in self.unit_cache:
             base_image = self.unit_images.get(unit.unit_type, self.default_image)
@@ -125,7 +137,10 @@ class RenderPipeline:
         return self.unit_cache[key]
 
     def build_map_sf(self, game_state: GameState, game_map: Map, tile_size):
-        """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre la carte"""
+        """
+        Méthode de pré-render, prépare la surface Pygame sur laquelle rendre la carte
+        Author : Victor
+        """
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
         surface = pygame.Surface((width_px, height_px))
@@ -146,7 +161,10 @@ class RenderPipeline:
         return surface
 
     def build_resource_sf(self, game_state, game_map, tile_size):
-        """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre les ressources des provinces"""
+        """
+        Méthode de pré-render, prépare la surface Pygame sur laquelle rendre les ressources des provinces
+        Author : Victor
+        """
         scale = gc.RESOURCE_BASE_SCALE
         width_px = game_map.width * tile_size * scale
         height_px = game_map.height * tile_size * scale
@@ -188,7 +206,10 @@ class RenderPipeline:
         return surface
 
     def build_building_sf(self, game_state, game_map, tile_size):
-        """Pré-render des bâtiments (hors routes) centrés sur leur tuile."""
+        """
+        Pré-render des bâtiments (hors routes) centrés sur leur tuile.
+        Author : Victor
+        """
         scale = gc.RESOURCE_BASE_SCALE
         surface = pygame.Surface(
             (game_map.width * tile_size * scale, game_map.height * tile_size * scale),
@@ -214,7 +235,10 @@ class RenderPipeline:
         return surface
 
     def build_city_overlay_sf(self, game_map, game_state, tile_size):
-        """Construit une surface avec les teintes de couleur pour les villes."""
+        """
+        Construit une surface avec les teintes de couleur pour les villes.
+        Author : Victor
+        """
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
 
@@ -246,7 +270,10 @@ class RenderPipeline:
         return surface
 
     def build_city_border_sf(self, game_map, game_state, tile_size):
-        """Construit une surface avec les contours colorés des villes."""
+        """
+        Construit une surface avec les contours colorés des villes.
+        Author : Victor
+        """
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
 
@@ -340,7 +367,10 @@ class RenderPipeline:
         return surface
 
     def build_border_sf(self, game_state, tile_size):
-        """Méthode de pré-render, prépare la surface Pygame sur laquelle rendre les frontières des provinces"""
+        """
+        Méthode de pré-render, prépare la surface Pygame sur laquelle rendre les frontières des provinces
+        Author : Victor
+        """
         game_map = game_state.map
         width_px = game_map.width * tile_size
         height_px = game_map.height * tile_size
@@ -383,7 +413,10 @@ class RenderPipeline:
         return surface
 
     def build_tile_highlight(self, game_state, tile, tile_size):
-        """Crée une surface unique pour la mise en évidence d'une tuile spécifique."""
+        """
+        Crée une surface unique pour la mise en évidence d'une tuile spécifique.
+        Author : Victor, fixed by Xavier
+        """
         min_x = min(c[0] for c in tile.cells)
         max_x = max(c[0] for c in tile.cells)
         min_y = min(c[1] for c in tile.cells)
@@ -406,8 +439,11 @@ class RenderPipeline:
         return surface, (min_x * tile_size, min_y * tile_size)
 
     def add_damage_number(self, tile_id, damage, game_map, tile_size, cam_zoom=1.0):
-        """Enregistre un nombre de dégâts flottant centré sur la tuile cible.
-        La surface texte est pré-rendue une seule fois ici."""
+        """
+        Enregistre un nombre de dégâts flottant centré sur la tuile cible.
+        La surface texte est pré-rendue une seule fois ici.
+        Author : Victor
+        """
         tile = game_map.tiles.get(tile_id)
         if not tile:
             return
@@ -427,7 +463,10 @@ class RenderPipeline:
         })
 
     def render_damage_numbers(self, screen, cam, dt):
-        """Dessine et fait monter les nombres de dégâts flottants."""
+        """
+        Dessine et fait monter les nombres de dégâts flottants.
+        Author : Victor
+        """
         if not self.damage_numbers:
             return
         remaining = []
@@ -452,7 +491,10 @@ class RenderPipeline:
         self.damage_numbers = remaining
 
     def _draw_hp_bar(self, screen, cx, cy, unit, bar_w):
-        """Dessine une barre d'HP sous une unité centrée en (cx, cy)."""
+        """
+        Dessine une barre d'HP sous une unité centrée en (cx, cy).
+        Author : Victor
+        """
         hp_ratio = max(0.0, unit.hp / unit.BASE_HP)
         bar_w *= unit.BASE_HP / 75
         bar_h = max(3, bar_w // 8)
@@ -476,6 +518,7 @@ class RenderPipeline:
     def render_units(self, screen, game_map, cam, tile_size):
         """
         Dessine toutes les unités de la carte.
+        Author : Victor and Xavier (modified multiples times)
         """
         for tile in game_map.tiles.values():
             if not tile.has_units():
@@ -522,6 +565,7 @@ class RenderPipeline:
     def render_cities(self, screen, game_state, cam, tile_size):
         """
         Dessine les noms des villes sur la carte.
+        Author : Victor
         """
         for city in game_state.cities:
             # Récupérer la tuile centrale de la ville
@@ -552,6 +596,9 @@ class RenderPipeline:
                 screen.blit(city_name_sf, name_rect)
 
     def render(self, screen, game_state, cam, tile_size, hovered_tile, dt):
+        """
+        Author : Victor
+        """
         self.render_world(screen, game_state.map, game_state, cam, tile_size)
         self.render_overlay(screen, game_state, cam, tile_size, hovered_tile)
         self.render_units(screen, game_state.map, cam, tile_size)
@@ -560,6 +607,9 @@ class RenderPipeline:
         # self.render_ui(screen, game_state.map, hovered_tile, dt)
 
     def render_world(self, screen, game_map, game_state, cam, tile_size):
+        """
+        Author : Victor
+        """
         if self.map_sf is None or self.map_dirty:
             self.map_sf = self.build_map_sf(game_state, game_map, tile_size)
             self.map_dirty = False
@@ -684,6 +734,9 @@ class RenderPipeline:
             screen.blit(scaled_city_border, (offset_x, offset_y))
 
     def render_overlay(self, screen, game_state, cam, tile_size, hovered_tile):
+        """
+        Author : Victor
+        """
         if not hovered_tile:
             return
 
@@ -711,7 +764,10 @@ class RenderPipeline:
         screen.blit(scaled_surf, (screen_x, screen_y))
 
     def render_reachable_tiles(self, screen, game_map, cam, tile_size, reachable_tile_ids):
-        """Affiche un overlay bleu transparent sur les tuiles accessibles (mouvement)."""
+        """
+        Affiche un overlay bleu transparent sur les tuiles accessibles (mouvement).
+        Author : Xavier
+        """
         if not reachable_tile_ids:
             return
 
@@ -753,7 +809,10 @@ class RenderPipeline:
         screen.blit(self._overlay_sf, (0, 0))
 
     def render_attackable_tiles(self, screen, game_map, cam, tile_size, attackable_tile_ids):
-        """Affiche un overlay rouge transparent sur les tuiles attaquables (combat avec unités ennemies)."""
+        """
+        Affiche un overlay rouge transparent sur les tuiles attaquables (combat avec unités ennemies).
+        Author : Xavier, optimised by Victor
+        """
         if not attackable_tile_ids:
             return
 
@@ -793,6 +852,9 @@ class RenderPipeline:
         screen.blit(overlay_sf, (0, 0))
 
     def render_ui(self, screen, game_map, hovered_tile: Tile, dt):
+        """
+        Author : Victor, enhanced by Xavier
+        """
         if hovered_tile:
             text_info = self.font.render(
                 f"Tile {hovered_tile.id:>5} | {hovered_tile.biome.name:>8} | {hovered_tile.resource.name:>7}| {hovered_tile.area}",

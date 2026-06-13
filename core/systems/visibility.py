@@ -3,10 +3,14 @@ from core.game_state import GameState
 
 class Visibility:
     def __init__(self, state: GameState) -> None:
+        """
+        Author : Victor
+        """
         self.state = state
 
     def update(self, state: GameState):
-        """Met à jour les cellules visibles pour le joueur actuel en fonction de ses unités."""
+        """Met à jour les cellules visibles pour le joueur actuel en fonction de ses unités.
+        Author : Victor"""
         state.update_fow()
 
     def calculate_visible_tiles(self, unit, map_):
@@ -19,6 +23,8 @@ class Visibility:
             map_ (Map): La carte du jeu, nécessaire pour accéder aux provinces et à leurs voisins
         Returns:
             Set[int]: Un ensemble d'identifiants de cellules visibles
+
+        Author : Victor
         """
         visible = {unit.tile_id}  # Commencer par les cellules de la province
         print(f"voici l'unite {unit}")

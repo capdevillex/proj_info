@@ -61,6 +61,8 @@ et post-traitements hydrographiques.
 * **Déterminisme :** Génération 100% pilotée par une `seed` unique.
 * **Connectivité Garantie :** Chaque province est une composante connexe unique de pixels
     grâce aux phases de nettoyage BFS et de propagation simultanée (Priority Queue).
+
+Author : Victor (whole file)
 """
 
 import heapq

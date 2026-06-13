@@ -1,3 +1,5 @@
+"""Author : Victor (whole file)"""
+
 from world.tile import Tile
 
 

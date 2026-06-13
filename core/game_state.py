@@ -8,13 +8,15 @@ from world.kingdom import Kingdom
 
 
 class TurnPhase(Enum):
-    """Phase active dans le cycle de tour."""
+    """Phase active dans le cycle de tour.
+    Author : Victor"""
     PLAYER_TURN = auto()  # le joueur humain peut interagir
     AI_TURN = auto()      # une IA est en train de jouer, input verrouillé
 
 
 class GameState:
     def __init__(self, width, height, seed, tile_area, log):
+        """Author : Victor"""
         self.map = Map(width, height, seed, avg_cells_per_tile=tile_area, log=log)
         self.units: List[Unit] = []
         self.cities: List[City] = []
@@ -62,19 +64,22 @@ class GameState:
     # Propriétés de tour
     @property
     def active_kingdom_id(self) -> int:
-        """ID du royaume dont c'est le tour (joueur ou IA)."""
+        """ID du royaume dont c'est le tour (joueur ou IA).
+        Author : Victor"""
         if not self.turn_order:
             return self.current_player
         return self.turn_order[self.current_kingdom_idx]
 
     @property
     def is_player_turn(self) -> bool:
-        """True si le joueur humain peut interagir."""
+        """True si le joueur humain peut interagir.
+        Author : Victor"""
         return self.phase == TurnPhase.PLAYER_TURN
 
     # Gestion des royaumes
     def add_kingdom(self, kingdom: Kingdom) -> None:
-        """Enregistre un nouveau royaume et initialise ses ressources."""
+        """Enregistre un nouveau royaume et initialise ses ressources.
+        Author : Victor"""
         if any(k.kingdom_id == kingdom.kingdom_id for k in self.kingdoms):
             raise ValueError(f"Le royaume {kingdom.kingdom_id} est déjà enregistré")
         self.kingdoms.append(kingdom)
@@ -86,7 +91,8 @@ class GameState:
             }
 
     def get_kingdom(self, kingdom_id: int) -> Optional[Kingdom]:
-        """Retourne le Kingdom correspondant à l'ID, ou None."""
+        """Retourne le Kingdom correspondant à l'ID, ou None.
+        Author : Victor"""
         for k in self.kingdoms:
             if k.kingdom_id == kingdom_id:
                 return k
@@ -94,7 +100,8 @@ class GameState:
 
     # Visibilité
     def update_fow(self):
-        """Met à jour les bitmasks de visibilité pour le joueur humain (current_player)."""
+        """Met à jour les bitmasks de visibilité pour le joueur humain (current_player).
+        Author : Victor"""
         self.visibility = 0
         for unit in self.units:
             if unit.owner == self.current_player:
@@ -105,7 +112,8 @@ class GameState:
         self.update_discovered()
 
     def update_discovered(self):
-        """Met à jour le bitmask de découverte en ajoutant les tuiles actuellement visibles."""
+        """Met à jour le bitmask de découverte en ajoutant les tuiles actuellement visibles.
+        Author : Victor"""
         self.discovered |= self.visibility
 
     def get_kingdom_visibility(self, kingdom_id: int) -> int:
@@ -113,6 +121,7 @@ class GameState:
 
         Utile pour les IA qui ont besoin de savoir ce qu'elles voient
         sans affecter la visibilité affichée au joueur humain.
+        Author : Victor
         """
         vis = 0
         for unit in self.units:
@@ -131,6 +140,8 @@ class GameState:
 
         Args:
             city (City): La ville à ajouter
+
+        Author : Victor
         """
         self.cities.append(city)
 
@@ -149,6 +160,8 @@ class GameState:
 
         Returns:
             City: La ville trouvée, ou None
+
+        Author : Victor
         """
         for city in self.cities:
             if city.id == city_id:
@@ -164,6 +177,8 @@ class GameState:
 
         Returns:
             City: La ville trouvée, ou None
+
+        Author : Victor
         """
         for city in self.cities:
             if city.center_tile_id == tile_id:
@@ -179,5 +194,7 @@ class GameState:
 
         Returns:
             List[City]: Liste des villes du joueur
+
+        Author : Victor
         """
         return [city for city in self.cities if city.owner == owner]

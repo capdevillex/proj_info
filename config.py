@@ -1,3 +1,7 @@
+"""
+Author : Victor (whole file), completed by Xavier
+"""
+
 from world.biome import Biome
 
 

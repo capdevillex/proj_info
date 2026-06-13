@@ -21,6 +21,8 @@ class Button:
     - Comportement (toggle ou simple clic)
 
     Supporte les états normal / hover / actif avec transitions douces.
+
+    Author : Xavier, completly rewritten by Victor, enhanced by Xavier
     """
 
     # Palette centralisée
@@ -64,6 +66,9 @@ class Button:
 
     # État
     def update(self, mouse_pos, dt=0.016):
+        """
+        Author : Victor
+        """
         target_h = 1.0 if self.rect.collidepoint(mouse_pos) else 0.0
         speed = 8.0
         self._hover_t += (target_h - self._hover_t) * speed * dt
@@ -81,10 +86,15 @@ class Button:
 
         Returns:
             bool: True si le bouton est cliqué
+
+        Author : Xavier
         """
         return self.rect.collidepoint(mouse_pos)
 
     def toggle(self):
+        """
+        Author : Xavier
+        """
         if self.is_toggleable:
             self.is_active = not self.is_active
 
@@ -94,11 +104,16 @@ class Button:
 
         Args:
             state: True pour activer, False pour désactiver
+
+        Author : Xavier
         """
         self.is_active = state
 
     def reset(self):
-        """Réinitialise le bouton à l'état inactif."""
+        """
+        Réinitialise le bouton à l'état inactif.
+        Author : Xavier
+        """
         self.is_active = False
 
     # Rendu
@@ -108,6 +123,8 @@ class Button:
 
         Args:
             screen: Surface pygame où dessiner
+
+        Author : Victor
         """
         t_h = self._hover_t
         t_a = self._active_t
@@ -151,6 +168,9 @@ class Button:
 
     @staticmethod
     def _lerp_color(a, b, t):
+        """
+        Author : Victor
+        """
         t = max(0.0, min(1.0, t))
         return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
@@ -160,6 +180,8 @@ class Button:
 
         Args:
             x, y: Nouvelles coordonnées
+
+        Author : Xavier
         """
         self.rect.x = x
         self.rect.y = y
@@ -180,6 +202,8 @@ class Button:
 
         Args:
             text: Nouveau texte
+
+        Author : Xavier
         """
         self.text = text
 
@@ -188,5 +212,6 @@ class Button:
         pass
 
     def __repr__(self):
-        """Représentation textuelle du bouton"""
+        """Représentation textuelle du bouton
+        Author : Xavier"""
         return f"Button(text='{self.text}', active={self.is_active}, pos=({self.rect.x}, {self.rect.y}))"

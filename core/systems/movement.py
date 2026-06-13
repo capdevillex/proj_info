@@ -61,7 +61,7 @@ class Movement:
             Biome.FOREST: 1,
             Biome.WATER: 1,
             Biome.DESERT: 1,},
-    
+
     UnitType.BOAT: {Biome.MOUNTAIN: 1,
             Biome.FOREST: 1,
             Biome.WATER: 1,
@@ -79,6 +79,8 @@ class Movement:
 
         Returns:
             float: Coût en points de mouvement (1.0 = normal, 2.0 = 2x plus cher)
+
+        Author : Xavier
         """
         # Coût de base du biome
         base_cost = Movement.TERRAIN_COSTS.get(biome, 1.0)
@@ -107,6 +109,8 @@ class Movement:
 
         Returns:
             dict: {tile_id: mouvement_consommé}
+
+        Author : Xavier
         """
         # heap = [(coût_total, tile_id)]
         heap = [(0, start_tile_id)]
@@ -149,12 +153,14 @@ class Movement:
 
         return distances
 
-    
+
     @staticmethod
     def get_reachable_tiles_fly(game_state: GameState, unit: Unit) -> set:
         """
         Récupère les tuiles accessibles pour une unité volante.
         Utilise la distance de Manhattan — ignore le terrain et les obstacles.
+
+        Author : Xavier
         """
         map_ = game_state.map
         origin_tile = map_.tiles[unit.tile_id]
@@ -196,6 +202,8 @@ class Movement:
 
         Returns:
             set: IDs des tuiles accessibles
+
+        Author : Xavier
         """
         map_ = game_state.map
         if not unit.can_move():
@@ -256,6 +264,8 @@ class Movement:
         Returns:
             list: Liste des IDs des tuiles du chemin [start, ..., target]
                   ou liste vide si pas de chemin
+
+        Author : Xavier
         """
         if not unit.can_move():
             return []
@@ -294,6 +304,8 @@ class Movement:
 
         Returns:
             float: Coût en points de mouvement, ou -1 si pas accessible
+
+        Author : Xavier
         """
         distances = Movement.dijkstra_reachable(
             map_, unit.tile_id, unit.max_distance, unit.unit_type
@@ -306,6 +318,9 @@ class Movement:
 
     @staticmethod
     def get_attackable_tiles(map_: Map, unit: Unit) -> set:
+        """
+        Author : Xavier
+        """
         if unit.ATTACK_RANGE == 0:
             return set()
 
@@ -351,6 +366,8 @@ class Movement:
 
         Returns:
             set: IDs des tuiles dans le rayon
+
+        Author : Xavier
         """
         tiles_in_range = set()
         queue = deque([(tile_id, 0)])
@@ -390,6 +407,8 @@ class Movement:
 
         Returns:
             bool: True si le mouvement a réussi, False sinon
+
+        Author : Xavier
         """
         map_ = state.map
 

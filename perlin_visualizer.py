@@ -12,6 +12,8 @@ Contrôles:
     - R/F : Modifier la seed (0-255)
     - ESPACE : Régénérer avec une seed aléatoire
     - ÉCHAP : Quitter
+
+Author : Victor (whole file)
 """
 
 import pygame

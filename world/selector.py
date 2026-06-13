@@ -6,6 +6,8 @@ Gère :
 - Affichage des zones accessibles (mouvement en bleu)
 - Affichage des zones attaquables (combat en rouge)
 - Déplacement ou attaque quand on clique sur une zone
+
+Author : Xavier (whole file)
 """
 
 from core.systems.movement import Movement

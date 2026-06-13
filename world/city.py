@@ -1,3 +1,5 @@
+"""Author : Victor (whole file)"""
+
 import random
 from typing import TYPE_CHECKING, Optional, Set, Dict
 
