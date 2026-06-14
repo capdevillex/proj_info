@@ -141,7 +141,7 @@ class Soldier(Unit):
     UNIT_TYPE    = UnitType.SOLDIER
     MAX_DISTANCE = 3
     ATTACK_RANGE = 1
-    BASE_ATTACK  = 6
+    BASE_ATTACK  = 8
     BASE_DEFENSE = 8
     BASE_HP      = 100
     SIZE         = 4
@@ -152,7 +152,7 @@ class Cavalry(Unit):
     UNIT_TYPE    = UnitType.CAVALRY
     MAX_DISTANCE = 5
     ATTACK_RANGE = 1
-    BASE_ATTACK  = 10
+    BASE_ATTACK  = 12
     BASE_DEFENSE = 5
     BASE_HP      = 80
     SIZE         = 4
@@ -165,7 +165,7 @@ class Archer(Unit):
     UNIT_TYPE    = UnitType.ARCHER
     MAX_DISTANCE = 2
     ATTACK_RANGE = 2
-    BASE_ATTACK  = 8
+    BASE_ATTACK  = 10
     BASE_DEFENSE = 3
     BASE_HP      = 60
     SIZE         = 4
@@ -189,7 +189,7 @@ class Plane(Unit):
     UNIT_TYPE      = UnitType.PLANE
     MAX_DISTANCE   = 10
     ATTACK_RANGE   = MAX_DISTANCE
-    BASE_ATTACK    = 15
+    BASE_ATTACK    = 19
     BASE_DEFENSE   = 5
     BASE_HP        = 50
     WATER_AFFINITY = True
@@ -204,7 +204,7 @@ class Baby(Unit):
     UNIT_TYPE      = UnitType.BABY
     MAX_DISTANCE   = 3
     ATTACK_RANGE   = 1
-    BASE_ATTACK    = 5
+    BASE_ATTACK    = 50
     BASE_DEFENSE   = 3
     BASE_HP        = 50
     SIZE           = 4
@@ -215,7 +215,7 @@ class Boat(Unit):
     UNIT_TYPE      = UnitType.BOAT
     MAX_DISTANCE   = 3
     ATTACK_RANGE   = 1
-    BASE_ATTACK    = 10
+    BASE_ATTACK    = 13
     BASE_DEFENSE   = 8
     BASE_HP        = 120
     SIZE           = 4
