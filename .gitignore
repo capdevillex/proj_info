@@ -1,6 +1,7 @@
 *.pyc
 /pycache
 /.vscode
+saves/autosave.json
 *.aux
 *.bbl
 *.bcf
