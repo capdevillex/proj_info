@@ -141,7 +141,7 @@ class Soldier(Unit):
     UNIT_TYPE    = UnitType.SOLDIER
     MAX_DISTANCE = 3
     ATTACK_RANGE = 1
-    BASE_ATTACK  = 9999
+    BASE_ATTACK  = 6
     BASE_DEFENSE = 8
     BASE_HP      = 100
     SIZE         = 4
@@ -152,9 +152,9 @@ class Cavalry(Unit):
     UNIT_TYPE    = UnitType.CAVALRY
     MAX_DISTANCE = 5
     ATTACK_RANGE = 1
-    BASE_ATTACK  = 12
-    BASE_DEFENSE = 6
-    BASE_HP      = 90
+    BASE_ATTACK  = 10
+    BASE_DEFENSE = 5
+    BASE_HP      = 80
     SIZE         = 4
     UPKEEP_COST  = 1
     BASE_COST    = 150
@@ -166,8 +166,8 @@ class Archer(Unit):
     MAX_DISTANCE = 2
     ATTACK_RANGE = 2
     BASE_ATTACK  = 8
-    BASE_DEFENSE = 5
-    BASE_HP      = 70
+    BASE_DEFENSE = 3
+    BASE_HP      = 60
     SIZE         = 4
     UPKEEP_COST  = 1
     BASE_COST    = 10
@@ -177,9 +177,9 @@ class Colon(Unit):
     UNIT_TYPE      = UnitType.COLON
     MAX_DISTANCE   = 1
     ATTACK_RANGE   = 0
-    BASE_ATTACK    = 2
+    BASE_ATTACK    = 0
     BASE_DEFENSE   = 3
-    BASE_HP        = 50
+    BASE_HP        = 100
     WATER_AFFINITY = True
     SIZE           = 4
     BASE_COST      = 15
@@ -189,7 +189,7 @@ class Plane(Unit):
     UNIT_TYPE      = UnitType.PLANE
     MAX_DISTANCE   = 10
     ATTACK_RANGE   = MAX_DISTANCE
-    BASE_ATTACK    = 20
+    BASE_ATTACK    = 15
     BASE_DEFENSE   = 5
     BASE_HP        = 50
     WATER_AFFINITY = True
@@ -215,9 +215,9 @@ class Boat(Unit):
     UNIT_TYPE      = UnitType.BOAT
     MAX_DISTANCE   = 3
     ATTACK_RANGE   = 1
-    BASE_ATTACK    = 5
-    BASE_DEFENSE   = 3
-    BASE_HP        = 50
+    BASE_ATTACK    = 10
+    BASE_DEFENSE   = 8
+    BASE_HP        = 120
     SIZE           = 4
     UPKEEP_COST    = 1
     BASE_COST      = 100
