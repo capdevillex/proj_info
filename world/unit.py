@@ -236,3 +236,10 @@ UNIT_CLASS_MAP = {
     UnitType.PLANE:   Plane,
     UnitType.BOAT:    Boat,
 }
+
+def create_unit(unit_type, tile_id, owner=0, x=0.0, y=0.0):
+    """
+    Factory : instancie la sous-classe d'Unit correspondant au type.
+    Author : Xavier
+    """
+    return UNIT_CLASS_MAP[unit_type](tile_id, owner, x, y)
