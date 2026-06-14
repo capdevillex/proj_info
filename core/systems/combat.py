@@ -92,7 +92,7 @@ class Combat:
         hp_ratio = attacker.hp / attacker.BASE_HP
 
         # Formule finale
-        damage = max(0, attack - (defense * terrain_modifier)) * type_modifier * hp_ratio
+        damage = int(max((0, attack - (defense * terrain_modifier)) * type_modifier * hp_ratio))
 
         return damage
 
